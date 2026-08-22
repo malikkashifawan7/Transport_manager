@@ -122,7 +122,7 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
 
     showDialog(
       context: context,
-      builder: (ctx) => StatefulWidget(
+      builder: (ctx) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           title: Text(tripToEdit == null ? 'Add New Trip' : 'Edit Trip'),
           content: SingleChildScrollView(
@@ -245,7 +245,7 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
       ),
     );
   }
-   void _openVehicleMasterLedger(Map<String, dynamic> vehicle, int vIndex) {
+  void _openVehicleMasterLedger(Map<String, dynamic> vehicle, int vIndex) {
     final String vNum = vehicle['number'] ?? '';
 
     Navigator.push(
@@ -480,7 +480,9 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
   void _openMapRoute(String origin, String destination) async {
     final Uri url = Uri.parse('https://www.google.com/maps/dir/?api=1&origin=$origin&destination=$destination');
     if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not launch Google Maps')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not launch Google Maps')));
+      }
     }
   }
 
@@ -501,7 +503,9 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
 
     final Uri url = Uri.parse("https://wa.me/$phone?text=${Uri.encodeComponent(msg)}");
     if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('WhatsApp not installed or invalid number')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('WhatsApp not installed or invalid number')));
+      }
     }
   }
 
@@ -545,7 +549,7 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Rashid Tours System Info'),
-        content: const Text('Version 5.0 - Fully Loaded Fleet & Maintenance Management System.'),
+        content: const Text('Version 5.0 - Fleet & Maintenance Management System.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
         ],
@@ -598,3 +602,4 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
     );
   }
 }
+
