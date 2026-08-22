@@ -3,6 +3,8 @@ name: Build Transport Manager Pro
 on:
   push:
     branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
   build:
@@ -23,18 +25,18 @@ jobs:
         with:
           channel: 'stable'
 
-      - name: Rebuild Android Files
-        run: flutter create . --platforms=android,windows
+      - name: Recreate Android Project
+        run: flutter create . --platforms=android
 
       - name: Fetch Dependencies
         run: flutter pub get
 
-      - name: Build Optimized Release APK
-        run: flutter build apk --release --split-per-abi
+      - name: Build Release APK
+        run: flutter build apk --release
 
-      - name: Upload Release Artifact
+      - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: TransportManagerPro-Release
-          path: build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+          path: build/app/outputs/flutter-apk/app-release.apk
           
