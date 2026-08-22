@@ -64,7 +64,12 @@ class _HomeState extends State<Home>{
    const SizedBox(height:10),
    GridView.count(shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),crossAxisCount:2,
     crossAxisSpacing:9,mainAxisSpacing:9,childAspectRatio:1.7,
-    children:modules.entries.map((e)=>Card(child:InkWell(
+    children: modules.entries.map((e) => Card(
+  child: InkWell(
+    ...
+  )
+)).toList()
+                  
      onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_) Page(.db db,title:e.key)
                                                         
      child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
