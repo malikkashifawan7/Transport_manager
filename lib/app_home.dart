@@ -4,7 +4,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class AppHomeScreen extends StatefulWidget {
   const AppHomeScreen({super.key});
@@ -230,17 +229,41 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
             Text('Trip Expenses: Rs. ${trip['expense']}'),
             const SizedBox(height: 15),
             ElevatedButton.icon(
-              onPressed: () {
-                final msg = "Trip Invoice%0AVehicle: ${trip['vehicle']}%0AParty: ${trip['party']}%0ARoute: ${trip['from']} to ${trip['to']}%0ATotal: Rs.${trip['amount']}%0AAdvance: Rs.${trip['advance']}";
-                launchUrl(Uri.parse("https://wa.me/?text=$msg"));
-              },
-              icon: const Icon(Icons.share),
-              label: const Text('Share to WhatsApp'),
+              onPressed: () => _printSingleTripPdf(trip, vehicle),
+              icon: const Icon(Icons.print),
+              label: const Text('Print / Export Invoice PDF'),
             )
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _printSingleTripPdf(Map<String, dynamic> trip, Map<String, dynamic> vehicle) async {
+    final pdf = pw.Document();
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        build: (pw.Context context) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Header(level: 0, child: pw.Text("TRIP INVOICE - ${trip['vehicle']}")),
+              pw.Text("Party Name: ${trip['party']}"),
+              pw.Text("Party Address: ${trip['address']}"),
+              pw.Text("Route: ${trip['from']} -> ${trip['to']}"),
+              pw.Text("Driver: ${vehicle['driver']} (CNIC: ${vehicle['cnic']})"),
+              pw.Text("Date & Time: ${trip['date']} ${trip['time']}"),
+              pw.Divider(),
+              pw.Text("Total Freight: Rs. ${trip['amount']}"),
+              pw.Text("Advance Payment: Rs. ${trip['advance']}"),
+              pw.Text("Expenses: Rs. ${trip['expense']}"),
+            ],
+          );
+        },
+      ),
+    );
+    await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save());
   }
 
   void _showAddQuickExpenseDialog(String vNum, StateSetter setLedgerState) {
@@ -300,4 +323,3 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
     );
   }
 }
-
