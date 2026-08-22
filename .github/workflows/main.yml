@@ -26,7 +26,7 @@ jobs:
 
       - name: Recreate Android Project Setup
         run: |
-          flutter create . --platforms=android --org=com.transporthisab
+          flutter create . --project-name transport_manager --platforms=android --org=com.transporthisab
 
       - name: Install Dependencies
         run: flutter pub get
