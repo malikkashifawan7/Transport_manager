@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AppHomeScreen extends StatefulWidget {
   const AppHomeScreen({super.key});
@@ -13,15 +14,10 @@ class AppHomeScreen extends StatefulWidget {
 }
 
 class _AppHomeScreenState extends State<AppHomeScreen> {
-  int _selectedIndex = 0;
-  String _searchQuery = "";
-
   List<Map<String, dynamic>> vehicles = [];
-  List<Map<String, dynamic>> drivers = [];
   List<Map<String, dynamic>> bookings = [];
   List<Map<String, dynamic>> fuelLogs = [];
   List<Map<String, dynamic>> maintenanceLogs = [];
-  List<Map<String, dynamic>> recycleBin = [];
 
   @override
   void initState() {
@@ -32,12 +28,10 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
   Future<void> _loadAllData() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      vehicles = List<Map<String, dynamic>>.from(json.decode(prefs.getString('v2_vehicles') ?? '[]'));
-      drivers = List<Map<String, dynamic>>.from(json.decode(prefs.getString('v2_drivers') ?? '[]'));
-      bookings = List<Map<String, dynamic>>.from(json.decode(prefs.getString('v2_bookings') ?? '[]'));
-      fuelLogs = List<Map<String, dynamic>>.from(json.decode(prefs.getString('v2_fuel') ?? '[]'));
-      maintenanceLogs = List<Map<String, dynamic>>.from(json.decode(prefs.getString('v2_maint') ?? '[]'));
-      recycleBin = List<Map<String, dynamic>>.from(json.decode(prefs.getString('v2_trash') ?? '[]'));
+      vehicles = List<Map<String, dynamic>>.from(json.decode(prefs.getString('v3_vehicles') ?? '[]'));
+      bookings = List<Map<String, dynamic>>.from(json.decode(prefs.getString('v3_bookings') ?? '[]'));
+      fuelLogs = List<Map<String, dynamic>>.from(json.decode(prefs.getString('v3_fuel') ?? '[]'));
+      maintenanceLogs = List<Map<String, dynamic>>.from(json.decode(prefs.getString('v3_maint') ?? '[]'));
     });
   }
 
@@ -46,25 +40,24 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
     await prefs.setString(key, json.encode(data));
   }
 
-  // --- Nayi Gari Add Karne Ka Dialog ---
   void _showAddVehicleDialog() {
     final numCtrl = TextEditingController();
     final driverCtrl = TextEditingController();
+    final cnicCtrl = TextEditingController();
     final modelCtrl = TextEditingController();
-    final typeCtrl = TextEditingController(text: 'Truck');
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Add New Vehicle 🚐'),
+        title: const Text('Add Vehicle & Driver'),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(controller: numCtrl, decoration: const InputDecoration(labelText: 'Vehicle Number (e.g. LES-1234)')),
+              TextField(controller: numCtrl, decoration: const InputDecoration(labelText: 'Vehicle Number')),
               TextField(controller: driverCtrl, decoration: const InputDecoration(labelText: 'Driver Name')),
-              TextField(controller: modelCtrl, decoration: const InputDecoration(labelText: 'Model / Type')),
-              TextField(controller: typeCtrl, decoration: const InputDecoration(labelText: 'Fuel Type (Diesel/Petrol)')),
+              TextField(controller: cnicCtrl, decoration: const InputDecoration(labelText: 'Driver CNIC')),
+              TextField(controller: modelCtrl, decoration: const InputDecoration(labelText: 'Vehicle Model')),
             ],
           ),
         ),
@@ -76,24 +69,21 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
                 final newV = {
                   'number': numCtrl.text.toUpperCase(),
                   'driver': driverCtrl.text,
+                  'cnic': cnicCtrl.text,
                   'model': modelCtrl.text,
-                  'type': typeCtrl.text,
                 };
-                setState(() {
-                  vehicles.add(newV);
-                });
-                _saveKey('v2_vehicles', vehicles);
+                setState(() => vehicles.add(newV));
+                _saveKey('v3_vehicles', vehicles);
                 Navigator.pop(ctx);
               }
             },
-            child: const Text('Save Vehicle'),
+            child: const Text('Save'),
           ),
         ],
       ),
     );
   }
 
-  // --- Master Ledger Screen ---
   void _openVehicleMasterLedger(Map<String, dynamic> vehicle) {
     final String vNum = vehicle['number'] ?? '';
     
@@ -110,16 +100,7 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
       context,
       MaterialPageRoute(
         builder: (_) => Scaffold(
-          appBar: AppBar(
-            title: Text('Vehicle Account: $vNum'),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.print),
-                tooltip: 'Print / Export PDF',
-                onPressed: () => _printVehicleLedgerPdf(vNum, vehicle, vBookings, vFuel, vMaint, totalEarned, totalFuel, totalMaint, netBalance),
-              ),
-            ],
-          ),
+          appBar: AppBar(title: Text('Vehicle: $vNum')),
           body: StatefulBuilder(
             builder: (BuildContext context, StateSetter setLedgerState) {
               return SingleChildScrollView(
@@ -128,69 +109,40 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Card(
-                      color: Theme.of(context).colorScheme.primaryContainer,
                       child: Padding(
-                        padding: const EdgeInsets.all(16.0),
+                        padding: const EdgeInsets.all(12.0),
                         child: Column(
                           children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text('Driver: ${vehicle['driver'] ?? 'Unassigned'}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                                Text('Model: ${vehicle['model'] ?? '-'}'),
-                              ],
-                            ),
-                            const Divider(height: 20),
+                            Text('Driver: ${vehicle['driver']} | CNIC: ${vehicle['cnic']}'),
+                            const Divider(),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceAround,
                               children: [
-                                _ledgerStatCell('Total Earned', totalEarned, Colors.green),
-                                _ledgerStatCell('Fuel Cost', totalFuel, Colors.orange),
-                                _ledgerStatCell('Maintenance/Puncture', totalMaint, Colors.red),
-                                _ledgerStatCell('Net Profit', netBalance, netBalance >= 0 ? Colors.blue : Colors.red),
+                                Text('Earned: Rs. $totalEarned', style: const TextStyle(color: Colors.green)),
+                                Text('Expenses: Rs. ${totalFuel + totalMaint}', style: const TextStyle(color: Colors.red)),
+                                Text('Net: Rs. $netBalance', style: const TextStyle(fontWeight: FontWeight.bold)),
                               ],
-                            ),
+                            )
                           ],
                         ),
                       ),
                     ),
-                    const SizedBox(height: 15),
+                    const SizedBox(height: 10),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        ElevatedButton.icon(onPressed: () => _showAddEntryDialog(vNum, 'booking', setLedgerState), icon: const Icon(Icons.add_road), label: const Text('Add Trip')),
-                        ElevatedButton.icon(onPressed: () => _showAddEntryDialog(vNum, 'fuel', setLedgerState), icon: const Icon(Icons.local_gas_station), label: const Text('Add Fuel')),
-                        ElevatedButton.icon(onPressed: () => _showAddEntryDialog(vNum, 'maint', setLedgerState), icon: const Icon(Icons.build), label: const Text('Add Repair/Puncture')),
+                        ElevatedButton(onPressed: () => _showAddDetailedTripDialog(vNum, vehicle, setLedgerState), child: const Text('+ Detailed Trip')),
+                        ElevatedButton(onPressed: () => _showAddQuickExpenseDialog(vNum, setLedgerState), child: const Text('+ Expense/Repair')),
                       ],
                     ),
-                    const SizedBox(height: 20),
-                    const Text('🚩 Trips & Bookings', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                    if (vBookings.isEmpty) const Padding(padding: EdgeInsets.all(8.0), child: Text('No trips recorded yet.')),
+                    const SizedBox(height: 15),
+                    const Text('🚩 Trips (Click for Details)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                     ...vBookings.map((b) => Card(
                           child: ListTile(
-                            title: Text('Customer/Route: ${b['route']}'),
-                            subtitle: Text('Date: ${b['date']}'),
+                            title: Text('${b['party']} (${b['from']} -> ${b['to']})'),
+                            subtitle: Text('Date: ${b['date']} | Advance: Rs. ${b['advance']}'),
                             trailing: Text('Rs. ${b['amount']}', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-                          ),
-                        )),
-                    const SizedBox(height: 15),
-                    const Text('⛽ Fuel Entries', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                    if (vFuel.isEmpty) const Padding(padding: EdgeInsets.all(8.0), child: Text('No fuel entries recorded.')),
-                    ...vFuel.map((f) => Card(
-                          child: ListTile(
-                            title: Text('${f['pump']}'),
-                            subtitle: Text('Date: ${f['date']}'),
-                            trailing: Text('Rs. ${f['cost']}', style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
-                          ),
-                        )),
-                    const SizedBox(height: 15),
-                    const Text('🔧 Maintenance, Punctures & Repairs', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                    if (vMaint.isEmpty) const Padding(padding: EdgeInsets.all(8.0), child: Text('No maintenance or puncture entries.')),
-                    ...vMaint.map((m) => Card(
-                          child: ListTile(
-                            title: Text('${m['work']}'),
-                            subtitle: Text('Date: ${m['date']}'),
-                            trailing: Text('Rs. ${m['cost']}', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                            onTap: () => _showTripDetailsModal(b, vehicle),
                           ),
                         )),
                   ],
@@ -203,135 +155,149 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
     );
   }
 
-  Widget _ledgerStatCell(String title, double amount, Color color) {
-    return Column(
-      children: [
-        Text(title, style: const TextStyle(fontSize: 11)),
-        Text('Rs. ${amount.toStringAsFixed(0)}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: color)),
-      ],
-    );
-  }
-
-  void _showAddEntryDialog(String vNum, String type, StateSetter setLedgerState) {
-    final titleCtrl = TextEditingController();
-    final costCtrl = TextEditingController();
+  void _showAddDetailedTripDialog(String vNum, Map<String, dynamic> vehicle, StateSetter setLedgerState) {
+    final partyCtrl = TextEditingController();
+    final addressCtrl = TextEditingController();
+    final fromCtrl = TextEditingController();
+    final toCtrl = TextEditingController();
+    final amountCtrl = TextEditingController();
+    final advanceCtrl = TextEditingController();
+    final expenseCtrl = TextEditingController();
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(type == 'booking' ? 'Add Trip/Booking' : (type == 'fuel' ? 'Add Fuel' : 'Add Repair/Puncture')),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: titleCtrl, decoration: InputDecoration(labelText: type == 'booking' ? 'Route / Customer' : (type == 'fuel' ? 'Pump / Liters Name' : 'Work Detail (e.g. Puncture/Oil)'))),
-            TextField(controller: costCtrl, decoration: const InputDecoration(labelText: 'Amount (PKR)'), keyboardType: TextInputType.number),
-          ],
+        title: const Text('Add Trip Details'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: partyCtrl, decoration: const InputDecoration(labelText: 'Party Name')),
+              TextField(controller: addressCtrl, decoration: const InputDecoration(labelText: 'Party Address')),
+              TextField(controller: fromCtrl, decoration: const InputDecoration(labelText: 'From Location')),
+              TextField(controller: toCtrl, decoration: const InputDecoration(labelText: 'To Location')),
+              TextField(controller: amountCtrl, decoration: const InputDecoration(labelText: 'Total Freight Amount'), keyboardType: TextInputType.number),
+              TextField(controller: advanceCtrl, decoration: const InputDecoration(labelText: 'Advance Payment Received'), keyboardType: TextInputType.number),
+              TextField(controller: expenseCtrl, decoration: const InputDecoration(labelText: 'Trip Expense (Diesel/Toll)'), keyboardType: TextInputType.number),
+            ],
+          ),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () {
-              if (titleCtrl.text.isNotEmpty && costCtrl.text.isNotEmpty) {
-                final entry = {
-                  'vehicle': vNum,
-                  'date': DateTime.now().toString().split(' ')[0],
-                  if (type == 'booking') ...{'customer': titleCtrl.text, 'route': titleCtrl.text, 'amount': costCtrl.text},
-                  if (type == 'fuel') ...{'pump': titleCtrl.text, 'cost': costCtrl.text},
-                  if (type == 'maint') ...{'work': titleCtrl.text, 'cost': costCtrl.text},
-                };
-
-                setState(() {
-                  if (type == 'booking') bookings.add(entry);
-                  if (type == 'fuel') fuelLogs.add(entry);
-                  if (type == 'maint') maintenanceLogs.add(entry);
-                });
-
-                _saveKey('v2_bookings', bookings);
-                _saveKey('v2_fuel', fuelLogs);
-                _saveKey('v2_maint', maintenanceLogs);
-                
-                setLedgerState(() {});
-                Navigator.pop(ctx);
-              }
+              final tripData = {
+                'vehicle': vNum,
+                'party': partyCtrl.text,
+                'address': addressCtrl.text,
+                'from': fromCtrl.text,
+                'to': toCtrl.text,
+                'amount': amountCtrl.text,
+                'advance': advanceCtrl.text,
+                'expense': expenseCtrl.text,
+                'date': DateTime.now().toString().split(' ')[0],
+                'time': TimeOfDay.now().format(context),
+              };
+              setState(() => bookings.add(tripData));
+              _saveKey('v3_bookings', bookings);
+              setLedgerState(() {});
+              Navigator.pop(ctx);
             },
-            child: const Text('Save Entry'),
+            child: const Text('Save Trip'),
           )
         ],
       ),
     );
   }
 
-  Future<void> _printVehicleLedgerPdf(String vNum, Map<String, dynamic> v, List b, List f, List m, double earn, double fuel, double maint, double net) async {
-    final pdf = pw.Document();
-    pdf.addPage(
-      pw.Page(
-        pageFormat: PdfPageFormat.a4,
-        build: (pw.Context context) {
-          return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Header(level: 0, child: pw.Text("Master Vehicle Ledger - $vNum", style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold))),
-              pw.Text("Driver: ${v['driver'] ?? 'N/A'} | Model: ${v['model'] ?? 'N/A'}"),
-              pw.Divider(),
-              pw.Text("SUMMARY: Total Earned: Rs. $earn | Fuel: Rs. $fuel | Repair/Puncture: Rs. $maint | NET PROFIT: Rs. $net"),
-              pw.SizedBox(height: 15),
-              pw.Text("EXPENSE & REPAIR BREAKDOWN:", style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-              pw.TableHelper.fromTextArray(
-                context: context,
-                data: <List<String>>[
-                  <String>['Date', 'Type', 'Description', 'Amount (PKR)'],
-                  ...m.map((i) => [i['date'].toString(), 'Repair/Puncture', i['work'].toString(), i['cost'].toString()]),
-                  ...f.map((i) => [i['date'].toString(), 'Fuel', i['pump'].toString(), i['cost'].toString()]),
-                ],
-              ),
-            ],
-          );
-        },
+  void _showTripDetailsModal(Map<String, dynamic> trip, Map<String, dynamic> vehicle) {
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Trip Detail: ${trip['party']}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const Divider(),
+            Text('Route: ${trip['from']} to ${trip['to']}'),
+            Text('Party Address: ${trip['address']}'),
+            Text('Driver: ${vehicle['driver']} (CNIC: ${vehicle['cnic']})'),
+            Text('Date/Time: ${trip['date']} ${trip['time']}'),
+            Text('Total Amount: Rs. ${trip['amount']}'),
+            Text('Advance Paid: Rs. ${trip['advance']}'),
+            Text('Trip Expenses: Rs. ${trip['expense']}'),
+            const SizedBox(height: 15),
+            ElevatedButton.icon(
+              onPressed: () {
+                final msg = "Trip Invoice%0AVehicle: ${trip['vehicle']}%0AParty: ${trip['party']}%0ARoute: ${trip['from']} to ${trip['to']}%0ATotal: Rs.${trip['amount']}%0AAdvance: Rs.${trip['advance']}";
+                launchUrl(Uri.parse("https://wa.me/?text=$msg"));
+              },
+              icon: const Icon(Icons.share),
+              label: const Text('Share to WhatsApp'),
+            )
+          ],
+        ),
       ),
     );
-    await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save());
+  }
+
+  void _showAddQuickExpenseDialog(String vNum, StateSetter setLedgerState) {
+    final workCtrl = TextEditingController();
+    final costCtrl = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Add Maintenance / Puncture'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: workCtrl, decoration: const InputDecoration(labelText: 'Expense Detail')),
+            TextField(controller: costCtrl, decoration: const InputDecoration(labelText: 'Amount'), keyboardType: TextInputType.number),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              final exp = {
+                'vehicle': vNum,
+                'work': workCtrl.text,
+                'cost': costCtrl.text,
+                'date': DateTime.now().toString().split(' ')[0],
+              };
+              setState(() => maintenanceLogs.add(exp));
+              _saveKey('v3_maint', maintenanceLogs);
+              setLedgerState(() {});
+              Navigator.pop(ctx);
+            },
+            child: const Text('Save Expense'),
+          )
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Transport Manager Pro'),
+      appBar: AppBar(title: const Text('Transport Manager Enterprise')),
+      body: ListView.builder(
+        itemCount: vehicles.length,
+        itemBuilder: (ctx, i) => ListTile(
+          leading: const Icon(Icons.local_shipping),
+          title: Text(vehicles[i]['number']),
+          subtitle: Text('Driver: ${vehicles[i]['driver']}'),
+          onTap: () => _openVehicleMasterLedger(vehicles[i]),
+        ),
       ),
-      body: vehicles.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.directions_bus, size: 70, color: Colors.grey),
-                  const SizedBox(height: 10),
-                  const Text('No Vehicles Added Yet!', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 5),
-                  const Text('Click the "+" button below to add your first vehicle.', style: TextStyle(color: Colors.grey)),
-                ],
-              ),
-            )
-          : ListView.builder(
-              itemCount: vehicles.length,
-              itemBuilder: (ctx, i) {
-                final v = vehicles[i];
-                return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  child: ListTile(
-                    leading: const CircleAvatar(child: Icon(Icons.directions_bus)),
-                    title: Text(v['number'] ?? 'No Number', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                    subtitle: Text('Driver: ${v['driver'] ?? 'N/A'} | Type: ${v['type'] ?? 'Truck'}'),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                    onTap: () => _openVehicleMasterLedger(v),
-                  ),
-                );
-              },
-            ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton(
         onPressed: _showAddVehicleDialog,
-        icon: const Icon(Icons.add),
-        label: const Text('Add Vehicle'),
+        child: const Icon(Icons.add),
       ),
     );
   }
 }
+
