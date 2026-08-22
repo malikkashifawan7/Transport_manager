@@ -21,25 +21,17 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.22.0'
           channel: 'stable'
 
       - name: Recreate Android Project
         run: |
           flutter create . --project-name transport_manager --platforms=android --org=com.transporthisab
 
-      - name: Configure Android Gradle
-        run: |
-          sed -i 's/minSdkVersion .*/minSdkVersion 21/g' android/app/build.gradle || true
-          sed -i 's/compileSdkVersion .*/compileSdkVersion 34/g' android/app/build.gradle || true
-          sed -i 's/flutter.minSdkVersion/21/g' android/app/build.gradle || true
-          sed -i 's/flutter.compileSdkVersion/34/g' android/app/build.gradle || true
-
       - name: Install Dependencies
         run: flutter pub get
 
-      - name: Build APK Clean
-        run: flutter build apk --debug --no-tree-shake-icons
+      - name: Build APK
+        run: flutter build apk --debug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
