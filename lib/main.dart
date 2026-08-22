@@ -436,6 +436,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       totalMaint += double.tryParse(m['cost'] ?? '0') ?? 0;
     }
 
+    double profit = totalEarnings - totalFuel - totalMaint;
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -484,7 +486,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             StatItem(title: 'Earnings', value: 'Rs. ${totalEarnings.toStringAsFixed(0)}'),
                             StatItem(title: 'Fuel', value: 'Rs. ${totalFuel.toStringAsFixed(0)}'),
                             StatItem(title: 'Maintenance', value: 'Rs. ${totalMaint.toStringAsFixed(0)}'),
-                            StatItem(title: 'Profit', value: 'Rs. ${(totalEarnings - totalFuel - totalMaint).toStringAsFixed(0)}'),
+                            StatItem(title: 'Profit', value: 'Rs. ${profit.toStringAsFixed(0)}'),
                           ],
                         ),
                       ],
@@ -505,4 +507,4 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ElevatedButton.icon(
                       onPressed: () => _showAddBookingDialog(vNum),
                       icon: const Icon(Icons.luggage),
-                      label: const Text('Add Booking
+                      lab
