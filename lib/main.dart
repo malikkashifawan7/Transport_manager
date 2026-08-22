@@ -398,7 +398,8 @@ class _SingleLedgerPageState extends State<SingleLedgerPage> {
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(12),
         child: Column(
-          crossAxisAlignment: CrossAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
+: CrossAlignment.start,
           children: [
             Card(
               color: Colors.blue.shade50,
