@@ -15,9 +15,6 @@ class AppHomeScreen extends StatefulWidget {
 class _AppHomeScreenState extends State<AppHomeScreen> {
   List<Map<String, dynamic>> vehicles = [];
   List<Map<String, dynamic>> bookings = [];
-  List<Map<String, dynamic>> fuelLogs = [];
-  List<Map<String, dynamic>> maintenanceLogs = [];
-
   bool isDarkMode = false;
   String filterDate = "";
 
@@ -32,8 +29,6 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
     setState(() {
       vehicles = List<Map<String, dynamic>>.from(json.decode(prefs.getString('v4_vehicles') ?? '[]'));
       bookings = List<Map<String, dynamic>>.from(json.decode(prefs.getString('v4_bookings') ?? '[]'));
-      fuelLogs = List<Map<String, dynamic>>.from(json.decode(prefs.getString('v4_fuel') ?? '[]'));
-      maintenanceLogs = List<Map<String, dynamic>>.from(json.decode(prefs.getString('v4_maint') ?? '[]'));
       isDarkMode = prefs.getBool('v4_theme') ?? false;
     });
   }
@@ -47,7 +42,6 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
     }
   }
 
-  // --- VEHICLE ADD/EDIT ---
   void _showVehicleDialog({Map<String, dynamic>? vehicleToEdit, int? index}) {
     final numCtrl = TextEditingController(text: vehicleToEdit?['number'] ?? '');
     final driverCtrl = TextEditingController(text: vehicleToEdit?['driver'] ?? '');
@@ -101,7 +95,6 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
     );
   }
 
-  // --- TRIP ADD / EDIT DIALOG ---
   void _showTripDialog(String vNum, Map<String, dynamic> vehicle, StateSetter setLedgerState, {Map<String, dynamic>? tripToEdit, int? tripIndex}) {
     final partyCtrl = TextEditingController(text: tripToEdit?['party'] ?? '');
     final partyPhoneCtrl = TextEditingController(text: tripToEdit?['partyPhone'] ?? '');
@@ -129,7 +122,7 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
               TextField(controller: kmCtrl, decoration: const InputDecoration(labelText: 'Estimated Distance (KM)')),
               TextField(controller: amountCtrl, decoration: const InputDecoration(labelText: 'Total Freight Amount'), keyboardType: TextInputType.number),
               TextField(controller: advanceCtrl, decoration: const InputDecoration(labelText: 'Advance Payment'), keyboardType: TextInputType.number),
-              TextField(controller: expenseCtrl, decoration: const InputDecoration(labelText: 'Trip Expense (Diesel/Tolls)'), keyboardType: TextInputType.number),
+              TextField(controller: expenseCtrl, decoration: const InputDecoration(labelText: 'Trip Expense'), keyboardType: TextInputType.number),
             ],
           ),
         ),
@@ -169,7 +162,6 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
     );
   }
 
-  // --- VEHICLE LEDGER PAGE ---
   void _openVehicleMasterLedger(Map<String, dynamic> vehicle, int vIndex) {
     final String vNum = vehicle['number'] ?? '';
 
@@ -233,10 +225,7 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
                         padding: const EdgeInsets.all(12.0),
                         child: Column(
                           children: [
-                            Text(
-                              'Driver: ${vehicle['driver']} | Phone: ${vehicle['driverPhone'] ?? 'N/A'}',
-                              style: const TextStyle(fontWeight: FontWeight.bold),
-                            ),
+                            Text('Driver: ${vehicle['driver']} | Phone: ${vehicle['driverPhone'] ?? 'N/A'}', style: const TextStyle(fontWeight: FontWeight.bold)),
                             Text('CNIC: ${vehicle['cnic']} | Model: ${vehicle['model']}'),
                             const Divider(),
                             if (filterDate.isNotEmpty) Text('Filtered Date: $filterDate', style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
@@ -256,15 +245,12 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        ElevatedButton.icon(
-                          onPressed: () => _showTripDialog(vNum, vehicle, setLedgerState),
-                          icon: const Icon(Icons.add),
-                          label: const Text('Add Trip'),
-                        ),
-                      ],
+                    Center(
+                      child: ElevatedButton.icon(
+                        onPressed: () => _showTripDialog(vNum, vehicle, setLedgerState),
+                        icon: const Icon(Icons.add),
+                        label: const Text('Add Trip'),
+                      ),
                     ),
                     const SizedBox(height: 15),
                     const Text('🚩 Trips List (Click to view details / Edit)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
@@ -276,15 +262,8 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
                         margin: const EdgeInsets.only(bottom: 8.0),
                         child: ListTile(
                           title: Text('${b['party']} (${b['from']} ➔ ${b['to']})', style: const TextStyle(fontWeight: FontWeight.bold)),
-                          subtitle: Text('Date: ${b['date']} | Advance: Rs. ${b['advance']} | Expenses: Rs. ${b['expense']}'),
-                          trailing: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text('Rs. ${b['amount']}', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 15)),
-                              if ((b['km'] ?? '').isNotEmpty) Text('${b['km']} KM', style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                            ],
-                          ),
+                          subtitle: Text('Date: ${b['date']} | Advance: Rs. ${b['advance']} | Expense: Rs. ${b['expense']}'),
+                          trailing: Text('Rs. ${b['amount']}', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 15)),
                           onTap: () => _showTripDetailsModal(b, vehicle, setLedgerState, idx),
                         ),
                       );
@@ -299,7 +278,6 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
     );
   }
 
-  // --- TRIP DETAILS MODAL ---
   void _showTripDetailsModal(Map<String, dynamic> trip, Map<String, dynamic> vehicle, StateSetter setLedgerState, int tripIndex) {
     showModalBottomSheet(
       context: context,
@@ -391,8 +369,7 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
     await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save());
   }
 
-  // --- SETTINGS AND USER MANUAL ---
-    void _openSettingsDialog() {
+  void _openSettingsDialog() {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -421,9 +398,6 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
     );
   }
 
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -432,4 +406,28 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
       home: Scaffold(
         appBar: AppBar(
           title: const Text('Transport Manager Pro'),
-       
+          actions: [
+            IconButton(
+              icon: Icon(isDarkMode ? Icons.light_mode : Icons.dark_mode),
+              onPressed: () {
+                setState(() => isDarkMode = !isDarkMode);
+                _saveKey('v4_theme', isDarkMode);
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.help_outline),
+              onPressed: _openSettingsDialog,
+            )
+          ],
+        ),
+        body: vehicles.isEmpty
+            ? const Center(child: Text('No vehicles added yet. Tap + to add.'))
+            : ListView.builder(
+                itemCount: vehicles.length,
+                itemBuilder: (ctx, i) => Card(
+                  margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  child: ListTile(
+                    leading: const Icon(Icons.local_shipping, size: 36, color: Colors.blue),
+                    title: Text(vehicles[i]['number'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                    subtitle: Text('Driver: ${vehicles[i]['driver']} | Phone: ${vehicles[i]['driverPhone'] ?? 'N/A'}'),
+                    trailing
