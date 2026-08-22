@@ -115,7 +115,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(controller: numCtrl, decoration: const InputDecoration(labelText: 'Vehicle Number (e.g. LES-3514)')),
+              TextField(controller: numCtrl, decoration: const InputDecoration(labelText: 'Vehicle Number')),
               TextField(controller: modelCtrl, decoration: const InputDecoration(labelText: 'Model / Type')),
               TextField(controller: driverCtrl, decoration: const InputDecoration(labelText: 'Driver Name')),
               TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'Driver Contact No.'), keyboardType: TextInputType.phone),
@@ -214,7 +214,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               TextField(controller: vehCtrl, decoration: const InputDecoration(labelText: 'Vehicle Number')),
               TextField(controller: custCtrl, decoration: const InputDecoration(labelText: 'Party / Customer Name')),
               TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'Party Phone No.'), keyboardType: TextInputType.phone),
-              TextField(controller: addressCtrl, decoration: const InputDecoration(labelText: 'Party Address / Location')),
+              TextField(controller: addressCtrl, decoration: const InputDecoration(labelText: 'Party Address')),
               TextField(controller: routeCtrl, decoration: const InputDecoration(labelText: 'Route / Trip Path')),
               TextField(controller: amtCtrl, decoration: const InputDecoration(labelText: 'Booking Amount (PKR)'), keyboardType: TextInputType.number),
             ],
@@ -255,12 +255,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Add Maintenance / Gari Ka Kaam'),
+        title: const Text('Add Maintenance / Kaam'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(controller: vehCtrl, decoration: const InputDecoration(labelText: 'Vehicle Number')),
-            TextField(controller: workCtrl, decoration: const InputDecoration(labelText: 'Work Description (e.g. Oil Change, Repair)')),
+            TextField(controller: workCtrl, decoration: const InputDecoration(labelText: 'Work Description')),
             TextField(controller: costCtrl, decoration: const InputDecoration(labelText: 'Expense (PKR)'), keyboardType: TextInputType.number),
           ],
         ),
@@ -371,9 +371,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget buildVehiclesList() {
-    if (vehicles.isEmpty) {
-      return const Center(child: Text('No Vehicles added yet. Tap + to add!'));
-    }
+    if (vehicles.isEmpty) return const Center(child: Text('No Vehicles added yet.'));
     return ListView.builder(
       padding: const EdgeInsets.all(12.0),
       itemCount: vehicles.length,
@@ -451,39 +449,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final vBookings = bookings.where((b) => b['vehicle'] == vNum).toList();
     final vMaint = maintenanceLogs.where((m) => m['vehicle'] == vNum).toList();
 
-    double totalFuel = 0;
-    for (var f in vFuel) {
-      totalFuel += double.tryParse(f['cost'] ?? '0') ?? 0;
-    }
-
-    double totalEarnings = 0;
-    for (var b in vBookings) {
-      totalEarnings += double.tryParse(b['amount'] ?? '0') ?? 0;
-    }
-
-    double totalMaint = 0;
-    for (var m in vMaint) {
-      totalMaint += double.tryParse(m['cost'] ?? '0') ?? 0;
-    }
-
+    double totalFuel = vFuel.fold(0, (sum, item) => sum + (double.tryParse(item['cost'] ?? '0') ?? 0));
+    double totalEarnings = vBookings.fold(0, (sum, item) => sum + (double.tryParse(item['amount'] ?? '0') ?? 0));
+    double totalMaint = vMaint.fold(0, (sum, item) => sum + (double.tryParse(item['cost'] ?? '0') ?? 0));
     double profit = totalEarnings - totalFuel - totalMaint;
 
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => Scaffold(
-          appBar: AppBar(
-            title: Text('Vehicle Account: $vNum'),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.edit),
-                onPressed: () {
-                  Navigator.pop(context);
-                  _showAddVehicleDialog(editVehicle: vehicle, editIndex: vIndex);
-                },
-              ),
-            ],
-          ),
+          appBar: AppBar(title: Text('Vehicle Account: $vNum')),
           body: SingleChildScrollView(
             padding: const EdgeInsets.all(12.0),
             child: Column(
@@ -502,13 +477,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             Text('Phone: ${vehicle['phone'] ?? 'N/A'}'),
                           ],
                         ),
-                        const SizedBox(height: 5),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('Model: ${vehicle['model'] ?? 'N/A'}'),
-                          ],
-                        ),
                         const Divider(height: 20),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -522,4 +490,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ],
                     ),
                   ),
-                )
+                ),
+                const SizedBox(height: 15),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: () => _showAddFuelDialog(vNum),
+                      icon: const Icon(Icons.local_gas_station),
+                      label: const Text('Add Fuel'),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: () => _showAddBookingDialog(vNum),
+                      icon: const Icon(Icons.luggage),
+                      label: const Text('Add Booking'),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: () => _showAddMaintenanceDialog(vNum),
+                      icon
