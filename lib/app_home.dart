@@ -19,7 +19,6 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
   List<Map<String, dynamic>> maintenanceLogs = [];
 
   bool isDarkMode = false;
-  String currentRole = "Admin"; // Admin / Member
   String filterDate = "";
 
   @override
@@ -228,7 +227,6 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Summary Banner
                     Card(
                       elevation: 3,
                       child: Padding(
@@ -250,7 +248,7 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
                                 Text('Earned: Rs. $totalEarned', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
                                 Text('Advance: Rs. $totalAdvance', style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
                                 Text('Expenses: Rs. $totalExpenses', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-                                Text('Net Profit: Rs. $netBalance', style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
+                                Text('Net: Rs. $netBalance', style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
                               ],
                             )
                           ],
@@ -426,7 +424,9 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       theme: isDarkMode ? ThemeData.dark() : ThemeData.light(),
       home: Scaffold(
         appBar: AppBar(
+          title: const Text('Transport Manager Pro'),
        
