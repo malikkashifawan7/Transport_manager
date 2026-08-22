@@ -1,9 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
 
 void main() {
   runApp(const TransportManagerApp());
@@ -74,39 +71,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return total;
   }
 
-  void _generatePdfReport() async {
-    final pdf = pw.Document();
-    pdf.addPage(
-      pw.Page(
-        build: (pw.Context context) {
-          return pw.Column(
-            cross: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Header(level: 0, child: pw.Text('Transport Manager Pro - Summary Report', style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold))),
-              pw.SizedBox(height: 10),
-              pw.Text('Total Vehicles: ${vehicles.length}'),
-              pw.Text('Total Bookings: ${bookings.length}'),
-              pw.Text('Total Fuel Expenses: Rs. ${_calculateTotalFuelCost().toStringAsFixed(0)}'),
-              pw.SizedBox(height: 20),
-              pw.Text('Vehicles List:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-              pw.Bullet(text: vehicles.map((v) => "${v['number']} - ${v['model']} (${v['driver']})").join('\n')),
-            ],
-          );
-        },
-      ),
-    );
-
-    await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save());
-  }
-
-  void _showAddDialog() {
-    if (_selectedIndex == 1) _showVehicleDialog();
-    else if (_selectedIndex == 2) _showBookingDialog();
-    else if (_selectedIndex == 3) _showFuelDialog();
-    else if (_selectedIndex == 4) _showDriverDialog();
-  }
-
-  void _showVehicleDialog() {
+  void _showAddVehicleDialog() {
     final numCtrl = TextEditingController();
     final modelCtrl = TextEditingController();
     final driverCtrl = TextEditingController();
@@ -114,12 +79,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Add Vehicle'),
+        title: const Text('Add New Vehicle'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(controller: numCtrl, decoration: const InputDecoration(labelText: 'Vehicle Number')),
-            TextField(controller: modelCtrl, decoration: const InputDecoration(labelText: 'Model')),
+            TextField(controller: numCtrl, decoration: const InputDecoration(labelText: 'Vehicle Number (e.g. LES-3514)')),
+            TextField(controller: modelCtrl, decoration: const InputDecoration(labelText: 'Model / Type')),
             TextField(controller: driverCtrl, decoration: const InputDecoration(labelText: 'Assigned Driver')),
           ],
         ),
@@ -128,20 +93,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ElevatedButton(
             onPressed: () {
               if (numCtrl.text.isNotEmpty) {
-                setState(() => vehicles.add({'number': numCtrl.text, 'model': modelCtrl.text, 'driver': driverCtrl.text}));
+                setState(() {
+                  vehicles.add({'number': numCtrl.text.toUpperCase(), 'model': modelCtrl.text, 'driver': driverCtrl.text});
+                });
                 _saveData('vehicles', vehicles);
                 Navigator.pop(context);
               }
             },
-            child: const Text('Save'),
+            child: const Text('Save Vehicle'),
           ),
         ],
       ),
     );
   }
 
-  void _showFuelDialog() {
-    final vehCtrl = TextEditingController();
+  void _showAddFuelDialog([String? defaultVehicle]) {
+    final vehCtrl = TextEditingController(text: defaultVehicle ?? '');
     final litCtrl = TextEditingController();
     final costCtrl = TextEditingController();
     final pumpCtrl = TextEditingController();
@@ -156,7 +123,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             TextField(controller: vehCtrl, decoration: const InputDecoration(labelText: 'Vehicle Number')),
             TextField(controller: litCtrl, decoration: const InputDecoration(labelText: 'Liters'), keyboardType: TextInputType.number),
             TextField(controller: costCtrl, decoration: const InputDecoration(labelText: 'Total Cost (PKR)'), keyboardType: TextInputType.number),
-            TextField(controller: pumpCtrl, decoration: const InputDecoration(labelText: 'Pump Name')),
+            TextField(controller: pumpCtrl, decoration: const InputDecoration(labelText: 'Pump / Vendor')),
           ],
         ),
         actions: [
@@ -164,72 +131,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ElevatedButton(
             onPressed: () {
               if (vehCtrl.text.isNotEmpty && costCtrl.text.isNotEmpty) {
-                setState(() => fuelLogs.add({
-                      'vehicle': vehCtrl.text,
-                      'liters': litCtrl.text,
-                      'cost': costCtrl.text,
-                      'pump': pumpCtrl.text
-                    }));
+                setState(() {
+                  fuelLogs.add({
+                    'vehicle': vehCtrl.text.toUpperCase(),
+                    'liters': litCtrl.text,
+                    'cost': costCtrl.text,
+                    'pump': pumpCtrl.text,
+                    'date': DateTime.now().toString().split(' ')[0]
+                  });
+                });
                 _saveData('fuelLogs', fuelLogs);
                 Navigator.pop(context);
               }
             },
-            child: const Text('Save Entry'),
+            child: const Text('Save Log'),
           ),
         ],
       ),
     );
   }
 
-  void _showDriverDialog() {
-    final nameCtrl = TextEditingController();
-    final phoneCtrl = TextEditingController();
-    final salCtrl = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add Driver'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Driver Name')),
-            TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'Phone Number')),
-            TextField(controller: salCtrl, decoration: const InputDecoration(labelText: 'Monthly Salary')),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () {
-              if (nameCtrl.text.isNotEmpty) {
-                setState(() => drivers.add({'name': nameCtrl.text, 'phone': phoneCtrl.text, 'salary': salCtrl.text}));
-                _saveData('drivers', drivers);
-                Navigator.pop(context);
-              }
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showBookingDialog() {
+  void _showAddBookingDialog([String? defaultVehicle]) {
     final custCtrl = TextEditingController();
     final routeCtrl = TextEditingController();
     final amtCtrl = TextEditingController();
+    final vehCtrl = TextEditingController(text: defaultVehicle ?? '');
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Add Tour / Booking'),
+        title: const Text('Add Booking / Tour'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(controller: custCtrl, decoration: const InputDecoration(labelText: 'Customer Name')),
-            TextField(controller: routeCtrl, decoration: const InputDecoration(labelText: 'Route')),
-            TextField(controller: amtCtrl, decoration: const InputDecoration(labelText: 'Total Amount (PKR)'), keyboardType: TextInputType.number),
+            TextField(controller: vehCtrl, decoration: const InputDecoration(labelText: 'Vehicle Number')),
+            TextField(controller: custCtrl, decoration: const InputDecoration(labelText: 'Customer / Party')),
+            TextField(controller: routeCtrl, decoration: const InputDecoration(labelText: 'Route / Journey')),
+            TextField(controller: amtCtrl, decoration: const InputDecoration(labelText: 'Amount (PKR)'), keyboardType: TextInputType.number),
           ],
         ),
         actions: [
@@ -237,12 +175,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ElevatedButton(
             onPressed: () {
               if (custCtrl.text.isNotEmpty) {
-                setState(() => bookings.add({'customer': custCtrl.text, 'route': routeCtrl.text, 'amount': amtCtrl.text}));
+                setState(() {
+                  bookings.add({
+                    'vehicle': vehCtrl.text.toUpperCase(),
+                    'customer': custCtrl.text,
+                    'route': routeCtrl.text,
+                    'amount': amtCtrl.text,
+                    'date': DateTime.now().toString().split(' ')[0]
+                  });
+                });
                 _saveData('bookings', bookings);
                 Navigator.pop(context);
               }
             },
-            child: const Text('Save'),
+            child: const Text('Save Booking'),
           ),
         ],
       ),
@@ -253,27 +199,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     final List<Widget> pages = [
       buildDashboard(),
-      buildList('Vehicles', vehicles, Icons.directions_bus, 'number', 'model', 'vehicles'),
-      buildList('Bookings', bookings, Icons.luggage, 'customer', 'route', 'bookings'),
+      buildVehiclesList(),
+      buildBookingsList(),
       buildFuelList(),
-      buildList('Drivers', drivers, Icons.person, 'name', 'phone', 'drivers'),
     ];
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Transport Manager Pro', style: TextStyle(fontWeight: FontWeight.bold)),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.picture_as_pdf),
-            onPressed: _generatePdfReport,
-            tooltip: 'Export PDF Report',
-          )
-        ],
       ),
       body: pages[_selectedIndex],
       floatingActionButton: _selectedIndex != 0
           ? FloatingActionButton(
-              onPressed: _showAddDialog,
+              onPressed: () {
+                if (_selectedIndex == 1) _showAddVehicleDialog();
+                else if (_selectedIndex == 2) _showAddBookingDialog();
+                else if (_selectedIndex == 3) _showAddFuelDialog();
+              },
               child: const Icon(Icons.add),
             )
           : null,
@@ -285,7 +227,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           NavigationDestination(icon: Icon(Icons.directions_bus), label: 'Vehicles'),
           NavigationDestination(icon: Icon(Icons.book), label: 'Bookings'),
           NavigationDestination(icon: Icon(Icons.local_gas_station), label: 'Fuel'),
-          NavigationDestination(icon: Icon(Icons.person), label: 'Drivers'),
         ],
       ),
     );
@@ -306,119 +247,198 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 children: [
                   StatItem(title: 'Vehicles', value: '${vehicles.length}'),
                   StatItem(title: 'Bookings', value: '${bookings.length}'),
-                  StatItem(title: 'Fuel Expenses', value: 'Rs. ${_calculateTotalFuelCost().toStringAsFixed(0)}'),
+                  StatItem(title: 'Fuel Costs', value: 'Rs. ${_calculateTotalFuelCost().toStringAsFixed(0)}'),
                 ],
               ),
             ),
           ),
           const SizedBox(height: 20),
-          ElevatedButton.icon(
-            onPressed: _generatePdfReport,
-            icon: const Icon(Icons.print),
-            label: const Text('Generate & Export PDF Report'),
-            style: ElevatedButton.styleFrom(
-              minimumSize: const Size.fromHeight(45),
-              backgroundColor: Colors.indigo,
-              foregroundColor: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 20),
-          const Text('Quick Navigation', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text('Fleet Overview', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 10),
-          ListTile(
-            tileColor: Colors.grey.shade100,
-            leading: const Icon(Icons.directions_bus, color: Colors.blue),
-            title: const Text('Manage Vehicles'),
-            subtitle: Text('${vehicles.length} Registered'),
-            onTap: () => setState(() => _selectedIndex = 1),
-          ),
-          const SizedBox(height: 8),
-          ListTile(
-            tileColor: Colors.grey.shade100,
-            leading: const Icon(Icons.luggage, color: Colors.green),
-            title: const Text('Bookings & Tours'),
-            subtitle: Text('${bookings.length} Registered'),
-            onTap: () => setState(() => _selectedIndex = 2),
-          ),
-          const SizedBox(height: 8),
-          ListTile(
-            tileColor: Colors.grey.shade100,
-            leading: const Icon(Icons.local_gas_station, color: Colors.red),
-            title: const Text('Fuel Logs & Pumps'),
-            subtitle: Text('Total: Rs. ${_calculateTotalFuelCost().toStringAsFixed(0)}'),
-            onTap: () => setState(() => _selectedIndex = 3),
-          ),
-          const SizedBox(height: 8),
-          ListTile(
-            tileColor: Colors.grey.shade100,
-            leading: const Icon(Icons.person, color: Colors.orange),
-            title: const Text('Drivers List'),
-            subtitle: Text('${drivers.length} Registered'),
-            onTap: () => setState(() => _selectedIndex = 4),
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: vehicles.length,
+            itemBuilder: (context, index) {
+              final v = vehicles[index];
+              return Card(
+                child: ListTile(
+                  leading: const CircleAvatar(child: Icon(Icons.directions_bus)),
+                  title: Text(v['number'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: Text('Driver: ${v['driver']}'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => _openVehicleDetail(v),
+                ),
+              );
+            },
           ),
         ],
       ),
     );
   }
 
-  Widget buildFuelList() {
-    if (fuelLogs.isEmpty) {
-      return const Center(child: Text('No Fuel entries added yet. Tap + to add!'));
+  Widget buildVehiclesList() {
+    if (vehicles.isEmpty) {
+      return const Center(child: Text('No Vehicles added yet. Tap + to add!'));
     }
     return ListView.builder(
       padding: const EdgeInsets.all(12.0),
-      itemCount: fuelLogs.length,
+      itemCount: vehicles.length,
       itemBuilder: (context, index) {
-        final item = fuelLogs[index];
+        final item = vehicles[index];
         return Card(
           child: ListTile(
-            leading: const CircleAvatar(backgroundColor: Colors.redAccent, child: Icon(Icons.local_gas_station, color: Colors.white)),
-            title: Text('Vehicle: ${item['vehicle'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text('Qty: ${item['liters']} L | Pump: ${item['pump']}'),
-            trailing: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text('Rs. ${item['cost']}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green, fontSize: 14)),
-                IconButton(
-                  icon: const Icon(Icons.delete, color: Colors.red, size: 18),
-                  onPressed: () {
-                    setState(() => fuelLogs.removeAt(index));
-                    _saveData('fuelLogs', fuelLogs);
-                  },
-                ),
-              ],
+            leading: const CircleAvatar(child: Icon(Icons.directions_bus)),
+            title: Text(item['number'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: Text('Model: ${item['model']} | Driver: ${item['driver']}'),
+            trailing: IconButton(
+              icon: const Icon(Icons.delete, color: Colors.red),
+              onPressed: () {
+                setState(() => vehicles.removeAt(index));
+                _saveData('vehicles', vehicles);
+              },
             ),
+            onTap: () => _openVehicleDetail(item),
           ),
         );
       },
     );
   }
 
-  Widget buildList(String title, List<Map<String, String>> items, IconData icon, String key1, String key2, String storageKey) {
-    if (items.isEmpty) {
-      return Center(child: Text('No $title added yet. Tap + to add!'));
-    }
+  Widget buildBookingsList() {
+    if (bookings.isEmpty) return const Center(child: Text('No Bookings added yet.'));
     return ListView.builder(
       padding: const EdgeInsets.all(12.0),
-      itemCount: items.length,
+      itemCount: bookings.length,
       itemBuilder: (context, index) {
-        final item = items[index];
+        final b = bookings[index];
         return Card(
           child: ListTile(
-            leading: CircleAvatar(child: Icon(icon)),
-            title: Text(item[key1] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text(item[key2] ?? ''),
-            trailing: IconButton(
-              icon: const Icon(Icons.delete, color: Colors.red),
-              onPressed: () {
-                setState(() => items.removeAt(index));
-                _saveData(storageKey, items);
-              },
-            ),
+            leading: const CircleAvatar(child: Icon(Icons.luggage)),
+            title: Text(b['customer'] ?? ''),
+            subtitle: Text('Vehicle: ${b['vehicle']} | Route: ${b['route']}'),
+            trailing: Text('Rs. ${b['amount']}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
           ),
         );
       },
+    );
+  }
+
+  Widget buildFuelList() {
+    if (fuelLogs.isEmpty) return const Center(child: Text('No Fuel Logs added yet.'));
+    return ListView.builder(
+      padding: const EdgeInsets.all(12.0),
+      itemCount: fuelLogs.length,
+      itemBuilder: (context, index) {
+        final f = fuelLogs[index];
+        return Card(
+          child: ListTile(
+            leading: const CircleAvatar(backgroundColor: Colors.redAccent, child: Icon(Icons.local_gas_station, color: Colors.white)),
+            title: Text('Vehicle: ${f['vehicle']}'),
+            subtitle: Text('${f['liters']} L | Pump: ${f['pump']}'),
+            trailing: Text('Rs. ${f['cost']}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+          ),
+        );
+      },
+    );
+  }
+
+  void _openVehicleDetail(Map<String, String> vehicle) {
+    final String vNum = vehicle['number'] ?? '';
+    final vFuel = fuelLogs.where((f) => f['vehicle'] == vNum).toList();
+    final vBookings = bookings.where((b) => b['vehicle'] == vNum).toList();
+
+    double totalFuel = 0;
+    for (var f in vFuel) {
+      totalFuel += double.tryParse(f['cost'] ?? '0') ?? 0;
+    }
+
+    double totalEarnings = 0;
+    for (var b in vBookings) {
+      totalEarnings += double.tryParse(b['amount'] ?? '0') ?? 0;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          appBar: AppBar(title: Text('Vehicle Account: $vNum')),
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.all(12.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Card(
+                  color: Colors.indigo.shade50,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Driver: ${vehicle['driver']}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                            Text('Model: ${vehicle['model']}'),
+                          ],
+                        ),
+                        const Divider(height: 20),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            StatItem(title: 'Earnings', value: 'Rs. ${totalEarnings.toStringAsFixed(0)}'),
+                            StatItem(title: 'Fuel Cost', value: 'Rs. ${totalFuel.toStringAsFixed(0)}'),
+                            StatItem(title: 'Profit', value: 'Rs. ${(totalEarnings - totalFuel).toStringAsFixed(0)}'),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 15),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: () => _showAddFuelDialog(vNum),
+                      icon: const Icon(Icons.local_gas_station),
+                      label: const Text('Add Fuel'),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: () => _showAddBookingDialog(vNum),
+                      icon: const Icon(Icons.luggage),
+                      label: const Text('Add Booking'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                const Text('Fuel Entries', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                vFuel.isEmpty
+                    ? const Padding(padding: EdgeInsets.all(8.0), child: Text('No fuel logs for this vehicle.'))
+                    : Column(
+                        children: vFuel
+                            .map((f) => ListTile(
+                                  title: Text('Rs. ${f['cost']} (${f['liters']} Liters)'),
+                                  subtitle: Text('Pump: ${f['pump']}'),
+                                ))
+                            .toList(),
+                      ),
+                const SizedBox(height: 10),
+                const Text('Bookings & Trips', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                vBookings.isEmpty
+                    ? const Padding(padding: EdgeInsets.all(8.0), child: Text('No bookings for this vehicle.'))
+                    : Column(
+                        children: vBookings
+                            .map((b) => ListTile(
+                                  title: Text('${b['customer']} (${b['route']})'),
+                                  subtitle: Text('Rs. ${b['amount']}'),
+                                ))
+                            .toList(),
+                      ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -432,7 +452,7 @@ class StatItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.indigo)),
+        Text(value, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.indigo)),
         Text(title, style: TextStyle(color: Colors.grey.shade700, fontSize: 12)),
       ],
     );
