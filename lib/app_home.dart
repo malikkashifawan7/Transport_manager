@@ -46,6 +46,54 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
     await prefs.setString(key, json.encode(data));
   }
 
+  // --- Nayi Gari Add Karne Ka Dialog ---
+  void _showAddVehicleDialog() {
+    final numCtrl = TextEditingController();
+    final driverCtrl = TextEditingController();
+    final modelCtrl = TextEditingController();
+    final typeCtrl = TextEditingController(text: 'Truck');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Add New Vehicle 🚐'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: numCtrl, decoration: const InputDecoration(labelText: 'Vehicle Number (e.g. LES-1234)')),
+              TextField(controller: driverCtrl, decoration: const InputDecoration(labelText: 'Driver Name')),
+              TextField(controller: modelCtrl, decoration: const InputDecoration(labelText: 'Model / Type')),
+              TextField(controller: typeCtrl, decoration: const InputDecoration(labelText: 'Fuel Type (Diesel/Petrol)')),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              if (numCtrl.text.isNotEmpty) {
+                final newV = {
+                  'number': numCtrl.text.toUpperCase(),
+                  'driver': driverCtrl.text,
+                  'model': modelCtrl.text,
+                  'type': typeCtrl.text,
+                };
+                setState(() {
+                  vehicles.add(newV);
+                });
+                _saveKey('v2_vehicles', vehicles);
+                Navigator.pop(ctx);
+              }
+            },
+            child: const Text('Save Vehicle'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- Master Ledger Screen ---
   void _openVehicleMasterLedger(Map<String, dynamic> vehicle) {
     final String vNum = vehicle['number'] ?? '';
     
@@ -72,76 +120,83 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
               ),
             ],
           ),
-          body: SingleChildScrollView(
-            padding: const EdgeInsets.all(12.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Card(
-                  color: Theme.of(context).colorScheme.primaryContainer,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
+          body: StatefulBuilder(
+            builder: (BuildContext context, StateSetter setLedgerState) {
+              return SingleChildScrollView(
+                padding: const EdgeInsets.all(12.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Card(
+                      color: Theme.of(context).colorScheme.primaryContainer,
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text('Driver: ${vehicle['driver'] ?? 'Unassigned'}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                Text('Model: ${vehicle['model'] ?? '-'}'),
+                              ],
+                            ),
+                            const Divider(height: 20),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceAround,
+                              children: [
+                                _ledgerStatCell('Total Earned', totalEarned, Colors.green),
+                                _ledgerStatCell('Fuel Cost', totalFuel, Colors.orange),
+                                _ledgerStatCell('Maintenance/Puncture', totalMaint, Colors.red),
+                                _ledgerStatCell('Net Profit', netBalance, netBalance >= 0 ? Colors.blue : Colors.red),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 15),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('Driver: ${vehicle['driver'] ?? 'Unassigned'}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                            Text('Model: ${vehicle['model'] ?? '-'}'),
-                          ],
-                        ),
-                        const Divider(height: 20),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: [
-                            _ledgerStatCell('Total Earned', totalEarned, Colors.green),
-                            _ledgerStatCell('Fuel Cost', totalFuel, Colors.orange),
-                            _ledgerStatCell('Maintenance/Puncture', totalMaint, Colors.red),
-                            _ledgerStatCell('Net Profit', netBalance, netBalance >= 0 ? Colors.blue : Colors.red),
-                          ],
-                        ),
+                        ElevatedButton.icon(onPressed: () => _showAddEntryDialog(vNum, 'booking', setLedgerState), icon: const Icon(Icons.add_road), label: const Text('Add Trip')),
+                        ElevatedButton.icon(onPressed: () => _showAddEntryDialog(vNum, 'fuel', setLedgerState), icon: const Icon(Icons.local_gas_station), label: const Text('Add Fuel')),
+                        ElevatedButton.icon(onPressed: () => _showAddEntryDialog(vNum, 'maint', setLedgerState), icon: const Icon(Icons.build), label: const Text('Add Repair/Puncture')),
                       ],
                     ),
-                  ),
-                ),
-                const SizedBox(height: 15),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    ElevatedButton.icon(onPressed: () => _showAddEntryDialog(vNum, 'booking'), icon: const Icon(Icons.add_road), label: const Text('Add Trip')),
-                    ElevatedButton.icon(onPressed: () => _showAddEntryDialog(vNum, 'fuel'), icon: const Icon(Icons.local_gas_station), label: const Text('Add Fuel')),
-                    ElevatedButton.icon(onPressed: () => _showAddEntryDialog(vNum, 'maint'), icon: const Icon(Icons.build), label: const Text('Add Repair/Puncture')),
+                    const SizedBox(height: 20),
+                    const Text('🚩 Trips & Bookings', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    if (vBookings.isEmpty) const Padding(padding: EdgeInsets.all(8.0), child: Text('No trips recorded yet.')),
+                    ...vBookings.map((b) => Card(
+                          child: ListTile(
+                            title: Text('Customer/Route: ${b['route']}'),
+                            subtitle: Text('Date: ${b['date']}'),
+                            trailing: Text('Rs. ${b['amount']}', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                          ),
+                        )),
+                    const SizedBox(height: 15),
+                    const Text('⛽ Fuel Entries', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    if (vFuel.isEmpty) const Padding(padding: EdgeInsets.all(8.0), child: Text('No fuel entries recorded.')),
+                    ...vFuel.map((f) => Card(
+                          child: ListTile(
+                            title: Text('${f['pump']}'),
+                            subtitle: Text('Date: ${f['date']}'),
+                            trailing: Text('Rs. ${f['cost']}', style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
+                          ),
+                        )),
+                    const SizedBox(height: 15),
+                    const Text('🔧 Maintenance, Punctures & Repairs', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    if (vMaint.isEmpty) const Padding(padding: EdgeInsets.all(8.0), child: Text('No maintenance or puncture entries.')),
+                    ...vMaint.map((m) => Card(
+                          child: ListTile(
+                            title: Text('${m['work']}'),
+                            subtitle: Text('Date: ${m['date']}'),
+                            trailing: Text('Rs. ${m['cost']}', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                          ),
+                        )),
                   ],
                 ),
-                const SizedBox(height: 20),
-                const Text('🚩 Trips & Bookings', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                ...vBookings.map((b) => Card(
-                      child: ListTile(
-                        title: Text('Customer: ${b['customer']} | Route: ${b['route']}'),
-                        subtitle: Text('Date: ${b['date']}'),
-                        trailing: Text('Rs. ${b['amount']}', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-                      ),
-                    )),
-                const SizedBox(height: 15),
-                const Text('⛽ Fuel Entries', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                ...vFuel.map((f) => Card(
-                      child: ListTile(
-                        title: Text('${f['liters']} Liters from ${f['pump']}'),
-                        subtitle: Text('Date: ${f['date']}'),
-                        trailing: Text('Rs. ${f['cost']}', style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
-                      ),
-                    )),
-                const SizedBox(height: 15),
-                const Text('🔧 Maintenance, Punctures & Repairs', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                ...vMaint.map((m) => Card(
-                      child: ListTile(
-                        title: Text('${m['work']}'),
-                        subtitle: Text('Date: ${m['date']}'),
-                        trailing: Text('Rs. ${m['cost']}', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-                      ),
-                    )),
-              ],
-            ),
+              );
+            },
           ),
         ),
       ),
@@ -157,7 +212,7 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
     );
   }
 
-  void _showAddEntryDialog(String vNum, String type) {
+  void _showAddEntryDialog(String vNum, String type, StateSetter setLedgerState) {
     final titleCtrl = TextEditingController();
     final costCtrl = TextEditingController();
 
@@ -168,7 +223,7 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(controller: titleCtrl, decoration: InputDecoration(labelText: type == 'booking' ? 'Route / Customer' : (type == 'fuel' ? 'Liters / Pump Name' : 'Work Detail (e.g. Puncture/Oil)'))),
+            TextField(controller: titleCtrl, decoration: InputDecoration(labelText: type == 'booking' ? 'Route / Customer' : (type == 'fuel' ? 'Pump / Liters Name' : 'Work Detail (e.g. Puncture/Oil)'))),
             TextField(controller: costCtrl, decoration: const InputDecoration(labelText: 'Amount (PKR)'), keyboardType: TextInputType.number),
           ],
         ),
@@ -181,7 +236,7 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
                   'vehicle': vNum,
                   'date': DateTime.now().toString().split(' ')[0],
                   if (type == 'booking') ...{'customer': titleCtrl.text, 'route': titleCtrl.text, 'amount': costCtrl.text},
-                  if (type == 'fuel') ...{'liters': '0', 'pump': titleCtrl.text, 'cost': costCtrl.text},
+                  if (type == 'fuel') ...{'pump': titleCtrl.text, 'cost': costCtrl.text},
                   if (type == 'maint') ...{'work': titleCtrl.text, 'cost': costCtrl.text},
                 };
 
@@ -194,8 +249,9 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
                 _saveKey('v2_bookings', bookings);
                 _saveKey('v2_fuel', fuelLogs);
                 _saveKey('v2_maint', maintenanceLogs);
+                
+                setLedgerState(() {});
                 Navigator.pop(ctx);
-                setState(() {});
               }
             },
             child: const Text('Save Entry'),
@@ -225,7 +281,7 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
                 data: <List<String>>[
                   <String>['Date', 'Type', 'Description', 'Amount (PKR)'],
                   ...m.map((i) => [i['date'].toString(), 'Repair/Puncture', i['work'].toString(), i['cost'].toString()]),
-                  ...f.map((i) => [i['date'].toString(), 'Fuel', '${i['liters']}L - ${i['pump']}', i['cost'].toString()]),
+                  ...f.map((i) => [i['date'].toString(), 'Fuel', i['pump'].toString(), i['cost'].toString()]),
                 ],
               ),
             ],
@@ -242,25 +298,40 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
       appBar: AppBar(
         title: const Text('Transport Manager Pro'),
       ),
-      body: _buildVehiclesTab(),
-    );
-  }
-
-  Widget _buildVehiclesTab() {
-    return ListView.builder(
-      itemCount: vehicles.length,
-      itemBuilder: (ctx, i) {
-        final v = vehicles[i];
-        return Card(
-          child: ListTile(
-            leading: const CircleAvatar(child: Icon(Icons.directions_bus)),
-            title: Text(v['number'] ?? 'No Number', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-            subtitle: Text('Driver: ${v['driver'] ?? 'N/A'} | Type: ${v['type'] ?? 'Truck'}'),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () => _openVehicleMasterLedger(v),
-          ),
-        );
-      },
+      body: vehicles.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.directions_bus, size: 70, color: Colors.grey),
+                  const SizedBox(height: 10),
+                  const Text('No Vehicles Added Yet!', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 5),
+                  const Text('Click the "+" button below to add your first vehicle.', style: TextStyle(color: Colors.grey)),
+                ],
+              ),
+            )
+          : ListView.builder(
+              itemCount: vehicles.length,
+              itemBuilder: (ctx, i) {
+                final v = vehicles[i];
+                return Card(
+                  margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  child: ListTile(
+                    leading: const CircleAvatar(child: Icon(Icons.directions_bus)),
+                    title: Text(v['number'] ?? 'No Number', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                    subtitle: Text('Driver: ${v['driver'] ?? 'N/A'} | Type: ${v['type'] ?? 'Truck'}'),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                    onTap: () => _openVehicleMasterLedger(v),
+                  ),
+                );
+              },
+            ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _showAddVehicleDialog,
+        icon: const Icon(Icons.add),
+        label: const Text('Add Vehicle'),
+      ),
     );
   }
 }
