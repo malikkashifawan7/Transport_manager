@@ -392,16 +392,16 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
   }
 
   // --- SETTINGS AND USER MANUAL ---
-  void _openSettingsDialog() {
+    void _openSettingsDialog() {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Settings & Help Guide'),
-        content: SingleChildScrollView(
+        content: const SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
-            children: const [
+            children: [
               Text('User Guide / Instructions', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               SizedBox(height: 5),
               Text('English:', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -410,7 +410,7 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
               Text('Urdu (رہنمائی):', style: TextStyle(fontWeight: FontWeight.bold)),
               Text('1. نئی گاڑی شامل کرنے کے لیے نیچے + پر کلک کریں۔\n2. گاڑی کے تمام ٹرپ داخل کرنے کے لیے گاڑی کا کارڈ اوپن کریں۔\n3. کسی بھی ٹرپ کو ایڈٹ یا پرنٹ کرنے کے لیے اس پر کلک کریں۔\n4. اوپر والے کلینڈر سے تاریخ کے حساب سے رپورٹ دیکھیں۔'),
               Divider(),
-              Text('Version: 4.0.0 (Enterprise Fleet Sync)', style: TextStyle(fontSize: 12, color: Colors.grey)),
+              Text('Version: 4.0.0', style: TextStyle(fontSize: 12, color: Colors.grey)),
             ],
           ),
         ),
@@ -418,6 +418,9 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
         ],
       ),
+    );
+  }
+
     );
   }
 
