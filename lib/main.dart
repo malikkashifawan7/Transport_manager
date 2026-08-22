@@ -1,3 +1,27 @@
+import 'package:flutter/material.dart';
+import 'dashboard.dart';
+
+void main() {
+  runApp(const TransportManagerApp());
+}
+
+class TransportManagerApp extends StatelessWidget {
+  const TransportManagerApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Transport Manager Pro',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        useMaterial3: true,
+        colorSchemeSeed: Colors.indigo,
+        brightness: Brightness.light,
+      ),
+      home: const DashboardScreen(),
+    );
+  }
+}
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
