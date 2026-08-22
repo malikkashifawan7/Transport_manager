@@ -487,6 +487,7 @@ class _SingleLedgerPageState extends State<SingleLedgerPage> {
               ),
             ),
                         const SizedBox(height: 10),
+                        const SizedBox(height: 10),
             ElevatedButton.icon(
               icon: const Icon(Icons.share),
               label: const Text('Share / Print Single Page Ledger'),
@@ -496,8 +497,5 @@ class _SingleLedgerPageState extends State<SingleLedgerPage> {
         ),
       ),
     );
-  }
-}
-
   }
 }
