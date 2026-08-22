@@ -424,6 +424,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             padding: const EdgeInsets.all(12.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+.start,
               children: [
                 Card(
                   color: Colors.indigo.shade50,
