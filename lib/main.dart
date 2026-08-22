@@ -41,25 +41,17 @@ class _TransportHomePageState extends State<TransportHomePage> {
       'phone': '0302-1234567',
       'cnic': '36302-XXXXXXX-1',
       'type': 'Company/Factory',
-      'fixedSalary': 25000.0,
       'trips': [
-        {'id': 't1', 'title': 'ww (mln)', 'income': 20000.0, 'expense': 8000.0, 'date': '2026-08-22', 'category': 'Factory'}
+        {'id': 't1', 'title': 'Lahore to Multan', 'income': 20000.0, 'expense': 8000.0, 'date': '2026-08-22', 'category': 'Diesel & Toll'},
+        {'id': 't2', 'title': 'Factory Shift', 'income': 15000.0, 'expense': 3000.0, 'date': '2026-08-21', 'category': 'Local'}
       ],
       'driverPayments': [
-        {'id': 'p1', 'amount': 5000.0, 'note': 'beti k leay', 'date': '2026-08-22'}
+        {'id': 'p1', 'amount': 5000.0, 'note': 'Beti k leay Advance', 'date': '2026-08-22'}
       ],
       'oilChangeKm': 45000,
       'nextOilChangeKm': 50000,
       'fuelAverage': 12.5,
     }
-  ];
-
-  List<Map<String, dynamic>> recycleBin = [];
-
-  List<Map<String, dynamic>> fuelRates = [
-    {'location': 'Lahore', 'petrol': 275.50, 'diesel': 282.00, 'updated': '2026-08-20', 'changed': true},
-    {'location': 'Multan', 'petrol': 276.00, 'diesel': 283.50, 'updated': '2026-08-21', 'changed': false},
-    {'location': 'Karachi', 'petrol': 274.00, 'diesel': 280.00, 'updated': '2026-08-15', 'changed': false},
   ];
 
   @override
@@ -116,16 +108,6 @@ class _TransportHomePageState extends State<TransportHomePage> {
             onPressed: _showTotalCombinedLedger,
           ),
           IconButton(
-            icon: const Icon(Icons.local_gas_station),
-            tooltip: 'Fuel Rates',
-            onPressed: _showFuelRatesDialog,
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete_sweep),
-            tooltip: 'Recycle Bin',
-            onPressed: _openRecycleBin,
-          ),
-          IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () => setState(() => isLoggedIn = false),
           ),
@@ -141,16 +123,7 @@ class _TransportHomePageState extends State<TransportHomePage> {
                   leading: const Icon(Icons.directions_bus, size: 36, color: Colors.blue),
                   title: Text('${vehicles[i]['number']} (${vehicles[i]['type']})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
                   subtitle: Text('Driver: ${vehicles[i]['driver']} | Tel: ${vehicles[i]['phone']}'),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.edit, color: Colors.orange),
-                        onPressed: () => _editVehicleDialog(i),
-                      ),
-                      const Icon(Icons.arrow_forward_ios, size: 16),
-                    ],
-                  ),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                   onTap: () => _openGariSinglePageLedger(vehicles[i]),
                 ),
               ),
@@ -161,8 +134,6 @@ class _TransportHomePageState extends State<TransportHomePage> {
       ),
     );
   }
-
-  // --- NEW FEATURES DIALOGS ---
 
   void _showAllDriversDialog() {
     showDialog(
@@ -186,9 +157,7 @@ class _TransportHomePageState extends State<TransportHomePage> {
             },
           ),
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close'))
-        ],
+        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close'))],
       ),
     );
   }
@@ -213,20 +182,15 @@ class _TransportHomePageState extends State<TransportHomePage> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('ALL VEHICLES TOTAL LEDGER'),
+        title: const Text('ALL VEHICLES COMBINED LEDGER'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ListTile(
-              title: const Text('Total Active Vehicles'),
-              trailing: Text('${vehicles.length}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            ),
+            Text('Total Vehicles: ${vehicles.length}', style: const TextStyle(fontWeight: FontWeight.bold)),
             const Divider(),
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Total Kiraya (All):'), Text('Rs. $grandTotalKiraya', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold))]),
-            const SizedBox(height: 5),
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Total Kharcha (All):'), Text('Rs. $grandTotalKharcha', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold))]),
-            const SizedBox(height: 5),
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Total Driver Paid (All):'), Text('Rs. $grandTotalDriverPaid', style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold))]),
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Total Kiraya:'), Text('Rs. $grandTotalKiraya', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold))]),
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Total Kharcha:'), Text('Rs. $grandTotalKharcha', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold))]),
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Total Driver Paid:'), Text('Rs. $grandTotalDriverPaid', style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold))]),
             const Divider(),
             Container(
               padding: const EdgeInsets.all(10),
@@ -234,75 +198,14 @@ class _TransportHomePageState extends State<TransportHomePage> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('GRAND NET PROFIT:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text('NET PROFIT:', style: TextStyle(fontWeight: FontWeight.bold)),
                   Text('Rs. $grandNetProfit', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 18)),
                 ],
               ),
             )
           ],
         ),
-        actions: [
-          IconButton(icon: const Icon(Icons.print), onPressed: () {}),
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close'))
-        ],
-      ),
-    );
-  }
-
-  void _showFuelRatesDialog() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Location Wise Fuel Rates'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: fuelRates.map((f) {
-            return ListTile(
-              tileColor: f['changed'] ? Colors.yellow.shade100 : null,
-              title: Text('${f['location']} ${f['changed'] ? "(Rate Changed!)" : ""}'),
-              subtitle: Text('Petrol: Rs.${f['petrol']} | Diesel: Rs.${f['diesel']}\nUpdated: ${f['updated']}'),
-            );
-          }).toList(),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close'))
-        ],
-      ),
-    );
-  }
-
-  void _openRecycleBin() {
-    showModalBottomSheet(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setModalState) => Container(
-          padding: const EdgeInsets.all(15),
-          child: Column(
-            children: [
-              const Text('Recycle Bin (Deleted Items)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              Expanded(
-                child: recycleBin.isEmpty
-                    ? const Center(child: Text('Recycle bin is empty'))
-                    : ListView.builder(
-                        itemCount: recycleBin.length,
-                        itemBuilder: (c, idx) => ListTile(
-                          title: Text(recycleBin[idx]['number'] ?? 'Deleted Item'),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.restore),
-                            onPressed: () {
-                              setState(() {
-                                vehicles.add(recycleBin[idx]);
-                                recycleBin.removeAt(idx);
-                              });
-                              setModalState(() {});
-                            },
-                          ),
-                        ),
-                      ),
-              )
-            ],
-          ),
-        ),
+        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close'))],
       ),
     );
   }
@@ -311,33 +214,18 @@ class _TransportHomePageState extends State<TransportHomePage> {
     final numCtrl = TextEditingController();
     final driverCtrl = TextEditingController();
     final phoneCtrl = TextEditingController();
-    final cnicCtrl = TextEditingController();
-    String selectedType = 'Company/Factory';
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Add New Vehicle & Driver'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(controller: numCtrl, decoration: const InputDecoration(labelText: 'Vehicle Number')),
-              TextField(controller: driverCtrl, decoration: const InputDecoration(labelText: 'Driver Name')),
-              TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'Driver Phone Number')),
-              TextField(controller: cnicCtrl, decoration: const InputDecoration(labelText: 'Driver CNIC / License')),
-              DropdownButton<String>(
-                value: selectedType,
-                isExpanded: true,
-                items: ['Company/Factory', 'School', 'Tour/Private'].map((String value) {
-                  return DropdownMenuItem<String>(value: value, child: Text(value));
-                }).toList(),
-                onChanged: (val) {
-                  if (val != null) selectedType = val;
-                },
-              )
-            ],
-          ),
+        title: const Text('Add New Vehicle'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: numCtrl, decoration: const InputDecoration(labelText: 'Vehicle Number')),
+            TextField(controller: driverCtrl, decoration: const InputDecoration(labelText: 'Driver Name')),
+            TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'Phone Number')),
+          ],
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
@@ -350,14 +238,11 @@ class _TransportHomePageState extends State<TransportHomePage> {
                     'number': numCtrl.text,
                     'driver': driverCtrl.text,
                     'phone': phoneCtrl.text,
-                    'cnic': cnicCtrl.text,
-                    'type': selectedType,
-                    'fixedSalary': 25000.0,
+                    'cnic': 'N/A',
+                    'type': 'Company/Factory',
                     'trips': [],
                     'driverPayments': [],
-                    'oilChangeKm': 0,
-                    'nextOilChangeKm': 5000,
-                    'fuelAverage': 10.0,
+                    'nextOilChangeKm': 50000,
                   });
                 });
                 Navigator.pop(ctx);
@@ -370,48 +255,10 @@ class _TransportHomePageState extends State<TransportHomePage> {
     );
   }
 
-  void _editVehicleDialog(int index) {
-    final driverCtrl = TextEditingController(text: vehicles[index]['driver']);
-    final phoneCtrl = TextEditingController(text: vehicles[index]['phone']);
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Edit ${vehicles[index]['number']}'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: driverCtrl, decoration: const InputDecoration(labelText: 'Driver Name')),
-            TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'Phone Number')),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              setState(() {
-                recycleBin.add(vehicles[index]);
-                vehicles.removeAt(index);
-              });
-              Navigator.pop(ctx);
-            },
-            child: const Text('Delete to Bin', style: TextStyle(color: Colors.red)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              setState(() {
-                vehicles[index]['driver'] = driverCtrl.text;
-                vehicles[index]['phone'] = phoneCtrl.text;
-              });
-              Navigator.pop(ctx);
-            },
-            child: const Text('Update'),
-          )
-        ],
-      ),
-    );
-  }
-
   void _openGariSinglePageLedger(Map<String, dynamic> gari) {
-    Navigator.push(context, MaterialPageRoute(builder: (ctx) => SingleLedgerPage(gari: gari)));
+    Navigator.push(context, MaterialPageRoute(builder: (ctx) => SingleLedgerPage(gari: gari))).then((_) {
+      setState(() {});
+    });
   }
 }
 
@@ -424,6 +271,110 @@ class SingleLedgerPage extends StatefulWidget {
 }
 
 class _SingleLedgerPageState extends State<SingleLedgerPage> {
+  void _addTripDialog() {
+    final titleCtrl = TextEditingController();
+    final incomeCtrl = TextEditingController();
+    final expenseCtrl = TextEditingController();
+    String category = 'Diesel';
+    DateTime selectedDate = DateTime.now();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDlgState) => AlertDialog(
+          title: const Text('Add Trip / Route Entry'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(controller: titleCtrl, decoration: const InputDecoration(labelText: 'Route / Title (e.g. LHR to MLN)')),
+                TextField(controller: incomeCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Income / Kiraya (Rs.)')),
+                TextField(controller: expenseCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Expense / Fuel/Toll (Rs.)')),
+                const SizedBox(height: 10),
+                DropdownButton<String>(
+                  value: category,
+                  isExpanded: true,
+                  items: ['Diesel', 'Maintenance/Repairs', 'Toll Tax / Food', 'Other'].map((String val) {
+                    return DropdownMenuItem<String>(value: val, child: Text(val));
+                  }).toList(),
+                  onChanged: (v) => setDlgState(() => category = v!),
+                ),
+                ListTile(
+                  title: Text('Date: ${selectedDate.toString().split(' ')[0]}'),
+                  trailing: const Icon(Icons.calendar_today),
+                  onTap: () async {
+                    DateTime? picked = await showDatePicker(
+                      context: context,
+                      initialDate: selectedDate,
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime(2030),
+                    );
+                    if (picked != null) setDlgState(() => selectedDate = picked);
+                  },
+                )
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  widget.gari['trips'].add({
+                    'id': DateTime.now().toString(),
+                    'title': titleCtrl.text.isEmpty ? 'Trip' : titleCtrl.text,
+                    'income': double.tryParse(incomeCtrl.text) ?? 0.0,
+                    'expense': double.tryParse(expenseCtrl.text) ?? 0.0,
+                    'category': category,
+                    'date': selectedDate.toString().split(' ')[0],
+                  });
+                });
+                Navigator.pop(ctx);
+              },
+              child: const Text('Add Entry'),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _addDriverPaymentDialog() {
+    final amountCtrl = TextEditingController();
+    final noteCtrl = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Add Driver Payment / Advance'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: amountCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Amount Paid (Rs.)')),
+            TextField(controller: noteCtrl, decoration: const InputDecoration(labelText: 'Note / Reason (e.g. Khuraak, Salary)')),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                widget.gari['driverPayments'].add({
+                  'id': DateTime.now().toString(),
+                  'amount': double.tryParse(amountCtrl.text) ?? 0.0,
+                  'note': noteCtrl.text.isEmpty ? 'Advance' : noteCtrl.text,
+                  'date': DateTime.now().toString().split(' ')[0],
+                });
+              });
+              Navigator.pop(ctx);
+            },
+            child: const Text('Save Payment'),
+          )
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     double totalKiraya = 0;
@@ -442,20 +393,12 @@ class _SingleLedgerPageState extends State<SingleLedgerPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('${widget.gari['number']} Ledger'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.print),
-            tooltip: 'Print Ledger',
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Preparing PDF for Printing...')));
-            },
-          )
-        ],
+        title: Text('${widget.gari['number']} Live Ledger'),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(12),
         child: Column(
+          crossAxisAlignment: CrossAlignment.start,
           children: [
             Card(
               color: Colors.blue.shade50,
@@ -464,21 +407,22 @@ class _SingleLedgerPageState extends State<SingleLedgerPage> {
                 child: Column(
                   children: [
                     Text('RASHID TOURS - ${widget.gari['number']}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                    Text('Type: ${widget.gari['type']} | Driver: ${widget.gari['driver']} (${widget.gari['phone']})'),
-                    Text('Oil Change Due At: ${widget.gari['nextOilChangeKm']} KM', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                    Text('Driver: ${widget.gari['driver']} (${widget.gari['phone']})'),
                     const Divider(),
-                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Total Kiraya:'), Text('Rs. $totalKiraya', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold))]),
-                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Total Kharcha (Fuel/Misc):'), Text('Rs. $totalKharcha', style: const TextStyle(color: Colors.red))]),
-                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Driver Advance/Paid:'), Text('Rs. $totalDriverPaid', style: const TextStyle(color: Colors.orange))]),
+                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Total Kiraya (Income):'), Text('Rs. $totalKiraya', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 16))]),
+                    const SizedBox(height: 4),
+                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Total Vehicle Kharcha:'), Text('Rs. $totalKharcha', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 16))]),
+                    const SizedBox(height: 4),
+                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Driver Advance/Khuraak:'), Text('Rs. $totalDriverPaid', style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 16))]),
                     const Divider(),
                     Container(
-                      padding: const EdgeInsets.all(8),
+                      padding: const EdgeInsets.all(10),
                       color: Colors.green.shade100,
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           const Text('SAFI BACHAT (NET PROFIT):', style: TextStyle(fontWeight: FontWeight.bold)),
-                          Text('Rs. $netProfit', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 16)),
+                          Text('Rs. $netProfit', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 18)),
                         ],
                       ),
                     )
@@ -486,13 +430,81 @@ class _SingleLedgerPageState extends State<SingleLedgerPage> {
                 ),
               ),
             ),
-                        const SizedBox(height: 10),
-                        const SizedBox(height: 10),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.share),
-              label: const Text('Share / Print Single Page Ledger'),
-              onPressed: () {},
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white),
+                    icon: const Icon(Icons.add_road),
+                    label: const Text('+ Add Trip'),
+                    onPressed: _addTripDialog,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.orange, foregroundColor: Colors.white),
+                    icon: const Icon(Icons.person_add),
+                    label: const Text('+ Driver Kharcha'),
+                    onPressed: _addDriverPaymentDialog,
+                  ),
+                ),
+              ],
             ),
+            const SizedBox(height: 15),
+            const Text('Trips & Routes Ledger:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            widget.gari['trips'].isEmpty
+                ? const Padding(padding: EdgeInsets.all(10), child: Text('Koi trip add nahi hua.'))
+                : ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: widget.gari['trips'].length,
+                    itemBuilder: (c, idx) {
+                      var trip = widget.gari['trips'][idx];
+                      return Card(
+                        child: ListTile(
+                          title: Text('${trip['title']} (${trip['category']})', style: const TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: Text('Date: ${trip['date']}\nIncome: Rs.${trip['income']} | Expense: Rs.${trip['expense']}'),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            onPressed: () {
+                              setState(() {
+                                widget.gari['trips'].removeAt(idx);
+                              });
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+            const SizedBox(height: 15),
+            const Text('Driver Advance / Khuraak Ledger:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            widget.gari['driverPayments'].isEmpty
+                ? const Padding(padding: EdgeInsets.all(10), child: Text('Driver ko koi advance nahi diya gaya.'))
+                : ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: widget.gari['driverPayments'].length,
+                    itemBuilder: (c, idx) {
+                    var p = widget.gari['driverPayments'][idx];
+                      return Card(
+                        color: Colors.orange.shade50,
+                        child: ListTile(
+                          title: Text('Rs. ${p['amount']} - ${p['note']}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: Text('Date: ${p['date']}'),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                                                        onPressed: () {
+                              setState(() {
+                                widget.gari['driverPayments'].removeAt(idx);
+                              });
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                  ),
           ],
         ),
       ),
