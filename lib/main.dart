@@ -399,7 +399,6 @@ class _SingleLedgerPageState extends State<SingleLedgerPage> {
         padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-: CrossAlignment.start,
           children: [
             Card(
               color: Colors.blue.shade50,
@@ -488,27 +487,4 @@ class _SingleLedgerPageState extends State<SingleLedgerPage> {
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: widget.gari['driverPayments'].length,
                     itemBuilder: (c, idx) {
-                    var p = widget.gari['driverPayments'][idx];
-                      return Card(
-                        color: Colors.orange.shade50,
-                        child: ListTile(
-                          title: Text('Rs. ${p['amount']} - ${p['note']}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                          subtitle: Text('Date: ${p['date']}'),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                                                        onPressed: () {
-                              setState(() {
-                                widget.gari['driverPayments'].removeAt(idx);
-                              });
-                            },
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-          ],
-        ),
-      ),
-    );
-  }
-}
+                      var p = widge
