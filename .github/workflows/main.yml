@@ -28,6 +28,11 @@ jobs:
         run: |
           flutter create . --project-name transport_manager --platforms=android --org=com.transporthisab
 
+      - name: Update Android SDK versions
+        run: |
+          sed -i 's/compileSdkVersion .*/compileSdkVersion 34/g' android/app/build.gradle || true
+          sed -i 's/targetSdkVersion .*/targetSdkVersion 34/g' android/app/build.gradle || true
+
       - name: Install Dependencies
         run: flutter pub get
 
