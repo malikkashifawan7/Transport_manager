@@ -1,6 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 
 void main() {
   runApp(const TransportManagerApp());
@@ -37,7 +40,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   List<Map<String, String>> drivers = [];
   List<Map<String, String>> bookings = [];
   List<Map<String, String>> fuelLogs = [];
-  List<Map<String, String>> accounts = [];
 
   @override
   void initState() {
@@ -56,8 +58,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           json.decode(prefs.getString('bookings') ?? '[]').map((e) => Map<String, String>.from(e)));
       fuelLogs = List<Map<String, String>>.from(
           json.decode(prefs.getString('fuelLogs') ?? '[]').map((e) => Map<String, String>.from(e)));
-      accounts = List<Map<String, String>>.from(
-          json.decode(prefs.getString('accounts') ?? '[]').map((e) => Map<String, String>.from(e)));
     });
   }
 
@@ -72,6 +72,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
       total += double.tryParse(log['cost'] ?? '0') ?? 0;
     }
     return total;
+  }
+
+  void _generatePdfReport() async {
+    final pdf = pw.Document();
+    pdf.addPage(
+      pw.Page(
+        build: (pw.Context context) {
+          return pw.Column(
+            cross: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Header(level: 0, child: pw.Text('Transport Manager Pro - Summary Report', style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold))),
+              pw.SizedBox(height: 10),
+              pw.Text('Total Vehicles: ${vehicles.length}'),
+              pw.Text('Total Bookings: ${bookings.length}'),
+              pw.Text('Total Fuel Expenses: Rs. ${_calculateTotalFuelCost().toStringAsFixed(0)}'),
+              pw.SizedBox(height: 20),
+              pw.Text('Vehicles List:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+              pw.Bullet(text: vehicles.map((v) => "${v['number']} - ${v['model']} (${v['driver']})").join('\n')),
+            ],
+          );
+        },
+      ),
+    );
+
+    await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save());
   }
 
   void _showAddDialog() {
@@ -129,9 +154,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(controller: vehCtrl, decoration: const InputDecoration(labelText: 'Vehicle Number')),
-            TextField(controller: litCtrl, decoration: const InputDecoration(labelText: 'Liters / Quantity'), keyboardType: TextInputType.number),
+            TextField(controller: litCtrl, decoration: const InputDecoration(labelText: 'Liters'), keyboardType: TextInputType.number),
             TextField(controller: costCtrl, decoration: const InputDecoration(labelText: 'Total Cost (PKR)'), keyboardType: TextInputType.number),
-            TextField(controller: pumpCtrl, decoration: const InputDecoration(labelText: 'Pump / Vendor Name')),
+            TextField(controller: pumpCtrl, decoration: const InputDecoration(labelText: 'Pump Name')),
           ],
         ),
         actions: [
@@ -202,8 +227,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(controller: custCtrl, decoration: const InputDecoration(labelText: 'Customer / Party Name')),
-            TextField(controller: routeCtrl, decoration: const InputDecoration(labelText: 'Route / Journey')),
+            TextField(controller: custCtrl, decoration: const InputDecoration(labelText: 'Customer Name')),
+            TextField(controller: routeCtrl, decoration: const InputDecoration(labelText: 'Route')),
             TextField(controller: amtCtrl, decoration: const InputDecoration(labelText: 'Total Amount (PKR)'), keyboardType: TextInputType.number),
           ],
         ),
@@ -237,6 +262,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Transport Manager Pro', style: TextStyle(fontWeight: FontWeight.bold)),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.picture_as_pdf),
+            onPressed: _generatePdfReport,
+            tooltip: 'Export PDF Report',
+          )
+        ],
       ),
       body: pages[_selectedIndex],
       floatingActionButton: _selectedIndex != 0
@@ -277,6 +309,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   StatItem(title: 'Fuel Expenses', value: 'Rs. ${_calculateTotalFuelCost().toStringAsFixed(0)}'),
                 ],
               ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton.icon(
+            onPressed: _generatePdfReport,
+            icon: const Icon(Icons.print),
+            label: const Text('Generate & Export PDF Report'),
+            style: ElevatedButton.styleFrom(
+              minimumSize: const Size.fromHeight(45),
+              backgroundColor: Colors.indigo,
+              foregroundColor: Colors.white,
             ),
           ),
           const SizedBox(height: 20),
