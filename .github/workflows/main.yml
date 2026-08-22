@@ -21,17 +21,19 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.22.0'
+          flutter-version: '3.19.6'
           channel: 'stable'
 
       - name: Recreate Android Project Setup
         run: |
           flutter create . --project-name transport_manager --platforms=android --org=com.transporthisab
 
-      - name: Fix Android Min/Compile SDK Versions
+      - name: Configure Android Gradle Settings
         run: |
           sed -i 's/minSdkVersion .*/minSdkVersion 21/g' android/app/build.gradle || true
           sed -i 's/compileSdkVersion .*/compileSdkVersion 34/g' android/app/build.gradle || true
+          sed -i 's/flutter.minSdkVersion/21/g' android/app/build.gradle || true
+          sed -i 's/flutter.compileSdkVersion/34/g' android/app/build.gradle || true
 
       - name: Install Dependencies
         run: flutter pub get
