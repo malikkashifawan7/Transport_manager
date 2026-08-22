@@ -24,10 +24,8 @@ jobs:
           flutter-version: '3.22.x'
           channel: 'stable'
 
-      - name: Create Android Files       - name: Create Android Files
+      - name: Create Android Files
         run: flutter create . --project-name=transport_manager --platforms=android
-        
-        run: flutter create . --platforms=android
 
       - name: Get Dependencies
         run: flutter pub get
@@ -40,4 +38,3 @@ jobs:
         with:
           name: release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
-          
