@@ -23,7 +23,8 @@ jobs:
       with:
         flutter-version: '3.22.x'
         channel: 'stable'
-
+      - name: Create Android Files
+        run: flutter create . --platforms=android
     - name: Get Dependencies
       run: flutter pub get
 
