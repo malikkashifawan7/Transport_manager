@@ -1,9 +1,7 @@
-name: Build Android APK
+name: Build Transport Manager Pro
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
     branches: [ main ]
 
 jobs:
@@ -11,31 +9,32 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set up Java JDK
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: Set up Flutter
+      - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
 
-      - name: Recreate Android Project Files
-        run: flutter create . --platforms=android
+      - name: Rebuild Android Files
+        run: flutter create . --platforms=android,windows
 
-      - name: Install Dependencies
+      - name: Fetch Dependencies
         run: flutter pub get
 
       - name: Build Optimized Release APK
-        run: flutter build apk --release
+        run: flutter build apk --release --split-per-abi
 
-      - name: Upload APK
+      - name: Upload Release Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-release
-          path: build/app/outputs/flutter-apk/app-release.apk
+          name: TransportManagerPro-Release
+          path: build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+          
