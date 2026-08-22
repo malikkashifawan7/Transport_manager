@@ -24,6 +24,36 @@ class TransportManagerApp extends StatelessWidget {
   }
 }
 
+class StatItem extends StatelessWidget {
+  final String title;
+  final String value;
+  const StatItem({super.key, required this.title, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            color: Colors.indigo,
+          ),
+        ),
+        Text(
+          title,
+          style: TextStyle(
+            color: Colors.grey.shade700,
+            fontSize: 11,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
@@ -492,19 +522,4 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ],
                     ),
                   ),
-                ),
-                const SizedBox(height: 15),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  alignment: WrapAlignment.center,
-                  children: [
-                    ElevatedButton.icon(
-                      onPressed: () => _showAddFuelDialog(vNum),
-                      icon: const Icon(Icons.local_gas_station),
-                      label: const Text('Add Fuel'),
-                    ),
-                    ElevatedButton.icon(
-                      onPressed: () => _showAddBookingDialog(vNum),
-                      icon: const Icon(Icons.luggage),
-                      lab
+                )
