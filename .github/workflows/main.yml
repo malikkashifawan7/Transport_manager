@@ -28,9 +28,20 @@ jobs:
         run: |
           flutter create . --project-name transport_manager --platforms=android --org=com.transporthisab
 
+      - name: Fix Android Min/Compile SDK Versions
+        run: |
+          sed -i 's/minSdkVersion .*/minSdkVersion 21/g' android/app/build.gradle || true
+          sed -i 's/compileSdkVersion .*/compileSdkVersion 34/g' android/app/build.gradle || true
+
       - name: Install Dependencies
         run: flutter pub get
 
       - name: Build APK
-        run: flutter build apk --debug --verbose
-        
+        run: flutter build apk --debug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          
