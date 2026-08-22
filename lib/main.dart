@@ -1,9 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
 
 void main() {
   runApp(const TransportManagerApp());
@@ -418,44 +415,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  void _exportVehiclePdf(Map<String, String> vehicle, List<Map<String, String>> vFuel, List<Map<String, String>> vBookings, List<Map<String, String>> vMaint, double earnings, double fuelCost, double maintCost) async {
-    final pdf = pw.Document();
-    final vNum = vehicle['number'] ?? '';
-
-    pdf.addPage(
-      pw.Page(
-        build: (pw.Context context) {
-          return pw.Column(
-            cross: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Header(level: 0, child: pw.Text('Vehicle Ledger Account: $vNum', style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold))),
-              pw.SizedBox(height: 5),
-              pw.Text('Driver Name: ${vehicle['driver'] ?? 'N/A'} | Phone: ${vehicle['phone'] ?? 'N/A'}'),
-              pw.Text('Model: ${vehicle['model'] ?? 'N/A'}'),
-              pw.SizedBox(height: 10),
-              pw.Text('Financial Summary:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-              pw.Text('Total Earnings: Rs. ${earnings.toStringAsFixed(0)}'),
-              pw.Text('Total Fuel Expenses: Rs. ${fuelCost.toStringAsFixed(0)}'),
-              pw.Text('Total Maintenance: Rs. ${maintCost.toStringAsFixed(0)}'),
-              pw.Text('Net Profit: Rs. ${(earnings - fuelCost - maintCost).toStringAsFixed(0)}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-              pw.SizedBox(height: 15),
-              pw.Text('Bookings History:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-              pw.Bullet(text: vBookings.map((b) => "${b['date']}: ${b['customer']} (${b['phone']}) - ${b['route']} -> Rs. ${b['amount']}").join('\n')),
-              pw.SizedBox(height: 10),
-              pw.Text('Fuel History:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-              pw.Bullet(text: vFuel.map((f) => "${f['date']}: ${f['liters']}L @ ${f['pump']} -> Rs. ${f['cost']}").join('\n')),
-              pw.SizedBox(height: 10),
-              pw.Text('Maintenance History:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-              pw.Bullet(text: vMaint.map((m) => "${m['date']}: ${m['work']} -> Rs. ${m['cost']}").join('\n')),
-            ],
-          );
-        },
-      ),
-    );
-
-    await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save());
-  }
-
   void _openVehicleDetail(Map<String, String> vehicle, int vIndex) {
     final String vNum = vehicle['number'] ?? '';
     final vFuel = fuelLogs.where((f) => f['vehicle'] == vNum).toList();
@@ -490,8 +449,60 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   Navigator.pop(context);
                   _showAddVehicleDialog(editVehicle: vehicle, editIndex: vIndex);
                 },
-                tooltip: 'Edit Vehicle Info',
               ),
-              IconButton(
-                icon: const Icon(Icons.print),
-                onPressed: () => _exportVehiclePdf(vehicle, vFuel, vBookings, vMaint, totalEarnings, totalFuel, total
+            ],
+          ),
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.all(12.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Card(
+                  color: Colors.indigo.shade50,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Driver: ${vehicle['driver'] ?? 'N/A'}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                            Text('Phone: ${vehicle['phone'] ?? 'N/A'}'),
+                          ],
+                        ),
+                        const SizedBox(height: 5),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Model: ${vehicle['model'] ?? 'N/A'}'),
+                          ],
+                        ),
+                        const Divider(height: 20),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            StatItem(title: 'Earnings', value: 'Rs. ${totalEarnings.toStringAsFixed(0)}'),
+                            StatItem(title: 'Fuel', value: 'Rs. ${totalFuel.toStringAsFixed(0)}'),
+                            StatItem(title: 'Maintenance', value: 'Rs. ${totalMaint.toStringAsFixed(0)}'),
+                            StatItem(title: 'Profit', value: 'Rs. ${(totalEarnings - totalFuel - totalMaint).toStringAsFixed(0)}'),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 15),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  alignment: WrapAlignment.center,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: () => _showAddFuelDialog(vNum),
+                      icon: const Icon(Icons.local_gas_station),
+                      label: const Text('Add Fuel'),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: () => _showAddBookingDialog(vNum),
+                      icon: const Icon(Icons.luggage),
+                      label: const Text('Add Booking
