@@ -25,10 +25,13 @@ jobs:
         with:
           channel: 'stable'
 
+      - name: Recreate Android Project Files
+        run: flutter create . --platforms=android
+
       - name: Install Dependencies
         run: flutter pub get
 
-      - name: Build Release APK
+      - name: Build Optimized Release APK
         run: flutter build apk --release
 
       - name: Upload APK
@@ -36,4 +39,3 @@ jobs:
         with:
           name: app-release
           path: build/app/outputs/flutter-apk/app-release.apk
-          
