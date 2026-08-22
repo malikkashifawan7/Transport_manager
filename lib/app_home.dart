@@ -46,7 +46,6 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
     await prefs.setString(key, json.encode(data));
   }
 
-  // --- One-Click Complete Vehicle Ledger Screen ---
   void _openVehicleMasterLedger(Map<String, dynamic> vehicle) {
     final String vNum = vehicle['number'] ?? '';
     
@@ -78,7 +77,6 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Summary Card
                 Card(
                   color: Theme.of(context).colorScheme.primaryContainer,
                   child: Padding(
@@ -107,8 +105,6 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
                   ),
                 ),
                 const SizedBox(height: 15),
-
-                // Quick Action Buttons
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
@@ -118,8 +114,6 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
                   ],
                 ),
                 const SizedBox(height: 20),
-
-                // Trips & Revenue List
                 const Text('🚩 Trips & Bookings', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 ...vBookings.map((b) => Card(
                       child: ListTile(
@@ -129,8 +123,6 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
                       ),
                     )),
                 const SizedBox(height: 15),
-
-                // Fuel Ledger
                 const Text('⛽ Fuel Entries', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 ...vFuel.map((f) => Card(
                       child: ListTile(
@@ -140,8 +132,6 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
                       ),
                     )),
                 const SizedBox(height: 15),
-
-                // Maintenance & Puncture
                 const Text('🔧 Maintenance, Punctures & Repairs', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 ...vMaint.map((m) => Card(
                       child: ListTile(
@@ -167,7 +157,6 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
     );
   }
 
-  // --- Direct Entry Dialog for Vehicle ---
   void _showAddEntryDialog(String vNum, String type) {
     final titleCtrl = TextEditingController();
     final costCtrl = TextEditingController();
@@ -216,7 +205,6 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
     );
   }
 
-  // --- PDF Vehicle Khata Generator ---
   Future<void> _printVehicleLedgerPdf(String vNum, Map<String, dynamic> v, List b, List f, List m, double earn, double fuel, double maint, double net) async {
     final pdf = pw.Document();
     pdf.addPage(
@@ -224,7 +212,7 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
         pageFormat: PdfPageFormat.a4,
         build: (pw.Context context) {
           return pw.Column(
-            cross: pw.CrossAxisAlignment.start,
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
               pw.Header(level: 0, child: pw.Text("Master Vehicle Ledger - $vNum", style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold))),
               pw.Text("Driver: ${v['driver'] ?? 'N/A'} | Model: ${v['model'] ?? 'N/A'}"),
@@ -248,7 +236,6 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
     await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save());
   }
 
-  // --- App Main Screens ---
   @override
   Widget build(BuildContext context) {
     return Scaffold(
