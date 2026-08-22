@@ -1,5 +1,5 @@
 name: transport_hisab
-description: Offline-first transport fleet management.
+description: Offline-first transport fleet management app
 publish_to: "none"
 version: 1.0.0+1
 environment:
@@ -8,5 +8,7 @@ dependencies:
   flutter:
     sdk: flutter
   shared_preferences: ^2.3.2
+
 flutter:
   uses-material-design: true
+  
