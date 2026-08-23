@@ -169,7 +169,7 @@ class _EnterpriseMainDashboardState extends State<EnterpriseMainDashboard> {
     );
   }
 
-  // --- CONTACTS DIRECTORY (CUSTOMERS & VENDORS PROFILE & EDIT) ---
+  // --- CONTACTS DIRECTORY ---
   Widget _buildContactsTab() {
     return Scaffold(
       floatingActionButton: FloatingActionButton(
@@ -256,7 +256,7 @@ class _EnterpriseMainDashboardState extends State<EnterpriseMainDashboard> {
     );
   }
 
-  // --- FLEET & VEHICLES MANAGER (FULL EDITING) ---
+  // --- FLEET & VEHICLES MANAGER ---
   Widget _buildVehiclesTab() {
     return Scaffold(
       floatingActionButton: FloatingActionButton(
@@ -341,7 +341,7 @@ class _EnterpriseMainDashboardState extends State<EnterpriseMainDashboard> {
     );
   }
 
-  // --- NOTE PAD & DAILY MEMO MODULE ---
+  // --- NOTE PAD MODULE ---
   Widget _buildNotePadTab() {
     return Scaffold(
       floatingActionButton: FloatingActionButton(
@@ -413,7 +413,7 @@ class _EnterpriseMainDashboardState extends State<EnterpriseMainDashboard> {
     );
   }
 
-  // --- BOOKINGS & PRINTING MODULE ---
+  // --- BOOKINGS MODULE ---
   Widget _buildBookingsTab() {
     return Scaffold(
       floatingActionButton: FloatingActionButton(
@@ -522,4 +522,7 @@ class _EnterpriseMainDashboardState extends State<EnterpriseMainDashboard> {
         },
       ),
     );
-    await Printing.layoutPdf(onLayout: (for
+    await Printing.layoutPdf(onLayout: (format) async => pdf.save());
+  }
+}
+
