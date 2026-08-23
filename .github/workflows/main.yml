@@ -28,21 +28,50 @@ jobs:
       - name: Recreate Android Project
         run: flutter create . --platforms=android
 
-      - name: Force SDK 35 In App Gradle
+      - name: Force Global SDK 35
         run: |
-          sed -i 's/compileSdkVersion flutter.compileSdkVersion/compileSdkVersion 35/g' android/app/build.gradle
-          sed -i 's/targetSdkVersion flutter.targetSdkVersion/targetSdkVersion 35/g' android/app/build.gradle
-          echo "
+          python3 -c "
+          import os
+
+          # Update settings.gradle / settings.gradle.kts if needed or root build file
+          root_build = 'android/build.gradle.kts' if os.path.exists('android/build.gradle.kts') else 'android/build.gradle'
+          
+          override_script = '''
           subprojects {
-              beforeEvaluate { project ->
-                  if (project.hasProperty('android')) {
-                      project.android {
-                          compileSdkVersion 35
+              afterEvaluate {
+                  if (plugins.hasPlugin('com.android.application') || plugins.hasPlugin('com.android.library')) {
+                      configure<com.android.build.gradle.BaseExtension> {
+                          compileSdkVersion(35)
                       }
                   }
               }
           }
-          " >> android/build.gradle
+          '''
+          
+          if os.path.exists('android/build.gradle'):
+              with open('android/build.gradle', 'a') as f:
+                  f.write('''
+                  subprojects {
+                      project.configurations.all {
+                          resolutionStrategy.eachDependency {
+                              if (requested.group == 'com.android.support') {
+                                  skip()
+                              }
+                          }
+                      }
+                      afterEvaluate { project ->
+                          if (project.hasProperty('android')) {
+                              project.android {
+                                  compileSdkVersion 35
+                              }
+                          }
+                      }
+                  }
+                  ''')
+          elif os.path.exists('android/build.gradle.kts'):
+              with open('android/build.gradle.kts', 'a') as f:
+                  f.write(override_script)
+          "
 
       - name: Build Release APK
         run: flutter build apk --release
@@ -52,3 +81,4 @@ jobs:
         with:
           name: TransportManagerPro-Release
           path: build/app/outputs/flutter-apk/app-release.apk
+          
