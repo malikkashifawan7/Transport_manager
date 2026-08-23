@@ -28,41 +28,45 @@ jobs:
       - name: Recreate Android Project
         run: flutter create . --platforms=android
 
-      - name: Inject Global SDK 36 Override
+      - name: Force SDK 36 via Settings Gradle
         run: |
           echo "android.suppressUnsupportedCompileSdk=36" >> android/gradle.properties
           
           python3 -c "
           import os
 
-          groovy_override = '''
-          subprojects {
-              afterEvaluate { project ->
-                  if (project.hasProperty('android')) {
-                      project.android {
-                          compileSdkVersion 36
-                      }
-                  }
+          settings_file = 'android/settings.gradle.kts' if os.path.exists('android/settings.gradle.kts') else 'android/settings.gradle'
+          
+          kotlin_settings_patch = '''
+          gradle.beforeProject {
+              plugins.withId(\"com.android.application\") {
+                  val android = extensions.findByName(\"android\") as? com.android.build.gradle.BaseExtension
+                  android?.compileSdkVersion(36)
               }
-          }
-          '''
-
-          kotlin_override = '''
-          subprojects {
-              afterEvaluate {
+              plugins.withId(\"com.android.library\") {
                   val android = extensions.findByName(\"android\") as? com.android.build.gradle.BaseExtension
                   android?.compileSdkVersion(36)
               }
           }
           '''
 
-          if os.path.exists('android/build.gradle'):
-              with open('android/build.gradle', 'a') as f:
-                  f.write(groovy_override)
+          groovy_settings_patch = '''
+          gradle.beforeProject { p ->
+              p.plugins.withId('com.android.application') {
+                  p.android.compileSdkVersion 36
+              }
+              p.plugins.withId('com.android.library') {
+                  p.android.compileSdkVersion 36
+              }
+          }
+          '''
 
-          if os.path.exists('android/build.gradle.kts'):
-              with open('android/build.gradle.kts', 'a') as f:
-                  f.write(kotlin_override)
+          if os.path.exists('android/settings.gradle.kts'):
+              with open('android/settings.gradle.kts', 'a') as f:
+                  f.write(kotlin_settings_patch)
+          elif os.path.exists('android/settings.gradle'):
+              with open('android/settings.gradle', 'a') as f:
+                  f.write(groovy_settings_patch)
           "
 
       - name: Build Release APK
