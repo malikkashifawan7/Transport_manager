@@ -352,7 +352,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
               title: const Text('Vendors Khata (Shops/Udhar)'),
               onTap: () {
                 Navigator.pop(context);
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const VendorsListScreen()));
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const VendorsListScreen() VendorsListScreen()));
               },
             ),
             ListTile(
@@ -422,6 +422,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
 }
 
 // ==================== VEHICLE LEDGER & BOOKINGS SCREEN ====================
+// ==================== VEHICLE LEDGER & BOOKINGS SCREEN ====================
 class VehicleLedgerScreen extends StatefulWidget {
   final Map<String, dynamic> vehicleData;
 
@@ -466,8 +467,7 @@ class _VehicleLedgerScreenState extends State<VehicleLedgerScreen> with SingleTi
       totalExpense = exp;
     });
   }
-
-  void _showRecordDialog({Map<String, dynamic>? editRecord}) {
+      void _showRecordDialog([Map<String, dynamic>? editRecord]) {
     final titleController = TextEditingController(text: editRecord?['title'] ?? '');
     final amountController = TextEditingController(text: editRecord != null ? editRecord['amount'].toString() : '');
     final detailsController = TextEditingController(text: editRecord?['details'] ?? '');
@@ -515,8 +515,11 @@ class _VehicleLedgerScreenState extends State<VehicleLedgerScreen> with SingleTi
                   _loadLedgerData();
                   if (mounted) Navigator.pop(context);
                 }
-              },
+              } ,
               child: const Text('Save Record'),
-            )
+            ),
           ],
-        )
+        ),
+      ),
+    );
+  }
