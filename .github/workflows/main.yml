@@ -28,18 +28,15 @@ jobs:
       - name: Recreate Android Project
         run: flutter create . --platforms=android
 
-      - name: Force Global SDK 35 Override
+      - name: Force SDK 35 In App Gradle
         run: |
+          sed -i 's/compileSdkVersion flutter.compileSdkVersion/compileSdkVersion 35/g' android/app/build.gradle
+          sed -i 's/targetSdkVersion flutter.targetSdkVersion/targetSdkVersion 35/g' android/app/build.gradle
           echo "
-          gradle.projectsEvaluated {
-              subprojects {
-                  plugins.withId('com.android.library') {
-                      android {
-                          compileSdkVersion 35
-                      }
-                  }
-                  plugins.withId('com.android.application') {
-                      android {
+          subprojects {
+              beforeEvaluate { project ->
+                  if (project.hasProperty('android')) {
+                      project.android {
                           compileSdkVersion 35
                       }
                   }
@@ -55,4 +52,3 @@ jobs:
         with:
           name: TransportManagerPro-Release
           path: build/app/outputs/flutter-apk/app-release.apk
-          
