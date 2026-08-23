@@ -28,45 +28,45 @@ jobs:
       - name: Recreate Android Project
         run: flutter create . --platforms=android
 
-      - name: Force SDK 36 for All Plugins Safely
+      - name: Fetch Pub Dependencies
+        run: flutter pub get
+
+      - name: Patch Global Pub Cache & Project for SDK 36
         run: |
           echo "android.suppressUnsupportedCompileSdk=36" >> android/gradle.properties
 
           python3 -c "
-          import os
+          import os, re
 
-          # Inject into android/build.gradle or android/build.gradle.kts
-          target_file = 'android/build.gradle.kts' if os.path.exists('android/build.gradle.kts') else 'android/build.gradle'
+          # 1. Update all build.gradle files in Pub Cache (Plugins like share_plus)
+          pub_cache = os.path.expanduser('~/.pub-cache')
+          if os.path.exists(pub_cache):
+              for root, dirs, files in os.walk(pub_cache):
+                  for file in files:
+                      if file in ['build.gradle', 'build.gradle.kts']:
+                          filepath = os.path.join(root, file)
+                          try:
+                              with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
+                                  content = f.read()
+                              
+                              # Replace compileSdkVersion 33 / compileSdk = 33 with 36
+                              content = re.sub(r'compileSdkVersion\s+\d+', 'compileSdkVersion 36', content)
+                              content = re.sub(r'compileSdk\s*=\s*\d+', 'compileSdk = 36', content)
+                              
+                              with open(filepath, 'w', encoding='utf-8') as f:
+                                  f.write(content)
+                          except Exception:
+                              pass
 
-          code_kts = '''
-          subprojects {
-              plugins.whenPluginAdded {
-                  if (this.javaClass.name.contains(\"AndroidPlugin\")) {
-                      val android = extensions.findByName(\"android\") as? com.android.build.gradle.BaseExtension
-                      android?.compileSdkVersion(36)
-                  }
-              }
-          }
-          '''
-
-          code_groovy = '''
-          subprojects {
-              plugins.whenPluginAdded { plugin ->
-                  if (plugin.class.name.contains('AndroidPlugin')) {
-                      project.android {
-                          compileSdkVersion 36
-                      }
-                  }
-              }
-          }
-          '''
-
-          if target_file.endswith('.kts'):
-              with open(target_file, 'a') as f:
-                  f.write(code_kts)
-          else:
-              with open(target_file, 'a') as f:
-                  f.write(code_groovy)
+          # 2. Update local App Gradle files
+          for app_gradle in ['android/app/build.gradle', 'android/app/build.gradle.kts']:
+              if os.path.exists(app_gradle):
+                  with open(app_gradle, 'r') as f:
+                      content = f.read()
+                  content = re.sub(r'compileSdkVersion\s+\d+', 'compileSdkVersion 36', content)
+                  content = re.sub(r'compileSdk\s*=\s*\d+', 'compileSdk = 36', content)
+                  with open(app_gradle, 'w') as f:
+                      f.write(content)
           "
 
       - name: Build Release APK
