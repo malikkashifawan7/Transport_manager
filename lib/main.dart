@@ -61,8 +61,8 @@ class _MainEnterpriseShellState extends State<MainEnterpriseShell> {
 
       if (fleet.isEmpty) {
         fleet = [
-          {'no': 'LES-1054', 'driver': 'Shami Khan', 'phone': '03001234567', 'loc': 'Lahore', 'type': '10-Wheeler', 'status': 'On Trip'},
-          {'no': 'KHI-9921', 'driver': 'Ali Raza', 'phone': '03219876543', 'loc': 'Multan', 'type': 'Trailer', 'status': 'Available'},
+          {'no': 'LES-1054', 'driver': 'Shami Khan', 'phone': '03001234567', 'loc': 'Lahore', 'type': '10-Wheeler'},
+          {'no': 'KHI-9921', 'driver': 'Ali Raza', 'phone': '03219876543', 'loc': 'Multan', 'type': 'Trailer'},
         ];
       }
       if (contacts.isEmpty) {
@@ -137,8 +137,8 @@ class _MainEnterpriseShellState extends State<MainEnterpriseShell> {
   }
 
   Widget _buildDashboard() {
-    double totalRevenue = trips.fold(0, (sum, item) => sum + (double.tryParse(item['freight'].toString()) ?? 0));
-    double totalExpense = workshops.fold(0, (sum, item) => sum + (double.tryParse(item['cost'].toString()) ?? 0));
+    double totalRevenue = trips.fold(0.0, (sum, item) => sum + (double.tryParse(item['freight'].toString()) ?? 0.0));
+    double totalExpense = workshops.fold(0.0, (sum, item) => sum + (double.tryParse(item['cost'].toString()) ?? 0.0));
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -315,7 +315,7 @@ class _MainEnterpriseShellState extends State<MainEnterpriseShell> {
             elevation: 2,
             margin: const EdgeInsets.only(bottom: 10),
             child: ListTile(
-              leading: CircleAvatar(backgroundColor: Colors.indigo.shade100, child: Text(c['name'][0])),
+              leading: CircleAvatar(backgroundColor: Colors.indigo.shade100, child: Text(c['name'].isNotEmpty ? c['name'][0] : 'C')),
               title: Text(c['name'], style: const TextStyle(fontWeight: FontWeight.bold)),
               subtitle: Text('Role: ${c['cat']} | City: ${c['city']}\nPhone: ${c['phone']}'),
               isThreeLine: true,
@@ -494,4 +494,4 @@ class _MainEnterpriseShellState extends State<MainEnterpriseShell> {
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(controller: clientCtrl, decoration: const InputDecoration(labelText: 'Client Name')),
-            TextField(controller: routeCtrl, decoration: const InputDecorat
+            TextField(controller: routeCtrl, decoration: const InputDecoration(lab
