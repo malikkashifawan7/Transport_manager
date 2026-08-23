@@ -352,7 +352,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
               title: const Text('Vendors Khata (Shops/Udhar)'),
               onTap: () {
                 Navigator.pop(context);
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const VendorsListScreen()));
+                Navigator.push(context, MaterialPageRoute(builder: (_) => VendorsListScreen()));
 
 
               },
