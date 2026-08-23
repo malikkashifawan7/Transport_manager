@@ -28,45 +28,45 @@ jobs:
       - name: Recreate Android Project
         run: flutter create . --platforms=android
 
-      - name: Force SDK 36 via Settings Gradle
+      - name: Force SDK 36 for All Plugins Safely
         run: |
           echo "android.suppressUnsupportedCompileSdk=36" >> android/gradle.properties
-          
+
           python3 -c "
           import os
 
-          settings_file = 'android/settings.gradle.kts' if os.path.exists('android/settings.gradle.kts') else 'android/settings.gradle'
-          
-          kotlin_settings_patch = '''
-          gradle.beforeProject {
-              plugins.withId(\"com.android.application\") {
-                  val android = extensions.findByName(\"android\") as? com.android.build.gradle.BaseExtension
-                  android?.compileSdkVersion(36)
-              }
-              plugins.withId(\"com.android.library\") {
-                  val android = extensions.findByName(\"android\") as? com.android.build.gradle.BaseExtension
-                  android?.compileSdkVersion(36)
+          # Inject into android/build.gradle or android/build.gradle.kts
+          target_file = 'android/build.gradle.kts' if os.path.exists('android/build.gradle.kts') else 'android/build.gradle'
+
+          code_kts = '''
+          subprojects {
+              plugins.whenPluginAdded {
+                  if (this.javaClass.name.contains(\"AndroidPlugin\")) {
+                      val android = extensions.findByName(\"android\") as? com.android.build.gradle.BaseExtension
+                      android?.compileSdkVersion(36)
+                  }
               }
           }
           '''
 
-          groovy_settings_patch = '''
-          gradle.beforeProject { p ->
-              p.plugins.withId('com.android.application') {
-                  p.android.compileSdkVersion 36
-              }
-              p.plugins.withId('com.android.library') {
-                  p.android.compileSdkVersion 36
+          code_groovy = '''
+          subprojects {
+              plugins.whenPluginAdded { plugin ->
+                  if (plugin.class.name.contains('AndroidPlugin')) {
+                      project.android {
+                          compileSdkVersion 36
+                      }
+                  }
               }
           }
           '''
 
-          if os.path.exists('android/settings.gradle.kts'):
-              with open('android/settings.gradle.kts', 'a') as f:
-                  f.write(kotlin_settings_patch)
-          elif os.path.exists('android/settings.gradle'):
-              with open('android/settings.gradle', 'a') as f:
-                  f.write(groovy_settings_patch)
+          if target_file.endswith('.kts'):
+              with open(target_file, 'a') as f:
+                  f.write(code_kts)
+          else:
+              with open(target_file, 'a') as f:
+                  f.write(code_groovy)
           "
 
       - name: Build Release APK
@@ -77,4 +77,3 @@ jobs:
         with:
           name: TransportManagerPro-Release
           path: build/app/outputs/flutter-apk/app-release.apk
-          
