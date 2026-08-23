@@ -262,6 +262,8 @@ class DatabaseHelper {
 // ==================== DASHBOARD & DRAWER ====================
 class MainHomeScreen extends StatefulWidget {
   const MainHomeScreen({super.key});
+class MainHomeScreen extends StatefulWidget {
+  const MainHomeScreen({super.key});
 
   @override
   State<MainHomeScreen> createState() => _MainHomeScreenState();
@@ -278,56 +280,9 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
 
   void _reloadVehicles() async {
     final data = await DatabaseHelper.instance.getVehicles();
-    setState(() => vehicles = data);
-  }
-
-  void _showAddVehicleDialog({Map<String, dynamic>? editVehicle}) {
-    final numberController = TextEditingController(text: editVehicle?['number'] ?? '');
-    final modelController = TextEditingController(text: editVehicle?['model'] ?? '');
-    final driverController = TextEditingController(text: editVehicle?['driver_name'] ?? '');
-    final phoneController = TextEditingController(text: editVehicle?['driver_phone'] ?? '');
-    final cnicController = TextEditingController(text: editVehicle?['driver_cnic'] ?? '');
-    final oilKmController = TextEditingController(text: editVehicle != null ? editVehicle['last_oil_km'].toString() : '');
-    final tokenDateController = TextEditingController(text: editVehicle?['token_tax_date'] ?? '2026-12-31');
-
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text(editVehicle == null ? 'Add Vehicle & Details' : 'Edit Vehicle Info'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(controller: numberController, decoration: const InputDecoration(labelText: 'Gari Number (e.g. LES-1054)')),
-              TextField(controller: modelController, decoration: const InputDecoration(labelText: 'Gari Model / Type')),
-              TextField(controller: driverController, decoration: const InputDecoration(labelText: 'Driver Name')),
-              TextField(controller: phoneController, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Driver Mobile Number')),
-              TextField(controller: cnicController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Driver CNIC Number')),
-              TextField(controller: oilKmController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Current Oil Meter Reading (KM)')),
-              TextField(controller: tokenDateController, decoration: const InputDecoration(labelText: 'Token / Fitness Expiry Date')),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () async {
-              final oilKm = double.tryParse(oilKmController.text) ?? 0.0;
-              if (numberController.text.isNotEmpty) {
-                if (editVehicle == null) {
-                  await DatabaseHelper.instance.addVehicle(numberController.text, modelController.text, driverController.text, phoneController.text, cnicController.text, oilKm, tokenDateController.text);
-                } else {
-                  await DatabaseHelper.instance.updateVehicle(editVehicle['id'], numberController.text, modelController.text, driverController.text, phoneController.text, cnicController.text, oilKm, tokenDateController.text);
-                }
-                _reloadVehicles();
-                if (mounted) Navigator.pop(context);
-              }
-            },
-            child: const Text('Save Vehicle'),
-          )
-        ],
-      ),
-    );
+    setState(() {
+      vehicles = data;
+    });
   }
 
   @override
@@ -350,12 +305,9 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
             ListTile(
               leading: const Icon(Icons.store, color: Colors.indigo),
               title: const Text('Vendors Khata (Shops/Udhar)'),
-                                  onTap: () {
-            Navigator.pop(context);
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const VendorKhataScreen()));
-          },
-
-
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const VendorKhataScreen()));
               },
             ),
             ListTile(
@@ -367,10 +319,16 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
               },
             ),
             const Divider(),
-            const ListTile(
-              leading: Icon(Icons.info_outline),
-              title: Text('App Info & Backup'),
-              subtitle: Text('Cloud & Offline Storage Sync Active'),
+            ListTile(
+              leading: const Icon(Icons.info_outline),
+              title: const Text('App Info & Backup'),
+              subtitle: const Text('Cloud & Offline Storage Sync Active'),
+            ),
+          ],
+        ),
+      ),
+      body: vehicles.isEmpty
+ Active'),
             ),
           ],
         ),
