@@ -28,23 +28,45 @@ jobs:
       - name: Recreate Android Project
         run: flutter create . --platforms=android
 
-      - name: Configure SDK 36 globally in gradle.properties
+      - name: Force Global SDK 36 on ALL Subprojects
         run: |
           echo "android.suppressUnsupportedCompileSdk=36" >> android/gradle.properties
           
           python3 -c "
-          import os, re
-          
-          app_gradle = 'android/app/build.gradle.kts' if os.path.exists('android/app/build.gradle.kts') else 'android/app/build.gradle'
-          if os.path.exists(app_gradle):
-              with open(app_gradle, 'r') as f:
-                  content = f.read()
-              
-              content = re.sub(r'compileSdk\s*=.*', 'compileSdk = 36', content)
-              content = re.sub(r'compileSdkVersion\s+.*', 'compileSdkVersion 36', content)
-              
-              with open(app_gradle, 'w') as f:
-                  f.write(content)
+          import os
+
+          # Inject into root build.gradle / build.gradle.kts
+          groovy_build = 'android/build.gradle'
+          kotlin_build = 'android/build.gradle.kts'
+
+          groovy_override = '''
+          subprojects {
+              afterEvaluate { project ->
+                  if (project.hasProperty('android')) {
+                      project.android {
+                          compileSdkVersion 36
+                      }
+                  }
+              }
+          }
+          '''
+
+          kotlin_override = '''
+          subprojects {
+              afterEvaluate {
+                  val android = extensions.findByName(\"android\") as? com.android.build.gradle.BaseExtension
+                  android?.compileSdkVersion(36)
+              }
+          }
+          '''
+
+          if os.path.exists(groovy_build):
+              with open(groovy_build, 'a') as f:
+                  f.write(groovy_override)
+
+          if os.path.exists(kotlin_build):
+              with open(kotlin_build, 'a') as f:
+                  f.write(kotlin_override)
           "
 
       - name: Build Release APK
@@ -55,3 +77,4 @@ jobs:
         with:
           name: TransportManagerPro-Release
           path: build/app/outputs/flutter-apk/app-release.apk
+          
