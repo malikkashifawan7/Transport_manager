@@ -28,14 +28,14 @@ jobs:
       - name: Recreate Android Project
         run: flutter create . --platforms=android
 
-      - name: Force SDK 34 for All Plugins
+      - name: Force SDK 35 for All Plugins
         run: |
           echo "
           subprojects {
               afterEvaluate { project ->
                   if (project.hasProperty('android')) {
                       project.android {
-                          compileSdkVersion 34
+                          compileSdkVersion 35
                       }
                   }
               }
