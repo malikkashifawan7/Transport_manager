@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+fimport 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart' as p;
 import 'package:url_launcher/url_launcher.dart';
@@ -352,9 +352,8 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
               title: const Text('Vendors Khata (Shops/Udhar)'),
               onTap: () {
                 Navigator.pop(context);
-                Navigator.push(context, MaterialPageRoute(builder: (_) => VendorsListScreen()));
-
-
+Navigator.push(context, MaterialPageRoute(builder: (_) => VendorKhataScreen()));
+                
               },
             ),
             ListTile(
