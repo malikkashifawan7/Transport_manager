@@ -1,375 +1,224 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:sqflite/sqflite.dart';
+import 'package:path/path.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:path_provider/path_provider.dart';
 
-void main() {
-  runApp(const TransportHisabApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  runconst MyApp();
 }
 
-class TransportHisabApp extends StatelessWidget {
-  const TransportHisabApp({super.key});
-
+class MyApp extends StatelessWidget {
+  const MyApp({Key? key}) : super(key: key);
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Transport Hisab',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        useMaterial3: true,
-      ),
-      home: const TransportHomePage(),
+      title: 'Transport Manager Pro',
+      theme: ThemeData(primarySwatch: Colors.blue),
+      home: const AdvancedFleetScreen(gariNo: "1054"),
     );
   }
 }
 
-class TransportHomePage extends StatefulWidget {
-  const TransportHomePage({super.key});
+// --- DATABASE HELPER ---
+class DBService {
+  static final DBService instance = DBService._init();
+  static Database? _database;
+  DBService._init();
 
-  @override
-  State<TransportHomePage> createState() => _TransportHomePageState();
-}
-
-class _TransportHomePageState extends State<TransportHomePage> {
-  bool isLoggedIn = false;
-  final String appPin = "1234";
-  final TextEditingController pinCtrl = TextEditingController();
-
-  List<Map<String, dynamic>> vehicles = [
-    {
-      'id': '1',
-      'number': 'Gari 1054',
-      'driver': 'Shami',
-      'phone': '0302-1234567',
-      'cnic': '36302-XXXXXXX-1',
-      'type': 'Company/Factory',
-      'trips': [
-        {'id': 't1', 'title': 'Lahore to Multan', 'income': 20000.0, 'expense': 8000.0, 'date': '2026-08-22', 'category': 'Diesel & Toll'},
-        {'id': 't2', 'title': 'Factory Shift', 'income': 15000.0, 'expense': 3000.0, 'date': '2026-08-21', 'category': 'Local'}
-      ],
-      'driverPayments': [
-        {'id': 'p1', 'amount': 5000.0, 'note': 'Beti k leay Advance', 'date': '2026-08-22'}
-      ],
-      'oilChangeKm': 45000,
-      'nextOilChangeKm': 50000,
-      'fuelAverage': 12.5,
-    }
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    if (!isLoggedIn) {
-      return Scaffold(
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(25.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.directions_bus, size: 70, color: Colors.blue),
-                const SizedBox(height: 10),
-                const Text('Rashid Tours Login', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 20),
-                TextField(
-                  controller: pinCtrl,
-                  obscureText: true,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(border: OutlineInputBorder(), labelText: 'Enter PIN (1234)'),
-                ),
-                const SizedBox(height: 15),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 45)),
-                  onPressed: () {
-                    if (pinCtrl.text == appPin) {
-                      setState(() => isLoggedIn = true);
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Wrong Password! Use 1234')));
-                    }
-                  },
-                  child: const Text('Login'),
-                )
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Transport Hisab Manager'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.people),
-            tooltip: 'All Drivers Details',
-            onPressed: _showAllDriversDialog,
-          ),
-          IconButton(
-            icon: const Icon(Icons.assessment),
-            tooltip: 'All Vehicles Total Ledger',
-            onPressed: _showTotalCombinedLedger,
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () => setState(() => isLoggedIn = false),
-          ),
-        ],
-      ),
-      body: vehicles.isEmpty
-          ? const Center(child: Text('Koi gari add nahi hai. Niche + ka button dabayein.'))
-          : ListView.builder(
-              itemCount: vehicles.length,
-              itemBuilder: (ctx, i) => Card(
-                margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                child: ListTile(
-                  leading: const Icon(Icons.directions_bus, size: 36, color: Colors.blue),
-                  title: Text('${vehicles[i]['number']} (${vehicles[i]['type']})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                  subtitle: Text('Driver: ${vehicles[i]['driver']} | Tel: ${vehicles[i]['phone']}'),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                  onTap: () => _openGariSinglePageLedger(vehicles[i]),
-                ),
-              ),
-            ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _addVehicleDialog,
-        child: const Icon(Icons.add),
-      ),
-    );
+  Future<Database> get database async {
+    if (_database != null) return _database!;
+    _database = await _initDB('transport_pro.db');
+    return _database!;
   }
 
-  void _showAllDriversDialog() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('All Drivers Details'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: ListView.builder(
-            shrinkWrap: true,
-            itemCount: vehicles.length,
-            itemBuilder: (c, i) {
-              var v = vehicles[i];
-              return Card(
-                child: ListTile(
-                  leading: const Icon(Icons.person, color: Colors.blue),
-                  title: Text(v['driver'], style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text('Vehicle: ${v['number']}\nPhone: ${v['phone']}\nCNIC: ${v['cnic']}'),
-                ),
-              );
-            },
-          ),
-        ),
-        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close'))],
-      ),
-    );
-  }
-
-  void _showTotalCombinedLedger() {
-    double grandTotalKiraya = 0;
-    double grandTotalKharcha = 0;
-    double grandTotalDriverPaid = 0;
-
-    for (var v in vehicles) {
-      for (var t in v['trips']) {
-        grandTotalKiraya += (t['income'] ?? 0);
-        grandTotalKharcha += (t['expense'] ?? 0);
-      }
-      for (var p in v['driverPayments']) {
-        grandTotalDriverPaid += (p['amount'] ?? 0);
-      }
-    }
-
-    double grandNetProfit = grandTotalKiraya - grandTotalKharcha - grandTotalDriverPaid;
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('ALL VEHICLES COMBINED LEDGER'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Total Vehicles: ${vehicles.length}', style: const TextStyle(fontWeight: FontWeight.bold)),
-            const Divider(),
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Total Kiraya:'), Text('Rs. $grandTotalKiraya', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold))]),
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Total Kharcha:'), Text('Rs. $grandTotalKharcha', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold))]),
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Total Driver Paid:'), Text('Rs. $grandTotalDriverPaid', style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold))]),
-            const Divider(),
-            Container(
-              padding: const EdgeInsets.all(10),
-              color: Colors.green.shade100,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('NET PROFIT:', style: TextStyle(fontWeight: FontWeight.bold)),
-                  Text('Rs. $grandNetProfit', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 18)),
-                ],
-              ),
-            )
-          ],
-        ),
-        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close'))],
-      ),
-    );
-  }
-
-  void _addVehicleDialog() {
-    final numCtrl = TextEditingController();
-    final driverCtrl = TextEditingController();
-    final phoneCtrl = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Add New Vehicle'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: numCtrl, decoration: const InputDecoration(labelText: 'Vehicle Number')),
-            TextField(controller: driverCtrl, decoration: const InputDecoration(labelText: 'Driver Name')),
-            TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'Phone Number')),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () {
-              if (numCtrl.text.isNotEmpty) {
-                setState(() {
-                  vehicles.add({
-                    'id': DateTime.now().toString(),
-                    'number': numCtrl.text,
-                    'driver': driverCtrl.text,
-                    'phone': phoneCtrl.text,
-                    'cnic': 'N/A',
-                    'type': 'Company/Factory',
-                    'trips': [],
-                    'driverPayments': [],
-                    'nextOilChangeKm': 50000,
-                  });
-                });
-                Navigator.pop(ctx);
-              }
-            },
-            child: const Text('Save'),
+  Future<Database> _initDB(String filePath) async {
+    final dbPath = await getDatabasesPath();
+    final path = join(dbPath, filePath);
+    return await openDatabase(
+      path,
+      version: 1,
+      onCreate: (db, version) async {
+        await db.execute('''
+          CREATE TABLE trips (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            vehicle_no TEXT,
+            category TEXT,
+            route_details TEXT,
+            total_income REAL,
+            advance REAL,
+            expense REAL,
+            trip_date TEXT
           )
-        ],
-      ),
+        ''');
+      },
     );
   }
 
-  void _openGariSinglePageLedger(Map<String, dynamic> gari) {
-    Navigator.push(context, MaterialPageRoute(builder: (ctx) => SingleLedgerPage(gari: gari))).then((_) {
-      setState(() {});
+  Future<int> insertTrip(Map<String, dynamic> row) async {
+    final db = await instance.database;
+    return await db.insert('trips', row);
+  }
+
+  Future<List<Map<String, dynamic>>> getTrips(String vehicleNo) async {
+    final db = await instance.database;
+    return await db.query('trips', where: 'vehicle_no = ?', whereArgs: [vehicleNo]);
+  }
+
+  Future<int> updateTrip(int id, Map<String, dynamic> row) async {
+    final db = await instance.database;
+    return await db.update('trips', row, where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<int> deleteTrip(int id) async {
+    final db = await instance.database;
+    return await db.delete('trips', where: 'id = ?', whereArgs: [id]);
+  }
+}
+
+// --- MAIN ADVANCED SCREEN ---
+class AdvancedFleetScreen extends StatefulWidget {
+  final String gariNo;
+  const AdvancedFleetScreen({Key? key, required this.gariNo}) : super(key: key);
+
+  @override
+  _AdvancedFleetScreenState createState() => _AdvancedFleetScreenState();
+}
+
+class _AdvancedFleetScreenState extends State<AdvancedFleetScreen> {
+  List<Map<String, dynamic>> _trips = [];
+  double _totalIncome = 0;
+  double _totalExpense = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  void _loadData() async {
+    final data = await DBService.instance.getTrips(widget.gariNo);
+    double income = 0;
+    double expense = 0;
+    for (var item in data) {
+      income += (item['total_income'] as num).toDouble();
+      expense += (item['expense'] as num).toDouble();
+    }
+    setState(() {
+      _trips = data;
+      _totalIncome = income;
+      _totalExpense = expense;
     });
   }
-}
 
-class SingleLedgerPage extends StatefulWidget {
-  final Map<String, dynamic> gari;
-  const SingleLedgerPage({super.key, required this.gari});
+  // Open Google Maps for Route
+  void _openGoogleMap(String route) async {
+    final uri = Uri.parse("https://www.google.com/maps/search/?api=1&query=$route");
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Could not open Google Maps")));
+    }
+  }
 
-  @override
-  State<SingleLedgerPage> createState() => _SingleLedgerPageState();
-}
-
-class _SingleLedgerPageState extends State<SingleLedgerPage> {
-  void _addTripDialog() {
-    final titleCtrl = TextEditingController();
-    final incomeCtrl = TextEditingController();
-    final expenseCtrl = TextEditingController();
-    String category = 'Diesel';
-    DateTime selectedDate = DateTime.now();
-
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setDlgState) => AlertDialog(
-          title: const Text('Add Trip / Route Entry'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(controller: titleCtrl, decoration: const InputDecoration(labelText: 'Route / Title (e.g. LHR to MLN)')),
-                TextField(controller: incomeCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Income / Kiraya (Rs.)')),
-                TextField(controller: expenseCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Expense / Fuel/Toll (Rs.)')),
-                const SizedBox(height: 10),
-                DropdownButton<String>(
-                  value: category,
-                  isExpanded: true,
-                  items: ['Diesel', 'Maintenance/Repairs', 'Toll Tax / Food', 'Other'].map((String val) {
-                    return DropdownMenuItem<String>(value: val, child: Text(val));
-                  }).toList(),
-                  onChanged: (v) => setDlgState(() => category = v!),
-                ),
-                ListTile(
-                  title: Text('Date: ${selectedDate.toString().split(' ')[0]}'),
-                  trailing: const Icon(Icons.calendar_today),
-                  onTap: () async {
-                    DateTime? picked = await showDatePicker(
-                      context: context,
-                      initialDate: selectedDate,
-                      firstDate: DateTime(2020),
-                      lastDate: DateTime(2030),
-                    );
-                    if (picked != null) setDlgState(() => selectedDate = picked);
-                  },
-                )
+  // Generate & Share Bill Invoice PDF
+  void _generatePDF(Map<String, dynamic> trip) async {
+    final pdf = pw.Document();
+    pdf.addPage(
+      pw.Page(
+        build: (context) => pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Text("TRANSPORT HISAB - OFFICIAL BILL INVOICE", style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+            pw.Divider(),
+            pw.Text("Vehicle No: ${trip['vehicle_no']}"),
+            pw.Text("Category / Sub-category: ${trip['category']}"),
+            pw.Text("Route / Details: ${trip['route_details']}"),
+            pw.Text("Date: ${trip['trip_date']}"),
+            pw.SizedBox(height: 10),
+            pw.TableHelper.fromTextArray(
+              headers: ['Description', 'Amount (PKR)'],
+              data: [
+                ['Total Income', trip['total_income'].toString()],
+                ['Advance Received', trip['advance'].toString()],
+                ['Expenses', trip['expense'].toString()],
+                ['Net Profit', (trip['total_income'] - trip['expense']).toString()],
               ],
             ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-            ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  widget.gari['trips'].add({
-                    'id': DateTime.now().toString(),
-                    'title': titleCtrl.text.isEmpty ? 'Trip' : titleCtrl.text,
-                    'income': double.tryParse(incomeCtrl.text) ?? 0.0,
-                    'expense': double.tryParse(expenseCtrl.text) ?? 0.0,
-                    'category': category,
-                    'date': selectedDate.toString().split(' ')[0],
-                  });
-                });
-                Navigator.pop(ctx);
-              },
-              child: const Text('Add Entry'),
-            )
           ],
         ),
       ),
     );
+
+    final output = await getTemporaryDirectory();
+    final file = File("${output.path}/Invoice_${trip['id']}.pdf");
+    await file.writeAsBytes(await pdf.save());
+    await Share.shareXFiles([XFile(file.path)], text: 'Bill Invoice for Gari ${widget.gariNo}');
   }
 
-  void _addDriverPaymentDialog() {
-    final amountCtrl = TextEditingController();
-    final noteCtrl = TextEditingController();
+  // Add / Edit Trip Dialog with Subcategories
+  void _showTripDialog({Map<String, dynamic>? existingTrip}) {
+    String selectedCategory = existingTrip != nullptr ? (existingTrip?['category'] ?? 'Factory Shift') : 'Factory Shift';
+    TextEditingController routeController = TextEditingController(text: existingTrip?['route_details'] ?? '');
+    TextEditingController incomeController = TextEditingController(text: existingTrip?['total_income']?.toString() ?? '');
+    TextEditingController advanceController = TextEditingController(text: existingTrip?['advance']?.toString() ?? '');
+    TextEditingController expenseController = TextEditingController(text: existingTrip?['expense']?.toString() ?? '');
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Add Driver Payment / Advance'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: amountCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Amount Paid (Rs.)')),
-            TextField(controller: noteCtrl, decoration: const InputDecoration(labelText: 'Note / Reason (e.g. Khuraak, Salary)')),
-          ],
+      builder: (context) => AlertDialog(
+        title: Text(existingTrip == null ? "Add New Trip / Booking" : "Edit Trip Entry"),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<String>(
+                value: ['Factory Shift', 'School Route', 'Contract Tour', 'Advance Booking', 'Local Trip']
+                        .contains(selectedCategory) ? selectedCategory : 'Factory Shift',
+                items: ['Factory Shift', 'School Route', 'Contract Tour', 'Advance Booking', 'Local Trip']
+                    .map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                onChanged: (v) => selectedCategory = v!,
+                decoration: const InputDecoration(labelText: "Sub-Category"),
+              ),
+              TextField(controller: routeController, decoration: const InputDecoration(labelText: "Route / Location Details")),
+              TextField(controller: incomeController, decoration: const InputDecoration(labelText: "Total Income (PKR)"), keyboardType: TextInputType.number),
+              TextField(controller: advanceController, decoration: const InputDecoration(labelText: "Advance Amount (PKR)"), keyboardType: TextInputType.number),
+              TextField(controller: expenseController, decoration: const InputDecoration(labelText: "Expenses (PKR)"), keyboardType: TextInputType.number),
+            ],
+          ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
           ElevatedButton(
-            onPressed: () {
-              setState(() {
-                widget.gari['driverPayments'].add({
-                  'id': DateTime.now().toString(),
-                  'amount': double.tryParse(amountCtrl.text) ?? 0.0,
-                  'note': noteCtrl.text.isEmpty ? 'Advance' : noteCtrl.text,
-                  'date': DateTime.now().toString().split(' ')[0],
-                });
-              });
-              Navigator.pop(ctx);
+            onPressed: () async {
+              final data = {
+                'vehicle_no': widget.gariNo,
+                'category': selectedCategory,
+                'route_details': routeController.text,
+                'total_income': double.tryParse(incomeController.text) ?? 0.0,
+                'advance': double.tryParse(advanceController.text) ?? 0.0,
+                'expense': double.tryParse(expenseController.text) ?? 0.0,
+                'trip_date': DateTime.now().toString().substring(0, 10),
+              };
+
+              if (existingTrip == null) {
+                await DBService.instance.insertTrip(data);
+              } else {
+                await DBService.instance.updateTrip(existingTrip['id'], data);
+              }
+
+              Navigator.pop(context);
+              _loadData();
             },
-            child: const Text('Save Payment'),
-          )
+            child: const Text("Save Entry"),
+          ),
         ],
       ),
     );
@@ -377,136 +226,106 @@ class _SingleLedgerPageState extends State<SingleLedgerPage> {
 
   @override
   Widget build(BuildContext context) {
-    double totalKiraya = 0;
-    double totalKharcha = 0;
-    for (var t in widget.gari['trips']) {
-      totalKiraya += (t['income'] ?? 0);
-      totalKharcha += (t['expense'] ?? 0);
-    }
-
-    double totalDriverPaid = 0;
-    for (var p in widget.gari['driverPayments']) {
-      totalDriverPaid += (p['amount'] ?? 0);
-    }
-
-    double netProfit = totalKiraya - totalKharcha - totalDriverPaid;
+    double netProfit = _totalIncome - _totalExpense;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('${widget.gari['number']} Live Ledger'),
+        title: Text("Gari ${widget.gariNo} - Pro Ledger"),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.print),
+            onPressed: () async {
+              // Direct Print sample using Printing package
+              await Printing.layoutPdf(onLayout: (format) async => pw.Document().save());
+            },
+          )
+        ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Card(
-              color: Colors.blue.shade50,
-              child: Padding(
-                padding: const EdgeInsets.all(15.0),
-                child: Column(
-                  children: [
-                    Text('RASHID TOURS - ${widget.gari['number']}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                    Text('Driver: ${widget.gari['driver']} (${widget.gari['phone']})'),
-                    const Divider(),
-                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Total Kiraya (Income):'), Text('Rs. $totalKiraya', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 16))]),
-                    const SizedBox(height: 4),
-                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Total Vehicle Kharcha:'), Text('Rs. $totalKharcha', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 16))]),
-                    const SizedBox(height: 4),
-                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Driver Advance/Khuraak:'), Text('Rs. $totalDriverPaid', style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 16))]),
-                    const Divider(),
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      color: Colors.green.shade100,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('SAFI BACHAT (NET PROFIT):', style: TextStyle(fontWeight: FontWeight.bold)),
-                          Text('Rs. $netProfit', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 18)),
-                        ],
-                      ),
-                    )
-                  ],
-                ),
+      body: Column(
+        children: [
+          // Dashboard Summary Card
+          Card(
+            margin: const EdgeInsets.all(12),
+            color: Colors.blue.shade50,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text("Income: Rs. $_totalIncome", style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                      Text("Expense: Rs. $_totalExpense", style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                  const Divider(),
+                  Text("NET PROFIT (SAFI BACHAT): Rs. $netProfit",
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blueAccent)),
+                ],
               ),
             ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white),
-                    icon: const Icon(Icons.add_road),
-                    label: const Text('+ Add Trip'),
-                    onPressed: _addTripDialog,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.orange, foregroundColor: Colors.white),
-                    icon: const Icon(Icons.person_add),
-                    label: const Text('+ Driver Kharcha'),
-                    onPressed: _addDriverPaymentDialog,
-                  ),
-                ),
-              ],
+          ),
+
+          // Action Button to Add Entry
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12.0),
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(45)),
+              onPressed: () => _showTripDialog(),
+              icon: const Icon(Icons.add),
+              label: const Text("Add New Trip / Booking / Sub-category"),
             ),
-            const SizedBox(height: 15),
-            const Text('Trips & Routes Ledger:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            widget.gari['trips'].isEmpty
-                ? const Padding(padding: EdgeInsets.all(10), child: Text('Koi trip add nahi hua.'))
-                : ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: widget.gari['trips'].length,
-                    itemBuilder: (c, idx) {
-                      var trip = widget.gari['trips'][idx];
-                      return Card(
-                        child: ListTile(
-                          title: Text('${trip['title']} (${trip['category']})', style: const TextStyle(fontWeight: FontWeight.bold)),
-                          subtitle: Text('Date: ${trip['date']}\nIncome: Rs.${trip['income']} | Expense: Rs.${trip['expense']}'),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () {
-                              setState(() {
-                                widget.gari['trips'].removeAt(idx);
-                              });
-                            },
-                          ),
+          ),
+
+          const SizedBox(height: 10),
+
+          // List of Entries with Edit, Delete, Google Map & Bill Share
+          Expanded(
+            child: ListView.builder(
+              itemCount: _trips.length,
+              itemBuilder: (context, index) {
+                final trip = _trips[index];
+                return Card(
+                  margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  child: ListTile(
+                    title: Text("${trip['category']} (${trip['route_details']})", style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text("Date: ${trip['trip_date']}\nIncome: Rs. ${trip['total_income']} | Exp: Rs. ${trip['expense']}"),
+                    isThreeLine: true,
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Google Map Button
+                        IconButton(
+                          icon: const Icon(Icons.map, color: Colors.blue),
+                          onPressed: () => _openGoogleMap(trip['route_details']),
+                          tooltip: "Open in Google Maps",
                         ),
-                      );
-                    },
-                  ),
-            const SizedBox(height: 15),
-            const Text('Driver Advance / Khuraak Ledger:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            widget.gari['driverPayments'].isEmpty
-                ? const Padding(padding: EdgeInsets.all(10), child: Text('Driver ko koi advance nahi diya gaya.'))
-                : ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: widget.gari['driverPayments'].length,
-                    itemBuilder: (c, idx) {
-                      var p = widget.gari['driverPayments'][idx];
-                                            return Card(
-                        color: Colors.orange.shade50,
-                        child: ListTile(
-                          title: Text('Rs. ${p['amount']} - ${p['note']}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                          subtitle: Text('Date: ${p['date']}'),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () {
-                              setState(() {
-                                widget.gari['driverPayments'].removeAt(idx);
-                              });
-                            },
-                          ),
+                        // Edit Button
+                        IconButton(
+                          icon: const Icon(Icons.edit, color: Colors.orange),
+                          onPressed: () => _showTripDialog(existingTrip: trip),
                         ),
-                      );
-                    },
+                        // Share Bill Invoice PDF Button
+                        IconButton(
+                          icon: const Icon(Icons.share, color: Colors.green),
+                          onPressed: () => _generatePDF(trip),
+                        ),
+                        // Delete Button
+                        IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          onPressed: () async {
+                            await DBService.instance.deleteTrip(trip['id']);
+                            _loadData();
+                          },
+                        ),
+                      ],
+                    ),
                   ),
-          ],
-        ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
