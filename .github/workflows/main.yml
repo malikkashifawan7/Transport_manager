@@ -28,14 +28,19 @@ jobs:
       - name: Recreate Android Project
         run: flutter create . --platforms=android
 
-      - name: Apply Gradle Android SDK Fix
+      - name: Force Global SDK 35 Override
         run: |
           echo "
-          subprojects {
-              afterEvaluate { project ->
-                  if (project.hasProperty('android')) {
-                      project.android {
-                          compileSdkVersion 34
+          gradle.projectsEvaluated {
+              subprojects {
+                  plugins.withId('com.android.library') {
+                      android {
+                          compileSdkVersion 35
+                      }
+                  }
+                  plugins.withId('com.android.application') {
+                      android {
+                          compileSdkVersion 35
                       }
                   }
               }
