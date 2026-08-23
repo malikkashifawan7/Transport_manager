@@ -28,14 +28,8 @@ jobs:
       - name: Recreate Android Project
         run: flutter create . --platforms=android
 
-      - name: Force SDK 34 in Gradle
-        run: |
-          sed -i 's/compileSdkVersion 33/compileSdkVersion 34/g' android/app/build.gradle || true
-          sed -i 's/compileSdk 33/compileSdk 34/g' android/app/build.gradle || true
-          sed -i 's/targetSdkVersion 33/targetSdkVersion 34/g' android/app/build.gradle || true
-
       - name: Build Release APK
-        run: flutter build apk --release
+        run: flutter build apk --release --extra-abstract-byte-code-options=ignore --target-platform android-arm64 --build-number=1 --build-name=1.0.0 --extra-front-end-options=--no-implicit-casts || flutter build apk --release --target-platform android-arm64
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
