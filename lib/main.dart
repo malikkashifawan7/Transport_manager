@@ -51,7 +51,6 @@ class DatabaseHelper {
   }
 
   Future _createDB(Database db, int version) async {
-    // Vehicles Table
     await db.execute('''
       CREATE TABLE vehicles (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -61,7 +60,6 @@ class DatabaseHelper {
       )
     ''');
 
-    // Records Table (Trips, Oil Change, Maintenance, Salary Advance)
     await db.execute('''
       CREATE TABLE records (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -77,7 +75,6 @@ class DatabaseHelper {
     ''');
   }
 
-  // Vehicle Queries
   Future<int> addVehicle(String number, String driver) async {
     final db = await instance.database;
     return await db.insert('vehicles', {'number': number, 'driver_name': driver});
@@ -98,7 +95,6 @@ class DatabaseHelper {
     return await db.update('vehicles', {'is_deleted': 1}, where: 'id = ?', whereArgs: [id]);
   }
 
-  // Record Queries
   Future<int> addRecord(int vehicleId, String type, String title, double amount, String details) async {
     final db = await instance.database;
     return await db.insert('records', {
@@ -126,7 +122,6 @@ class DatabaseHelper {
     return await db.update('records', {'is_deleted': 1}, where: 'id = ?', whereArgs: [id]);
   }
 
-  // Recycle Bin Queries
   Future<List<Map<String, dynamic>>> getDeletedVehicles() async {
     final db = await instance.database;
     return await db.query('vehicles', where: 'is_deleted = 1');
@@ -201,7 +196,9 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
   void _openGoogleMaps() async {
     final Uri url = Uri.parse('https://www.google.com/maps');
     if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open Maps')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open Maps')));
+      }
     }
   }
 
@@ -417,7 +414,6 @@ class _VehicleLedgerScreenState extends State<VehicleLedgerScreen> {
       ),
       body: Column(
         children: [
-          // Auto Calculator Summary Card
           Container(
             margin: const EdgeInsets.all(12),
             padding: const EdgeInsets.all(16),
@@ -541,9 +537,12 @@ class _SalaryAdvanceLedgerScreenState extends State<SalaryAdvanceLedgerScreen> {
               itemCount: advances.length,
               itemBuilder: (context, index) {
                 final item = advances[index];
+                final dateStr = item['date'] ?? '';
+                final detailsStr = item['details'] ?? '';
                 return Card(
                   margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   child: ListTile(
                     leading: const CircleAvatar(child: Icon(Icons.money_off)),
-                    title: Text(item['title'], style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text('Date: ${item['date']} | Details: ${item['deta
+                    title: Text(item['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text('Date: $dateStr | Details: $detailsStr'),
+                    trailing: Text('Rs. ${item['amount']}
