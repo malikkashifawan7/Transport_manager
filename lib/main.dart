@@ -1,320 +1,505 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart' as p;
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const MyApp());
+  runApp(const TransportManagerApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+class TransportManagerApp extends StatelessWidget {
+  const TransportManagerApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      title: 'Transport Hisab',
       debugShowCheckedModeBanner: false,
-      title: 'Transport Manager Pro',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      home: const AdvancedFleetScreen(gariNo: "1054"),
+      theme: ThemeData(
+        primarySwatch: Colors.indigo,
+        useMaterial3: true,
+      ),
+      home: const MainHomeScreen(),
     );
   }
 }
 
-// --- DATABASE HELPER ---
-class DBService {
-  static final DBService instance = DBService._init();
+// ==================== DATABASE HELPER ====================
+class DatabaseHelper {
+  static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;
-  DBService._init();
+
+  DatabaseHelper._init();
 
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _database = await _initDB('transport_pro.db');
+    _database = await _initDB('transport_manager.db');
     return _database!;
   }
 
   Future<Database> _initDB(String filePath) async {
     final dbPath = await getDatabasesPath();
     final path = p.join(dbPath, filePath);
+
     return await openDatabase(
       path,
       version: 1,
-      onCreate: (db, version) async {
-        await db.execute('''
-          CREATE TABLE trips (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            vehicle_no TEXT,
-            category TEXT,
-            route_details TEXT,
-            total_income REAL,
-            advance REAL,
-            expense REAL,
-            trip_date TEXT
-          )
-        ''');
-      },
+      onCreate: _createDB,
     );
   }
 
-  Future<int> insertTrip(Map<String, dynamic> row) async {
-    final db = await instance.database;
-    return await db.insert('trips', row);
+  Future _createDB(Database db, int version) async {
+    // Vehicles Table
+    await db.execute('''
+      CREATE TABLE vehicles (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        number TEXT NOT NULL,
+        driver_name TEXT NOT NULL,
+        is_deleted INTEGER DEFAULT 0
+      )
+    ''');
+
+    // Records Table (Trips, Oil Change, Maintenance, Salary Advance)
+    await db.execute('''
+      CREATE TABLE records (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        vehicle_id INTEGER NOT NULL,
+        type TEXT NOT NULL, 
+        title TEXT NOT NULL,
+        amount REAL NOT NULL,
+        details TEXT,
+        date TEXT NOT NULL,
+        is_deleted INTEGER DEFAULT 0,
+        FOREIGN KEY (vehicle_id) REFERENCES vehicles (id)
+      )
+    ''');
   }
 
-  Future<List<Map<String, dynamic>>> getTrips(String vehicleNo) async {
+  // Vehicle Queries
+  Future<int> addVehicle(String number, String driver) async {
     final db = await instance.database;
-    return await db.query('trips', where: 'vehicle_no = ?', whereArgs: [vehicleNo]);
+    return await db.insert('vehicles', {'number': number, 'driver_name': driver});
   }
 
-  Future<int> updateTrip(int id, Map<String, dynamic> row) async {
+  Future<List<Map<String, dynamic>>> getVehicles() async {
     final db = await instance.database;
-    return await db.update('trips', row, where: 'id = ?', whereArgs: [id]);
+    return await db.query('vehicles', where: 'is_deleted = 0');
   }
 
-  Future<int> deleteTrip(int id) async {
+  Future<int> updateVehicle(int id, String number, String driver) async {
     final db = await instance.database;
-    return await db.delete('trips', where: 'id = ?', whereArgs: [id]);
+    return await db.update('vehicles', {'number': number, 'driver_name': driver}, where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<int> softDeleteVehicle(int id) async {
+    final db = await instance.database;
+    return await db.update('vehicles', {'is_deleted': 1}, where: 'id = ?', whereArgs: [id]);
+  }
+
+  // Record Queries
+  Future<int> addRecord(int vehicleId, String type, String title, double amount, String details) async {
+    final db = await instance.database;
+    return await db.insert('records', {
+      'vehicle_id': vehicleId,
+      'type': type,
+      'title': title,
+      'amount': amount,
+      'details': details,
+      'date': DateTime.now().toIso8601String().substring(0, 10),
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> getRecords(int vehicleId) async {
+    final db = await instance.database;
+    return await db.query('records', where: 'vehicle_id = ? AND is_deleted = 0', whereArgs: [vehicleId], orderBy: 'id DESC');
+  }
+
+  Future<List<Map<String, dynamic>>> getAllAdvanceRecords() async {
+    final db = await instance.database;
+    return await db.query('records', where: 'type = "Salary Advance" AND is_deleted = 0', orderBy: 'id DESC');
+  }
+
+  Future<int> softDeleteRecord(int id) async {
+    final db = await instance.database;
+    return await db.update('records', {'is_deleted': 1}, where: 'id = ?', whereArgs: [id]);
+  }
+
+  // Recycle Bin Queries
+  Future<List<Map<String, dynamic>>> getDeletedVehicles() async {
+    final db = await instance.database;
+    return await db.query('vehicles', where: 'is_deleted = 1');
+  }
+
+  Future<int> restoreVehicle(int id) async {
+    final db = await instance.database;
+    return await db.update('vehicles', {'is_deleted': 0}, where: 'id = ?', whereArgs: [id]);
   }
 }
 
-// --- MAIN ADVANCED SCREEN ---
-class AdvancedFleetScreen extends StatefulWidget {
-  final String gariNo;
-  const AdvancedFleetScreen({Key? key, required this.gariNo}) : super(key: key);
+// ==================== MAIN HOME SCREEN ====================
+class MainHomeScreen extends StatefulWidget {
+  const MainHomeScreen({super.key});
 
   @override
-  _AdvancedFleetScreenState createState() => _AdvancedFleetScreenState();
+  State<MainHomeScreen> createState() => _MainHomeScreenState();
 }
 
-class _AdvancedFleetScreenState extends State<AdvancedFleetScreen> {
-  List<Map<String, dynamic>> _trips = [];
-  double _totalIncome = 0;
-  double _totalExpense = 0;
+class _MainHomeScreenState extends State<MainHomeScreen> {
+  List<Map<String, dynamic>> vehicles = [];
 
   @override
   void initState() {
     super.initState();
-    _loadData();
+    _loadVehicles();
   }
 
-  void _loadData() async {
-    final data = await DBService.instance.getTrips(widget.gariNo);
-    double income = 0;
-    double expense = 0;
-    for (var item in data) {
-      income += (item['total_income'] as num).toDouble();
-      expense += (item['expense'] as num).toDouble();
-    }
+  void _loadVehicles() async {
+    final data = await DatabaseHelper.instance.getVehicles();
     setState(() {
-      _trips = data;
-      _totalIncome = income;
-      _totalExpense = expense;
+      vehicles = data;
     });
   }
 
-  void _openGoogleMap(String route) async {
-    final uri = Uri.parse("https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(route)}");
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    }
-  }
-
-  void _generatePDF(Map<String, dynamic> trip) async {
-    final pdf = pw.Document();
-    pdf.addPage(
-      pw.Page(
-        build: (pw.Context context) => pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.Text("TRANSPORT HISAB - OFFICIAL BILL INVOICE", style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
-            pw.Divider(),
-            pw.Text("Vehicle No: ${trip['vehicle_no']}"),
-            pw.Text("Category: ${trip['category']}"),
-            pw.Text("Route / Details: ${trip['route_details']}"),
-            pw.Text("Date: ${trip['trip_date']}"),
-            pw.SizedBox(height: 10),
-            pw.TableHelper.fromTextArray(
-              headers: ['Description', 'Amount (PKR)'],
-              data: [
-                ['Total Income', trip['total_income'].toString()],
-                ['Advance Received', trip['advance'].toString()],
-                ['Expenses', trip['expense'].toString()],
-                ['Net Profit', (trip['total_income'] - trip['expense']).toString()],
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-
-    final output = await getTemporaryDirectory();
-    final file = File("${output.path}/Invoice_${trip['id']}.pdf");
-    await file.writeAsBytes(await pdf.save());
-    await Share.shareXFiles([XFile(file.path)], text: 'Bill Invoice for Gari ${widget.gariNo}');
-  }
-
-  void _showTripDialog({Map<String, dynamic>? existingTrip}) {
-    String selectedCategory = existingTrip != null ? (existingTrip['category'] ?? 'Factory Shift') : 'Factory Shift';
-    TextEditingController routeController = TextEditingController(text: existingTrip?['route_details'] ?? '');
-    TextEditingController incomeController = TextEditingController(text: existingTrip?['total_income']?.toString() ?? '');
-    TextEditingController advanceController = TextEditingController(text: existingTrip?['advance']?.toString() ?? '');
-    TextEditingController expenseController = TextEditingController(text: existingTrip?['expense']?.toString() ?? '');
+  void _showAddVehicleDialog({Map<String, dynamic>? editVehicle}) {
+    final numberController = TextEditingController(text: editVehicle?['number'] ?? '');
+    final driverController = TextEditingController(text: editVehicle?['driver_name'] ?? '');
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(existingTrip == null ? "Add New Trip / Booking" : "Edit Trip Entry"),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButtonFormField<String>(
-                value: ['Factory Shift', 'School Route', 'Contract Tour', 'Advance Booking', 'Local Trip']
-                        .contains(selectedCategory) ? selectedCategory : 'Factory Shift',
-                items: ['Factory Shift', 'School Route', 'Contract Tour', 'Advance Booking', 'Local Trip']
-                    .map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-                onChanged: (v) => selectedCategory = v!,
-                decoration: const InputDecoration(labelText: "Sub-Category"),
-              ),
-              TextField(controller: routeController, decoration: const InputDecoration(labelText: "Route / Location Details")),
-              TextField(controller: incomeController, decoration: const InputDecoration(labelText: "Total Income (PKR)"), keyboardType: TextInputType.number),
-              TextField(controller: advanceController, decoration: const InputDecoration(labelText: "Advance Amount (PKR)"), keyboardType: TextInputType.number),
-              TextField(controller: expenseController, decoration: const InputDecoration(labelText: "Expenses (PKR)"), keyboardType: TextInputType.number),
-            ],
-          ),
+      builder: (_) => AlertDialog(
+        title: Text(editVehicle == null ? 'Add Vehicle' : 'Edit Vehicle'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: numberController, decoration: const InputDecoration(labelText: 'Gari Number (e.g. LES-1054)')),
+            TextField(controller: driverController, decoration: const InputDecoration(labelText: 'Driver Name')),
+          ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancel")),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () async {
-              final data = {
-                'vehicle_no': widget.gariNo,
-                'category': selectedCategory,
-                'route_details': routeController.text,
-                'total_income': double.tryParse(incomeController.text) ?? 0.0,
-                'advance': double.tryParse(advanceController.text) ?? 0.0,
-                'expense': double.tryParse(expenseController.text) ?? 0.0,
-                'trip_date': DateTime.now().toString().substring(0, 10),
-              };
-
-              if (existingTrip == null) {
-                await DBService.instance.insertTrip(data);
-              } else {
-                await DBService.instance.updateTrip(existingTrip['id'], data);
+              if (numberController.text.isNotEmpty) {
+                if (editVehicle == null) {
+                  await DatabaseHelper.instance.addVehicle(numberController.text, driverController.text);
+                } else {
+                  await DatabaseHelper.instance.updateVehicle(editVehicle['id'], numberController.text, driverController.text);
+                }
+                _loadVehicles();
+                if (mounted) Navigator.pop(context);
               }
-
-              if (mounted) Navigator.pop(ctx);
-              _loadData();
             },
-            child: const Text("Save Entry"),
-          ),
+            child: const Text('Save'),
+          )
         ],
       ),
     );
+  }
+
+  void _openGoogleMaps() async {
+    final Uri url = Uri.parse('https://www.google.com/maps');
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open Maps')));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    double netProfit = _totalIncome - _totalExpense;
-
     return Scaffold(
       appBar: AppBar(
-        title: Text("Gari ${widget.gariNo} - Pro Ledger"),
+        title: const Text('Transport Hisab - Dashboard'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.print),
-            onPressed: () async {
-              final pdf = pw.Document();
-              pdf.addPage(
-                pw.Page(
-                  build: (pw.Context context) => pw.Center(
-                    child: pw.Text("Gari ${widget.gariNo} Statement - Total Profit: Rs. $netProfit"),
-                  ),
-                ),
-              );
-              await Printing.layoutPdf(onLayout: (format) async => pdf.save());
+            icon: const Icon(Icons.map),
+            tooltip: 'Google Maps Navigation',
+            onPressed: _openGoogleMaps,
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_sweep),
+            tooltip: 'Recycle Bin',
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const RecycleBinScreen())).then((_) => _loadVehicles());
             },
-          )
+          ),
         ],
       ),
-      body: Column(
-        children: [
-          Card(
-            margin: const EdgeInsets.all(12),
-            color: Colors.blue.shade50,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text("Income: Rs. $_totalIncome", style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-                      Text("Expense: Rs. $_totalExpense", style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                  const Divider(),
-                  Text("NET PROFIT (SAFI BACHAT): Rs. $netProfit",
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blueAccent)),
-                ],
-              ),
+      drawer: Drawer(
+        child: ListView(
+          children: [
+            const UserAccountsDrawerHeader(
+              accountName: Text('Transport Hisab'),
+              accountEmail: Text('v2.0 Advanced Fleet Manager'),
+              currentAccountPicture: CircleAvatar(child: Icon(Icons.local_shipping, size: 36)),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12.0),
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(45)),
-              onPressed: () => _showTripDialog(),
-              icon: const Icon(Icons.add),
-              label: const Text("Add New Trip / Booking / Sub-category"),
+            ListTile(
+              leading: const Icon(Icons.account_balance_wallet),
+              title: const Text('Driver Salary Advances'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const SalaryAdvanceLedgerScreen()));
+              },
             ),
-          ),
-          const SizedBox(height: 10),
-          Expanded(
-            child: ListView.builder(
-              itemCount: _trips.length,
+            ListTile(
+              leading: const Icon(Icons.sync),
+              title: const Text('Auto Update Check'),
+              onTap: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('App is up to date (Version 2.0.0)')));
+              },
+            ),
+          ],
+        ),
+      ),
+      body: vehicles.isEmpty
+          ? const Center(child: Text('No vehicles added yet. Click + to add.'))
+          : ListView.builder(
+              itemCount: vehicles.length,
               itemBuilder: (context, index) {
-                final trip = _trips[index];
+                final v = vehicles[index];
                 return Card(
                   margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   child: ListTile(
-                    title: Text("${trip['category']} (${trip['route_details']})", style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text("Date: ${trip['trip_date']}\nIncome: Rs. ${trip['total_income']} | Exp: Rs. ${trip['expense']}"),
-                    isThreeLine: true,
+                    leading: const CircleAvatar(child: Icon(Icons.directions_car)),
+                    title: Text(v['number'], style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text('Driver: ${v['driver_name']}'),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.map, color: Colors.blue),
-                          onPressed: () => _openGoogleMap(trip['route_details']),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.edit, color: Colors.orange),
-                          onPressed: () => _showTripDialog(existingTrip: trip),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.share, color: Colors.green),
-                          onPressed: () => _generatePDF(trip),
+                          icon: const Icon(Icons.edit, color: Colors.blue),
+                          onPressed: () => _showAddVehicleDialog(editVehicle: v),
                         ),
                         IconButton(
                           icon: const Icon(Icons.delete, color: Colors.red),
                           onPressed: () async {
-                            await DBService.instance.deleteTrip(trip['id']);
-                            _loadData();
+                            await DatabaseHelper.instance.softDeleteVehicle(v['id']);
+                            _loadVehicles();
                           },
                         ),
                       ],
                     ),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => VehicleLedgerScreen(vehicleId: v['id'], vehicleNumber: v['number'], driverName: v['driver_name']),
+                        ),
+                      );
+                    },
                   ),
                 );
               },
             ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _showAddVehicleDialog(),
+        icon: const Icon(Icons.add),
+        label: const Text('Add Vehicle'),
+      ),
+    );
+  }
+}
+
+// ==================== VEHICLE LEDGER & AUTO CALCULATOR ====================
+class VehicleLedgerScreen extends StatefulWidget {
+  final int vehicleId;
+  final String vehicleNumber;
+  final String driverName;
+
+  const VehicleLedgerScreen({super.key, required this.vehicleId, required this.vehicleNumber, required this.driverName});
+
+  @override
+  State<VehicleLedgerScreen> createState() => _VehicleLedgerScreenState();
+}
+
+class _VehicleLedgerScreenState extends State<VehicleLedgerScreen> {
+  List<Map<String, dynamic>> records = [];
+  double totalIncome = 0.0;
+  double totalExpense = 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRecords();
+  }
+
+  void _loadRecords() async {
+    final data = await DatabaseHelper.instance.getRecords(widget.vehicleId);
+    double inc = 0;
+    double exp = 0;
+    for (var r in data) {
+      if (r['type'] == 'Income') {
+        inc += r['amount'];
+      } else {
+        exp += r['amount'];
+      }
+    }
+    setState(() {
+      records = data;
+      totalIncome = inc;
+      totalExpense = exp;
+    });
+  }
+
+  void _addRecordDialog() {
+    final titleController = TextEditingController();
+    final amountController = TextEditingController();
+    final detailsController = TextEditingController();
+    String selectedType = 'Income';
+
+    showDialog(
+      context: context,
+      builder: (_) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Add Transaction / Entry'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButton<String>(
+                  value: selectedType,
+                  isExpanded: true,
+                  items: ['Income', 'Oil Change', 'Maintenance', 'Salary Advance', 'Other Expense']
+                      .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                      .toList(),
+                  onChanged: (val) {
+                    if (val != null) setDialogState(() => selectedType = val);
+                  },
+                ),
+                TextField(controller: titleController, decoration: const InputDecoration(labelText: 'Title / Sub-category')),
+                TextField(controller: amountController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Amount (Rs.)')),
+                TextField(controller: detailsController, decoration: const InputDecoration(labelText: 'Details / Meter Reading')),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+            ElevatedButton(
+              onPressed: () async {
+                final amt = double.tryParse(amountController.text) ?? 0.0;
+                if (titleController.text.isNotEmpty && amt > 0) {
+                  await DatabaseHelper.instance.addRecord(
+                    widget.vehicleId,
+                    selectedType,
+                    titleController.text,
+                    amt,
+                    detailsController.text,
+                  );
+                  _loadRecords();
+                  if (mounted) Navigator.pop(context);
+                }
+              },
+              child: const Text('Save Record'),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _shareSummary() {
+    final net = totalIncome - totalExpense;
+    final text = '*** Vehicle Ledger Summary ***\nVehicle: ${widget.vehicleNumber}\nDriver: ${widget.driverName}\nTotal Income: Rs. $totalIncome\nTotal Expenses: Rs. $totalExpense\nNET PROFIT: Rs. $net\n\nGenerated via Transport Hisab';
+    Share.share(text);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final netProfit = totalIncome - totalExpense;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('${widget.vehicleNumber} - Pro Ledger'),
+        actions: [
+          IconButton(icon: const Icon(Icons.share), onPressed: _shareSummary, tooltip: 'Share Summary'),
+        ],
+      ),
+      body: Column(
+        children: [
+          // Auto Calculator Summary Card
+          Container(
+            margin: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.blue.shade200),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Income: Rs. $totalIncome', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 16)),
+                    Text('Expense: Rs. $totalExpense', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 16)),
+                  ],
+                ),
+                const Divider(height: 20),
+                Text(
+                  'NET PROFIT (SAFI BACHAT): Rs. $netProfit',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: netProfit >= 0 ? Colors.indigo : Colors.red,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(45)),
+              onPressed: _addRecordDialog,
+              icon: const Icon(Icons.add_card),
+              label: const Text('Add Entry (Income, Oil Change, Advance, Maintenance)'),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: records.isEmpty
+                ? const Center(child: Text('No ledger entries recorded.'))
+                : ListView.builder(
+                    itemCount: records.length,
+                    itemBuilder: (context, index) {
+                      final r = records[index];
+                      final isInc = r['type'] == 'Income';
+                      return Card(
+                        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: isInc ? Colors.green.shade100 : Colors.red.shade100,
+                            child: Icon(
+                              isInc ? Icons.arrow_downward : Icons.arrow_upward,
+                              color: isInc ? Colors.green : Colors.red,
+                            ),
+                          ),
+                          title: Text('${r['title']} [${r['type']}]', style: const TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: Text('Date: ${r['date']} | Details: ${r['details']}'),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Rs. ${r['amount']}',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: isInc ? Colors.green : Colors.red,
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline, size: 20, color: Colors.grey),
+                                onPressed: () async {
+                                  await DatabaseHelper.instance.softDeleteRecord(r['id']);
+                                  _loadRecords();
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
           ),
         ],
       ),
@@ -322,3 +507,43 @@ class _AdvancedFleetScreenState extends State<AdvancedFleetScreen> {
   }
 }
 
+// ==================== ALL DRIVERS SALARY ADVANCE ====================
+class SalaryAdvanceLedgerScreen extends StatefulWidget {
+  const SalaryAdvanceLedgerScreen({super.key});
+
+  @override
+  State<SalaryAdvanceLedgerScreen> createState() => _SalaryAdvanceLedgerScreenState();
+}
+
+class _SalaryAdvanceLedgerScreenState extends State<SalaryAdvanceLedgerScreen> {
+  List<Map<String, dynamic>> advances = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAdvances();
+  }
+
+  void _loadAdvances() async {
+    final data = await DatabaseHelper.instance.getAllAdvanceRecords();
+    setState(() {
+      advances = data;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Driver Salary Advances Ledger')),
+      body: advances.isEmpty
+          ? const Center(child: Text('No advance payments recorded.'))
+          : ListView.builder(
+              itemCount: advances.length,
+              itemBuilder: (context, index) {
+                final item = advances[index];
+                return Card(
+                  margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  child: ListTile(
+                    leading: const CircleAvatar(child: Icon(Icons.money_off)),
+                    title: Text(item['title'], style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text('Date: ${item['date']} | Details: ${item['deta
