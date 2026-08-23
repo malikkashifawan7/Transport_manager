@@ -397,14 +397,24 @@ class _VehicleLedgerScreenState extends State<VehicleLedgerScreen> with SingleTi
 
   List<Map<String, dynamic>> records = [];
   List<Map<String, dynamic>> bookings = [];
+class VehicleLedgerScreen extends StatefulWidget {
+  final Map<String, dynamic> vehicleData;
 
+  const VehicleLedgerScreen({super.key, required this.vehicleData});
+
+  @override
+  State<VehicleLedgerScreen> createState() => _VehicleLedgerScreenState();
+}
+
+class _VehicleLedgerScreenState extends State<VehicleLedgerScreen> with SingleTickerProviderStateMixin {
+  List<Map<String, dynamic>> records = [];
+  List<Map<String, dynamic>> bookings = [];
   double totalIncome = 0.0;
   double totalExpense = 0.0;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
     _loadLedgerData();
   }
 
@@ -422,13 +432,16 @@ class _VehicleLedgerScreenState extends State<VehicleLedgerScreen> with SingleTi
         exp += amt;
       }
     }
+
     setState(() {
       records = recData;
       bookings = bookData;
       totalIncome = inc;
       totalExpense = exp;
     });
-   void _showRecordDialog([Map<String, dynamic>? editRecord]) {
+  }
+
+  void _showRecordDialog([Map<String, dynamic>? editRecord]) {
     final titleController = TextEditingController(text: editRecord?['title'] ?? '');
     final amountController = TextEditingController(text: editRecord != null ? editRecord['amount'].toString() : '');
     final detailsController = TextEditingController(text: editRecord?['details'] ?? '');
@@ -484,3 +497,20 @@ class _VehicleLedgerScreenState extends State<VehicleLedgerScreen> with SingleTi
       ),
     );
   }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('${widget.vehicleData['number']} Ledger'),
+      ),
+      body: Center(
+        child: Text('Income: \$${totalIncome.toStringAsFixed(2)} | Expense: \$${totalExpense.toStringAsFixed(2)}'),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showRecordDialog(),
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
+}
