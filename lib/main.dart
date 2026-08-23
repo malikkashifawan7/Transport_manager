@@ -98,7 +98,6 @@ class DatabaseHelper {
     ''');
   }
 
-  // Vehicles CRUD
   Future<int> addVehicle(String number, String model, String driver, String phone, String cnic, double oilKm) async {
     final db = await instance.database;
     return await db.insert('vehicles', {
@@ -135,7 +134,6 @@ class DatabaseHelper {
     return await db.update('vehicles', {'is_deleted': 1}, where: 'id = ?', whereArgs: [id]);
   }
 
-  // Ledger Records CRUD
   Future<int> addRecord(int vehicleId, String type, String title, double amount, String details, double meter) async {
     final db = await instance.database;
     return await db.insert('records', {
@@ -170,7 +168,6 @@ class DatabaseHelper {
     return await db.update('records', {'is_deleted': 1}, where: 'id = ?', whereArgs: [id]);
   }
 
-  // Bookings
   Future<int> addBooking(int vehicleId, String party, String phone, String pickup, String drop, double total, double advance) async {
     final db = await instance.database;
     return await db.insert('bookings', {
@@ -206,10 +203,10 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
   @override
   void initState() {
     super.initState();
-    _loadVehicles();
+    _reloadVehicles();
   }
 
-  void _loadVehicles() async {
+  void _reloadVehicles() async {
     final data = await DatabaseHelper.instance.getVehicles();
     setState(() => vehicles = data);
   }
@@ -250,7 +247,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
                 } else {
                   await DatabaseHelper.instance.updateVehicle(editVehicle['id'], numberController.text, modelController.text, driverController.text, phoneController.text, cnicController.text, oilKm);
                 }
-                _loadVehicles();
+                _reloadVehicles();
                 if (mounted) Navigator.pop(context);
               }
             },
@@ -266,7 +263,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Auto Update Check'),
-        content: const Text('Aap ki application "Transport Hisab v2.0 Advanced Fleet Manager" updated hai! Koi naya update filhal dastiyab nahi hai.'),
+        content: const Text('Aap ki application "Transport Hisab v2.0 Advanced Fleet Manager" updated hai!'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK'))
         ],
@@ -282,21 +279,21 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
-            UserAccountsDrawerHeader(
-              accountName: const Text('Transport Hisab', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-              accountEmail: const Text('v2.0 Advanced Fleet Manager'),
-              currentAccountPicture: const CircleAvatar(
+            const UserAccountsDrawerHeader(
+              accountName: Text('Transport Hisab', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              accountEmail: Text('v2.0 Advanced Fleet Manager'),
+              currentAccountPicture: CircleAvatar(
                 backgroundColor: Colors.white,
                 child: Icon(Icons.local_shipping, size: 40, color: Colors.deepPurple),
               ),
-              decoration: const BoxDecoration(color: Colors.deepPurple),
+              decoration: BoxDecoration(color: Colors.deepPurple),
             ),
             ListTile(
               leading: const Icon(Icons.account_balance_wallet),
               title: const Text('Driver Salary Advances'),
               onTap: () {
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Select a vehicle to view/manage driver salary advances.')));
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Select a vehicle to manage driver salary advances.')));
               },
             ),
             ListTile(
@@ -308,11 +305,10 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
               },
             ),
             const Divider(),
-            ListTile(
-              leading: const Icon(Icons.info_outline),
-              title: const Text('App Info'),
-              subtitle: const Text('Transport Fleet Hisab Engine v2.0'),
-              onTap: () {},
+            const ListTile(
+              leading: Icon(Icons.info_outline),
+              title: Text('App Info'),
+              subtitle: Text('Transport Fleet Hisab Engine v2.0'),
             ),
           ],
         ),
@@ -340,7 +336,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
                           icon: const Icon(Icons.delete, color: Colors.red),
                           onPressed: () async {
                             await DatabaseHelper.instance.softDeleteVehicle(v['id']);
-                            _loadVehicles();
+                            _reloadVehicles();
                           },
                         ),
                       ],
@@ -349,9 +345,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => VehicleLedgerScreen(
-                            vehicle: v,
-                          ),
+                          builder: (_) => VehicleLedgerScreen(vehicleData: v),
                         ),
                       );
                     },
@@ -366,13 +360,14 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
       ),
     );
   }
+}
 // ==================== VEHICLE LEDGER & BOOKINGS SCREEN ====================
 class VehicleLedgerScreen extends StatefulWidget {
-  final Map<String, dynamic> vehicle;
+  final Map<String, dynamic> vehicleData;
 
   const VehicleLedgerScreen({
     super.key,
-    required this.vehicle,
+    required this.vehicleData,
   });
 
   @override
@@ -390,12 +385,12 @@ class _VehicleLedgerScreenState extends State<VehicleLedgerScreen> with SingleTi
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _loadData();
+    _loadLedgerData();
   }
 
-  void _loadData() async {
-    final recData = await DatabaseHelper.instance.getRecords(widget.vehicle['id']);
-    final bookData = await DatabaseHelper.instance.getBookings(widget.vehicle['id']);
+  void _loadLedgerData() async {
+    final recData = await DatabaseHelper.instance.getRecords(widget.vehicleData['id']);
+    final bookData = await DatabaseHelper.instance.getBookings(widget.vehicleData['id']);
     
     double inc = 0;
     double exp = 0;
@@ -455,11 +450,11 @@ class _VehicleLedgerScreenState extends State<VehicleLedgerScreen> with SingleTi
                 final meter = double.tryParse(meterController.text) ?? 0.0;
                 if (titleController.text.isNotEmpty && amt > 0) {
                   if (editRecord == null) {
-                    await DatabaseHelper.instance.addRecord(widget.vehicle['id'], selectedType, titleController.text, amt, detailsController.text, meter);
+                    await DatabaseHelper.instance.addRecord(widget.vehicleData['id'], selectedType, titleController.text, amt, detailsController.text, meter);
                   } else {
                     await DatabaseHelper.instance.updateRecord(editRecord['id'], selectedType, titleController.text, amt, detailsController.text, meter);
                   }
-                  _loadData();
+                  _loadLedgerData();
                   if (mounted) Navigator.pop(context);
                 }
               },
@@ -503,11 +498,11 @@ class _VehicleLedgerScreenState extends State<VehicleLedgerScreen> with SingleTi
               final fare = double.tryParse(fareController.text) ?? 0.0;
               final adv = double.tryParse(advanceController.text) ?? 0.0;
               if (partyController.text.isNotEmpty && fare > 0) {
-                await DatabaseHelper.instance.addBooking(widget.vehicle['id'], partyController.text, phoneController.text, pickupController.text, dropController.text, fare, adv);
+                await DatabaseHelper.instance.addBooking(widget.vehicleData['id'], partyController.text, phoneController.text, pickupController.text, dropController.text, fare, adv);
                 if (adv > 0) {
-                  await DatabaseHelper.instance.addRecord(widget.vehicle['id'], 'Income', 'Booking Advance: ${partyController.text}', adv, 'Route: ${pickupController.text} to ${dropController.text}', 0);
+                  await DatabaseHelper.instance.addRecord(widget.vehicleData['id'], 'Income', 'Booking Advance: ${partyController.text}', adv, 'Route: ${pickupController.text} to ${dropController.text}', 0);
                 }
-                _loadData();
+                _loadLedgerData();
                 if (mounted) Navigator.pop(context);
               }
             },
@@ -524,7 +519,9 @@ class _VehicleLedgerScreenState extends State<VehicleLedgerScreen> with SingleTi
     if (await canLaunchUrl(googleMapsUrl)) {
       await launchUrl(googleMapsUrl, mode: LaunchMode.externalApplication);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open Google Maps')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open Google Maps')));
+      }
     }
   }
 
@@ -533,15 +530,15 @@ class _VehicleLedgerScreenState extends State<VehicleLedgerScreen> with SingleTi
     final summary = '''
 🚛 *TRANSPORT HISAB REPORT*
 -----------------------------
-*Vehicle:* ${widget.vehicle['number']} (${widget.vehicle['model']})
-*Driver:* ${widget.vehicle['driver_name']} (Ph: ${widget.vehicle['driver_phone']})
+*Vehicle:* ${widget.vehicleData['number']} (${widget.vehicleData['model']})
+*Driver:* ${widget.vehicleData['driver_name']} (Ph: ${widget.vehicleData['driver_phone']})
 
 🟢 *Total Income:* Rs. $totalIncome
 🔴 *Total Expense:* Rs. $totalExpense
 -----------------------------
 💰 *NET PROFIT (SAFI BACHAT):* Rs. $netProfit
 -----------------------------
-Generated via Transport Hisab Pro v2.0
+Generated via Transport Hisab Pro
 ''';
     Share.share(summary);
   }
@@ -552,7 +549,7 @@ Generated via Transport Hisab Pro v2.0
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('${widget.vehicle['number']} - Pro Ledger'),
+        title: Text('${widget.vehicleData['number']} - Pro Ledger'),
         actions: [
           IconButton(
             icon: const Icon(Icons.share),
@@ -610,7 +607,7 @@ Generated via Transport Hisab Pro v2.0
                             IconButton(icon: const Icon(Icons.edit, size: 20, color: Colors.blue), onPressed: () => _showRecordDialog(editRecord: r)),
                             IconButton(icon: const Icon(Icons.delete_outline, size: 20, color: Colors.red), onPressed: () async {
                               await DatabaseHelper.instance.softDeleteRecord(r['id']);
-                              _loadData();
+                              _loadLedgerData();
                             }),
                           ],
                         ),
@@ -678,5 +675,4 @@ Generated via Transport Hisab Pro v2.0
       ),
     );
   }
-}
 }
