@@ -36,7 +36,6 @@ jobs:
                   if (project.hasProperty('android')) {
                       project.android {
                           compileSdkVersion 34
-                          buildToolsVersion '34.0.0'
                       }
                   }
               }
