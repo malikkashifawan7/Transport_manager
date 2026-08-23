@@ -1,5 +1,5 @@
 name: transport_manager
-description: Transport Fleet Management App
+description: Transport Fleet Management Ultra Pro Max ERP
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -13,11 +13,8 @@ dependencies:
   pdf: ^3.10.4
   printing: ^5.11.1
   cupertino_icons: ^1.0.6
-  sqflite: ^2.3.3+1
-  path: ^1.9.1
-  share_plus: ^10.0.0
   url_launcher: ^6.3.0
-  path_provider: ^2.1.4
+  intl: ^0.19.0
 
 dev_dependencies:
   flutter_test:
