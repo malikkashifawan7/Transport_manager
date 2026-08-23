@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart' as p;
-import 'package:url_launcher/url_launcher.dart';
-import 'package:share_plus/share_plus.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,7 +13,7 @@ class TransportManagerApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Transport Hisab',
+      title: 'Transport Hisab Pro',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primarySwatch: Colors.indigo,
@@ -26,7 +24,7 @@ class TransportManagerApp extends StatelessWidget {
   }
 }
 
-// ==================== DATABASE HELPER ====================
+// ==================== ADVANCED DATABASE HELPER ====================
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;
@@ -35,7 +33,7 @@ class DatabaseHelper {
 
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _database = await _initDB('transport_manager.db');
+    _database = await _initDB('transport_manager_v2.db');
     return _database!;
   }
 
@@ -56,6 +54,7 @@ class DatabaseHelper {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         number TEXT NOT NULL,
         driver_name TEXT NOT NULL,
+        driver_phone TEXT,
         is_deleted INTEGER DEFAULT 0
       )
     ''');
@@ -73,11 +72,28 @@ class DatabaseHelper {
         FOREIGN KEY (vehicle_id) REFERENCES vehicles (id)
       )
     ''');
+
+    await db.execute('''
+      CREATE TABLE bookings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        vehicle_id INTEGER NOT NULL,
+        party_name TEXT NOT NULL,
+        party_phone TEXT,
+        route TEXT NOT NULL,
+        total_fare REAL NOT NULL,
+        advance_paid REAL NOT NULL,
+        booking_date TEXT NOT NULL,
+        status TEXT DEFAULT 'Pending',
+        is_deleted INTEGER DEFAULT 0,
+        FOREIGN KEY (vehicle_id) REFERENCES vehicles (id)
+      )
+    ''');
   }
 
-  Future<int> addVehicle(String number, String driver) async {
+  // Vehicles CRUD
+  Future<int> addVehicle(String number, String driver, String phone) async {
     final db = await instance.database;
-    return await db.insert('vehicles', {'number': number, 'driver_name': driver});
+    return await db.insert('vehicles', {'number': number, 'driver_name': driver, 'driver_phone': phone});
   }
 
   Future<List<Map<String, dynamic>>> getVehicles() async {
@@ -85,9 +101,9 @@ class DatabaseHelper {
     return await db.query('vehicles', where: 'is_deleted = 0');
   }
 
-  Future<int> updateVehicle(int id, String number, String driver) async {
+  Future<int> updateVehicle(int id, String number, String driver, String phone) async {
     final db = await instance.database;
-    return await db.update('vehicles', {'number': number, 'driver_name': driver}, where: 'id = ?', whereArgs: [id]);
+    return await db.update('vehicles', {'number': number, 'driver_name': driver, 'driver_phone': phone}, where: 'id = ?', whereArgs: [id]);
   }
 
   Future<int> softDeleteVehicle(int id) async {
@@ -95,6 +111,7 @@ class DatabaseHelper {
     return await db.update('vehicles', {'is_deleted': 1}, where: 'id = ?', whereArgs: [id]);
   }
 
+  // Ledger Records CRUD
   Future<int> addRecord(int vehicleId, String type, String title, double amount, String details) async {
     final db = await instance.database;
     return await db.insert('records', {
@@ -107,14 +124,19 @@ class DatabaseHelper {
     });
   }
 
+  Future<int> updateRecord(int id, String type, String title, double amount, String details) async {
+    final db = await instance.database;
+    return await db.update('records', {
+      'type': type,
+      'title': title,
+      'amount': amount,
+      'details': details,
+    }, where: 'id = ?', whereArgs: [id]);
+  }
+
   Future<List<Map<String, dynamic>>> getRecords(int vehicleId) async {
     final db = await instance.database;
     return await db.query('records', where: 'vehicle_id = ? AND is_deleted = 0', whereArgs: [vehicleId], orderBy: 'id DESC');
-  }
-
-  Future<List<Map<String, dynamic>>> getAllAdvanceRecords() async {
-    final db = await instance.database;
-    return await db.query('records', where: 'type = "Salary Advance" AND is_deleted = 0', orderBy: 'id DESC');
   }
 
   Future<int> softDeleteRecord(int id) async {
@@ -122,18 +144,28 @@ class DatabaseHelper {
     return await db.update('records', {'is_deleted': 1}, where: 'id = ?', whereArgs: [id]);
   }
 
-  Future<List<Map<String, dynamic>>> getDeletedVehicles() async {
+  // Bookings CRUD
+  Future<int> addBooking(int vehicleId, String party, String phone, String route, double total, double advance) async {
     final db = await instance.database;
-    return await db.query('vehicles', where: 'is_deleted = 1');
+    return await db.insert('bookings', {
+      'vehicle_id': vehicleId,
+      'party_name': party,
+      'party_phone': phone,
+      'route': route,
+      'total_fare': total,
+      'advance_paid': advance,
+      'booking_date': DateTime.now().toIso8601String().substring(0, 10),
+      'status': 'Pending'
+    });
   }
 
-  Future<int> restoreVehicle(int id) async {
+  Future<List<Map<String, dynamic>>> getBookings(int vehicleId) async {
     final db = await instance.database;
-    return await db.update('vehicles', {'is_deleted': 0}, where: 'id = ?', whereArgs: [id]);
+    return await db.query('bookings', where: 'vehicle_id = ? AND is_deleted = 0', whereArgs: [vehicleId], orderBy: 'id DESC');
   }
 }
 
-// ==================== MAIN HOME SCREEN ====================
+// ==================== DASHBOARD SCREEN ====================
 class MainHomeScreen extends StatefulWidget {
   const MainHomeScreen({super.key});
 
@@ -152,14 +184,13 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
 
   void _loadVehicles() async {
     final data = await DatabaseHelper.instance.getVehicles();
-    setState(() {
-      vehicles = data;
-    });
+    setState(() => vehicles = data);
   }
 
   void _showAddVehicleDialog({Map<String, dynamic>? editVehicle}) {
     final numberController = TextEditingController(text: editVehicle?['number'] ?? '');
     final driverController = TextEditingController(text: editVehicle?['driver_name'] ?? '');
+    final phoneController = TextEditingController(text: editVehicle?['driver_phone'] ?? '');
 
     showDialog(
       context: context,
@@ -170,6 +201,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
           children: [
             TextField(controller: numberController, decoration: const InputDecoration(labelText: 'Gari Number (e.g. LES-1054)')),
             TextField(controller: driverController, decoration: const InputDecoration(labelText: 'Driver Name')),
+            TextField(controller: phoneController, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Driver Mobile Number')),
           ],
         ),
         actions: [
@@ -178,9 +210,9 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
             onPressed: () async {
               if (numberController.text.isNotEmpty) {
                 if (editVehicle == null) {
-                  await DatabaseHelper.instance.addVehicle(numberController.text, driverController.text);
+                  await DatabaseHelper.instance.addVehicle(numberController.text, driverController.text, phoneController.text);
                 } else {
-                  await DatabaseHelper.instance.updateVehicle(editVehicle['id'], numberController.text, driverController.text);
+                  await DatabaseHelper.instance.updateVehicle(editVehicle['id'], numberController.text, driverController.text, phoneController.text);
                 }
                 _loadVehicles();
                 if (mounted) Navigator.pop(context);
@@ -193,70 +225,12 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
     );
   }
 
-  void _openGoogleMaps() async {
-    final Uri url = Uri.parse('https://www.google.com/maps');
-    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open Maps')));
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Transport Hisab - Dashboard'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.map),
-            tooltip: 'Google Maps Navigation',
-            onPressed: _openGoogleMaps,
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete_sweep),
-            tooltip: 'Recycle Bin',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const RecycleBinScreen()),
-              ).then((_) => _loadVehicles());
-            },
-          ),
-        ],
-      ),
-      drawer: Drawer(
-        child: ListView(
-          children: [
-            const UserAccountsDrawerHeader(
-              accountName: Text('Transport Hisab'),
-              accountEmail: Text('v2.0 Advanced Fleet Manager'),
-              currentAccountPicture: CircleAvatar(child: Icon(Icons.local_shipping, size: 36)),
-            ),
-            ListTile(
-              leading: const Icon(Icons.account_balance_wallet),
-              title: const Text('Driver Salary Advances'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const SalaryAdvanceLedgerScreen()),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.sync),
-              title: const Text('Auto Update Check'),
-              onTap: () {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('App is up to date (Version 2.0.0)')));
-              },
-            ),
-          ],
-        ),
-      ),
+      appBar: AppBar(title: const Text('Transport Hisab Pro')),
       body: vehicles.isEmpty
-          ? const Center(child: Text('No vehicles added yet. Click + to add.'))
+          ? const Center(child: Text('No vehicles added yet.'))
           : ListView.builder(
               itemCount: vehicles.length,
               itemBuilder: (context, index) {
@@ -264,9 +238,9 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
                 return Card(
                   margin: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
                   child: ListTile(
-                    leading: const CircleAvatar(child: Icon(Icons.directions_car)),
+                    leading: const CircleAvatar(child: Icon(Icons.local_shipping)),
                     title: Text(v['number'], style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text('Driver: ${v['driver_name']}'),
+                    subtitle: Text('Driver: ${v['driver_name']} | Ph: ${v['driver_phone'] ?? "N/A"}'),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -291,6 +265,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
                             vehicleId: v['id'],
                             vehicleNumber: v['number'],
                             driverName: v['driver_name'],
+                            driverPhone: v['driver_phone'] ?? '',
                           ),
                         ),
                       );
@@ -307,39 +282,46 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
     );
   }
 }
-// ==================== VEHICLE LEDGER & AUTO CALCULATOR ====================
+// ==================== VEHICLE LEDGER & BOOKINGS SCREEN ====================
 class VehicleLedgerScreen extends StatefulWidget {
   final int vehicleId;
   final String vehicleNumber;
   final String driverName;
+  final String driverPhone;
 
   const VehicleLedgerScreen({
     super.key,
     required this.vehicleId,
     required this.vehicleNumber,
     required this.driverName,
+    required this.driverPhone,
   });
 
   @override
   State<VehicleLedgerScreen> createState() => _VehicleLedgerScreenState();
 }
 
-class _VehicleLedgerScreenState extends State<VehicleLedgerScreen> {
+class _VehicleLedgerScreenState extends State<VehicleLedgerScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
   List<Map<String, dynamic>> records = [];
+  List<Map<String, dynamic>> bookings = [];
   double totalIncome = 0.0;
   double totalExpense = 0.0;
 
   @override
   void initState() {
     super.initState();
-    _loadRecords();
+    _tabController = TabController(length: 2, vsync: this);
+    _loadData();
   }
 
-  void _loadRecords() async {
-    final data = await DatabaseHelper.instance.getRecords(widget.vehicleId);
+  void _loadData() async {
+    final recData = await DatabaseHelper.instance.getRecords(widget.vehicleId);
+    final bookData = await DatabaseHelper.instance.getBookings(widget.vehicleId);
+    
     double inc = 0;
     double exp = 0;
-    for (var r in data) {
+    for (var r in recData) {
       if (r['type'] == 'Income') {
         inc += r['amount'];
       } else {
@@ -347,23 +329,24 @@ class _VehicleLedgerScreenState extends State<VehicleLedgerScreen> {
       }
     }
     setState(() {
-      records = data;
+      records = recData;
+      bookings = bookData;
       totalIncome = inc;
       totalExpense = exp;
     });
   }
 
-  void _addRecordDialog() {
-    final titleController = TextEditingController();
-    final amountController = TextEditingController();
-    final detailsController = TextEditingController();
-    String selectedType = 'Income';
+  void _showRecordDialog({Map<String, dynamic>? editRecord}) {
+    final titleController = TextEditingController(text: editRecord?['title'] ?? '');
+    final amountController = TextEditingController(text: editRecord != null ? editRecord['amount'].toString() : '');
+    final detailsController = TextEditingController(text: editRecord?['details'] ?? '');
+    String selectedType = editRecord?['type'] ?? 'Income';
 
     showDialog(
       context: context,
       builder: (_) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Add Transaction / Entry'),
+          title: Text(editRecord == null ? 'Add Entry' : 'Edit Entry'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -378,7 +361,7 @@ class _VehicleLedgerScreenState extends State<VehicleLedgerScreen> {
                     if (val != null) setDialogState(() => selectedType = val);
                   },
                 ),
-                TextField(controller: titleController, decoration: const InputDecoration(labelText: 'Title / Sub-category')),
+                TextField(controller: titleController, decoration: const InputDecoration(labelText: 'Title')),
                 TextField(controller: amountController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Amount (Rs.)')),
                 TextField(controller: detailsController, decoration: const InputDecoration(labelText: 'Details / Meter Reading')),
               ],
@@ -390,14 +373,12 @@ class _VehicleLedgerScreenState extends State<VehicleLedgerScreen> {
               onPressed: () async {
                 final amt = double.tryParse(amountController.text) ?? 0.0;
                 if (titleController.text.isNotEmpty && amt > 0) {
-                  await DatabaseHelper.instance.addRecord(
-                    widget.vehicleId,
-                    selectedType,
-                    titleController.text,
-                    amt,
-                    detailsController.text,
-                  );
-                  _loadRecords();
+                  if (editRecord == null) {
+                    await DatabaseHelper.instance.addRecord(widget.vehicleId, selectedType, titleController.text, amt, detailsController.text);
+                  } else {
+                    await DatabaseHelper.instance.updateRecord(editRecord['id'], selectedType, titleController.text, amt, detailsController.text);
+                  }
+                  _loadData();
                   if (mounted) Navigator.pop(context);
                 }
               },
@@ -409,10 +390,49 @@ class _VehicleLedgerScreenState extends State<VehicleLedgerScreen> {
     );
   }
 
-  void _shareSummary() {
-    final net = totalIncome - totalExpense;
-    final text = '*** Vehicle Ledger Summary ***\nVehicle: ${widget.vehicleNumber}\nDriver: ${widget.driverName}\nTotal Income: Rs. $totalIncome\nTotal Expenses: Rs. $totalExpense\nNET PROFIT: Rs. $net\n\nGenerated via Transport Hisab';
-    Share.share(text);
+  void _showBookingDialog() {
+    final partyController = TextEditingController();
+    final phoneController = TextEditingController();
+    final routeController = TextEditingController();
+    final fareController = TextEditingController();
+    final advanceController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('New Advance Booking'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: partyController, decoration: const InputDecoration(labelText: 'Party / Client Name')),
+              TextField(controller: phoneController, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Party Phone Number')),
+              TextField(controller: routeController, decoration: const InputDecoration(labelText: 'Route (e.g. Lahore to Multan)')),
+              TextField(controller: fareController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Total Fare (Rs.)')),
+              TextField(controller: advanceController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Advance Paid (Rs.)')),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              final fare = double.tryParse(fareController.text) ?? 0.0;
+              final adv = double.tryParse(advanceController.text) ?? 0.0;
+              if (partyController.text.isNotEmpty && fare > 0) {
+                await DatabaseHelper.instance.addBooking(widget.vehicleId, partyController.text, phoneController.text, routeController.text, fare, adv);
+                if (adv > 0) {
+                  await DatabaseHelper.instance.addRecord(widget.vehicleId, 'Income', 'Booking Advance: ${partyController.text}', adv, 'Route: ${routeController.text}');
+                }
+                _loadData();
+                if (mounted) Navigator.pop(context);
+              }
+            },
+            child: const Text('Save Booking'),
+          )
+        ],
+      ),
+    );
   }
 
   @override
@@ -421,210 +441,112 @@ class _VehicleLedgerScreenState extends State<VehicleLedgerScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('${widget.vehicleNumber} - Pro Ledger'),
-        actions: [
-          IconButton(icon: const Icon(Icons.share), onPressed: _shareSummary, tooltip: 'Share Summary'),
-        ],
+        title: Text(widget.vehicleNumber),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(icon: Icon(Icons.receipt_long), text: 'Ledger Hisab'),
+            Tab(icon: Icon(Icons.bookmark_added), text: 'Advance Bookings'),
+          ],
+        ),
       ),
-      body: Column(
+      body: TabBarView(
+        controller: _tabController,
         children: [
-          Container(
-            margin: const EdgeInsets.all(12.0),
-            padding: const EdgeInsets.all(16.0),
-            decoration: BoxDecoration(
-              color: Colors.blue.shade50,
-              borderRadius: BorderRadius.circular(12.0),
-              border: Border.all(color: Colors.blue.shade200),
-            ),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          // TAB 1: LEDGER
+          Column(
+            children: [
+              Container(
+                margin: const EdgeInsets.all(12.0),
+                padding: const EdgeInsets.all(16.0),
+                decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(12.0)),
+                child: Column(
                   children: [
-                    Text('Income: Rs. $totalIncome', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 16)),
-                    Text('Expense: Rs. $totalExpense', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 16)),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Income: Rs. $totalIncome', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                        Text('Expense: Rs. $totalExpense', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                    const Divider(),
+                    Text('NET PROFIT: Rs. $netProfit', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: netProfit >= 0 ? Colors.indigo : Colors.red)),
                   ],
                 ),
-                const Divider(height: 20),
-                Text(
-                  'NET PROFIT (SAFI BACHAT): Rs. $netProfit',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: netProfit >= 0 ? Colors.indigo : Colors.red,
+              ),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: records.length,
+                  itemBuilder: (context, index) {
+                    final r = records[index];
+                    final isInc = r['type'] == 'Income';
+                    return Card(
+                      margin: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
+                      child: ListTile(
+                        title: Text('${r['title']} [${r['type']}]', style: const TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: Text('Date: ${r['date']} | ${r['details']}'),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('Rs. ${r['amount']}', style: TextStyle(fontWeight: FontWeight.bold, color: isInc ? Colors.green : Colors.red)),
+                            IconButton(icon: const Icon(Icons.edit, size: 20, color: Colors.blue), onPressed: () => _showRecordDialog(editRecord: r)),
+                            IconButton(icon: const Icon(Icons.delete_outline, size: 20, color: Colors.red), onPressed: () async {
+                              await DatabaseHelper.instance.softDeleteRecord(r['id']);
+                              _loadData();
+                            }),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+          
+          // TAB 2: ADVANCE BOOKINGS
+          ListView.builder(
+            itemCount: bookings.length,
+            itemBuilder: (context, index) {
+              final b = bookings[index];
+              final double remaining = b['total_fare'] - b['advance_paid'];
+              return Card(
+                margin: const EdgeInsets.all(10.0),
+                child: Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Party: ${b['party_name']} (Ph: ${b['party_phone']})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      Text('Route: ${b['route']}'),
+                      Text('Booking Date: ${b['booking_date']}'),
+                      const Divider(),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Total: Rs. ${b['total_fare']}'),
+                          Text('Advance: Rs. ${b['advance_paid']}', style: const TextStyle(color: Colors.green)),
+                          Text('Baqaya: Rs. $remaining', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12.0),
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(45)),
-              onPressed: _addRecordDialog,
-              icon: const Icon(Icons.add_card),
-              label: const Text('Add Entry (Income, Oil Change, Advance, Maintenance)'),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: records.isEmpty
-                ? const Center(child: Text('No ledger entries recorded.'))
-                : ListView.builder(
-                    itemCount: records.length,
-                    itemBuilder: (context, index) {
-                      final r = records[index];
-                      final isInc = r['type'] == 'Income';
-                      final double amt = r['amount'] is int ? (r['amount'] as int).toDouble() : (r['amount'] ?? 0.0);
-                      final String titleStr = r['title'] ?? '';
-                      final String typeStr = r['type'] ?? '';
-                      final String dateStr = r['date'] ?? '';
-                      final String detailsStr = r['details'] ?? '';
-
-                      return Card(
-                        margin: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
-                        child: ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: isInc ? Colors.green.shade100 : Colors.red.shade100,
-                            child: Icon(
-                              isInc ? Icons.arrow_downward : Icons.arrow_upward,
-                              color: isInc ? Colors.green : Colors.red,
-                            ),
-                          ),
-                          title: Text('$titleStr [$typeStr]', style: const TextStyle(fontWeight: FontWeight.bold)),
-                          subtitle: Text('Date: $dateStr | Details: $detailsStr'),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                'Rs. $amt',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: isInc ? Colors.green : Colors.red,
-                                ),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.delete_outline, size: 20, color: Colors.grey),
-                                onPressed: () async {
-                                  await DatabaseHelper.instance.softDeleteRecord(r['id']);
-                                  _loadRecords();
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+              );
+            },
           ),
         ],
       ),
-    );
-  }
-}
-
-// ==================== ALL DRIVERS SALARY ADVANCE ====================
-class SalaryAdvanceLedgerScreen extends StatefulWidget {
-  const SalaryAdvanceLedgerScreen({super.key});
-
-  @override
-  State<SalaryAdvanceLedgerScreen> createState() => _SalaryAdvanceLedgerScreenState();
-}
-
-class _SalaryAdvanceLedgerScreenState extends State<SalaryAdvanceLedgerScreen> {
-  List<Map<String, dynamic>> advances = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _loadAdvances();
-  }
-
-  void _loadAdvances() async {
-    final data = await DatabaseHelper.instance.getAllAdvanceRecords();
-    setState(() {
-      advances = data;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Driver Salary Advances Ledger')),
-      body: advances.isEmpty
-          ? const Center(child: Text('No advance payments recorded.'))
-          : ListView.builder(
-              itemCount: advances.length,
-              itemBuilder: (context, index) {
-                final item = advances[index];
-                final String titleStr = item['title'] ?? '';
-                final String dateStr = item['date'] ?? '';
-                final String detailsStr = item['details'] ?? '';
-                final double amt = item['amount'] is int ? (item['amount'] as int).toDouble() : (item['amount'] ?? 0.0);
-
-                return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
-                  child: ListTile(
-                    leading: const CircleAvatar(child: Icon(Icons.money_off)),
-                    title: Text(titleStr, style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text('Date: $dateStr | Details: $detailsStr'),
-                    trailing: Text('Rs. $amt', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
-                  ),
-                );
-              },
-            ),
-    );
-  }
-}
-
-// ==================== RECYCLE BIN SCREEN ====================
-class RecycleBinScreen extends StatefulWidget {
-  const RecycleBinScreen({super.key});
-
-  @override
-  State<RecycleBinScreen> createState() => _RecycleBinScreenState();
-}
-
-class _RecycleBinScreenState extends State<RecycleBinScreen> {
-  List<Map<String, dynamic>> deletedVehicles = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _loadDeleted();
-  }
-
-  void _loadDeleted() async {
-    final data = await DatabaseHelper.instance.getDeletedVehicles();
-    setState(() {
-      deletedVehicles = data;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Recycle Bin')),
-      body: deletedVehicles.isEmpty
-          ? const Center(child: Text('Recycle bin is empty.'))
-          : ListView.builder(
-              itemCount: deletedVehicles.length,
-              itemBuilder: (context, index) {
-                final v = deletedVehicles[index];
-                return ListTile(
-                  title: Text(v['number']),
-                  subtitle: Text('Driver: ${v['driver_name']}'),
-                  trailing: ElevatedButton.icon(
-                    icon: const Icon(Icons.restore),
-                    label: const Text('Restore'),
-                    onPressed: () async {
-                      await DatabaseHelper.instance.restoreVehicle(v['id']);
-                      _loadDeleted();
-                    },
-                  ),
-                );
-              },
-            ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          if (_tabController.index == 0) {
+            _showRecordDialog();
+          } else {
+            _showBookingDialog();
+          }
+        },
+        child: const Icon(Icons.add),
+      ),
     );
   }
 }
