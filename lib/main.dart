@@ -350,10 +350,12 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
             ListTile(
               leading: const Icon(Icons.store, color: Colors.indigo),
               title: const Text('Vendors Khata (Shops/Udhar)'),
-              onTap: () {
-                Navigator.pop(context);
-Navigator.push(context, MaterialPageRoute(builder: (_) => VendorKhataScreen()));
-                
+                                  onTap: () {
+            Navigator.pop(context);
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const VendorKhataScreen()));
+          },
+
+
               },
             ),
             ListTile(
@@ -432,7 +434,7 @@ class VehicleLedgerScreen extends StatefulWidget {
   State<VehicleLedgerScreen> createState() => _VehicleLedgerScreenState();
 }
 
-class _VehicleLedgerScreenState extends State<VehicleLedgerScreen> with SingleTickerProviderStateMixin {
+class _VehicleLedgerScreenState extends State<VehicleLedgerScreen> with SingleTickerProviderStateMixin { {
   late TabController _tabController;
 
   List<Map<String, dynamic>> records = [];
@@ -468,10 +470,7 @@ class _VehicleLedgerScreenState extends State<VehicleLedgerScreen> with SingleTi
       totalIncome = inc;
       totalExpense = exp;
     });
-  }
-
-  void _showRecordDialog([Map<String, dynamic>? editRecord]) {
-
+   void _showRecordDialog([Map<String, dynamic>? editRecord]) {
     final titleController = TextEditingController(text: editRecord?['title'] ?? '');
     final amountController = TextEditingController(text: editRecord != null ? editRecord['amount'].toString() : '');
     final detailsController = TextEditingController(text: editRecord?['details'] ?? '');
@@ -498,8 +497,8 @@ class _VehicleLedgerScreenState extends State<VehicleLedgerScreen> with SingleTi
                   },
                 ),
                 TextField(controller: titleController, decoration: const InputDecoration(labelText: 'Title / Description')),
-                TextField(controller: amountController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Amount (Rs.)')),
-                TextField(controller: meterController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Current Meter Reading (KM)')),
+                TextField(controller: amountController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Amount')),
+                TextField(controller: meterController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Meter Reading (KM)')),
                 TextField(controller: detailsController, decoration: const InputDecoration(labelText: 'Notes / Vendor Name')),
               ],
             ),
@@ -519,7 +518,7 @@ class _VehicleLedgerScreenState extends State<VehicleLedgerScreen> with SingleTi
                   _loadLedgerData();
                   if (mounted) Navigator.pop(context);
                 }
-              } ,
+              },
               child: const Text('Save Record'),
             ),
           ],
