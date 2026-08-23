@@ -28,11 +28,10 @@ jobs:
       - name: Recreate Android Project
         run: flutter create . --platforms=android
 
-      - name: Configure SDK 35 globally in gradle.properties
+      - name: Configure SDK 36 globally in gradle.properties
         run: |
-          echo "android.suppressUnsupportedCompileSdk=35" >> android/gradle.properties
+          echo "android.suppressUnsupportedCompileSdk=36" >> android/gradle.properties
           
-          # Inject compileSdkVersion into app build file safely
           python3 -c "
           import os, re
           
@@ -41,9 +40,8 @@ jobs:
               with open(app_gradle, 'r') as f:
                   content = f.read()
               
-              # Replace compileSdk or compileSdkVersion with 35
-              content = re.sub(r'compileSdk\s*=.*', 'compileSdk = 35', content)
-              content = re.sub(r'compileSdkVersion\s+.*', 'compileSdkVersion 35', content)
+              content = re.sub(r'compileSdk\s*=.*', 'compileSdk = 36', content)
+              content = re.sub(r'compileSdkVersion\s+.*', 'compileSdkVersion 36', content)
               
               with open(app_gradle, 'w') as f:
                   f.write(content)
@@ -57,4 +55,3 @@ jobs:
         with:
           name: TransportManagerPro-Release
           path: build/app/outputs/flutter-apk/app-release.apk
-          
