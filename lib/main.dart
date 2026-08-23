@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
-import 'package:path/path.dart';
+import 'package:path/path.dart' as p;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -41,7 +41,7 @@ class DBService {
 
   Future<Database> _initDB(String filePath) async {
     final dbPath = await getDatabasesPath();
-    final path = join(dbPath, filePath);
+    final path = p.join(dbPath, filePath);
     return await openDatabase(
       path,
       version: 1,
@@ -118,30 +118,24 @@ class _AdvancedFleetScreenState extends State<AdvancedFleetScreen> {
     });
   }
 
-  // Open Google Maps for Route
   void _openGoogleMap(String route) async {
-    final uri = Uri.parse("https://www.google.com/maps/search/?api=1&query=$route");
+    final uri = Uri.parse("https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(route)}");
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Could not open Google Maps")));
-      }
     }
   }
 
-  // Generate & Share Bill Invoice PDF
   void _generatePDF(Map<String, dynamic> trip) async {
     final pdf = pw.Document();
     pdf.addPage(
       pw.Page(
-        build: (context) => pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
+        build: (pw.Context context) => pw.Column(
+          cross: pw.CrossAxisAlignment.start,
           children: [
             pw.Text("TRANSPORT HISAB - OFFICIAL BILL INVOICE", style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
             pw.Divider(),
             pw.Text("Vehicle No: ${trip['vehicle_no']}"),
-            pw.Text("Category / Sub-category: ${trip['category']}"),
+            pw.Text("Category: ${trip['category']}"),
             pw.Text("Route / Details: ${trip['route_details']}"),
             pw.Text("Date: ${trip['trip_date']}"),
             pw.SizedBox(height: 10),
@@ -165,7 +159,6 @@ class _AdvancedFleetScreenState extends State<AdvancedFleetScreen> {
     await Share.shareXFiles([XFile(file.path)], text: 'Bill Invoice for Gari ${widget.gariNo}');
   }
 
-  // Add / Edit Trip Dialog with Subcategories
   void _showTripDialog({Map<String, dynamic>? existingTrip}) {
     String selectedCategory = existingTrip != null ? (existingTrip['category'] ?? 'Factory Shift') : 'Factory Shift';
     TextEditingController routeController = TextEditingController(text: existingTrip?['route_details'] ?? '');
@@ -175,7 +168,7 @@ class _AdvancedFleetScreenState extends State<AdvancedFleetScreen> {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         title: Text(existingTrip == null ? "Add New Trip / Booking" : "Edit Trip Entry"),
         content: SingleChildScrollView(
           child: Column(
@@ -197,7 +190,7 @@ class _AdvancedFleetScreenState extends State<AdvancedFleetScreen> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancel")),
           ElevatedButton(
             onPressed: () async {
               final data = {
@@ -216,7 +209,7 @@ class _AdvancedFleetScreenState extends State<AdvancedFleetScreen> {
                 await DBService.instance.updateTrip(existingTrip['id'], data);
               }
 
-              if (mounted) Navigator.pop(context);
+              if (mounted) Navigator.pop(ctx);
               _loadData();
             },
             child: const Text("Save Entry"),
@@ -237,7 +230,15 @@ class _AdvancedFleetScreenState extends State<AdvancedFleetScreen> {
           IconButton(
             icon: const Icon(Icons.print),
             onPressed: () async {
-              await Printing.layoutPdf(onLayout: (format) async => pw.Document().save());
+              final pdf = pw.Document();
+              pdf.addPage(
+                pw.Page(
+                  build: (pw.Context context) => pw.Center(
+                    child: pw.Text("Gari ${widget.gariNo} Statement - Total Profit: Rs. $netProfit"),
+                  ),
+                ),
+              );
+              await Printing.layoutPdf(onLayout: (format) async => pdf.save());
             },
           )
         ],
