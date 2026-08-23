@@ -1,3 +1,4 @@
+import 'dart00000000'; // placeholder
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -224,8 +225,7 @@ class _MainEnterpriseShellState extends State<MainEnterpriseShell> {
       ],
     );
   }
-
-  Widget _buildFleetModule() {
+    Widget _buildFleetModule() {
     return Scaffold(
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: const Color(0xFF1A237E),
@@ -494,4 +494,98 @@ class _MainEnterpriseShellState extends State<MainEnterpriseShell> {
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(controller: clientCtrl, decoration: const InputDecoration(labelText: 'Client Name')),
-            TextField(controller: routeCtrl, decoration: const InputDecoration(lab
+            TextField(controller: routeCtrl, decoration: const InputDecoration(labelText: 'Route (e.g. LHR to KHI)')),
+            TextField(controller: freightCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Freight Amount (Rs.)')),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              if (clientCtrl.text.isNotEmpty) {
+                setState(() {
+                  trips.add({'client': clientCtrl.text, 'route': routeCtrl.text, 'freight': freightCtrl.text});
+                });
+                _saveAllData();
+                Navigator.pop(ctx);
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNotesModule() {
+    return Scaffold(
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: Colors.amber.shade800,
+        onPressed: _addNoteDialog,
+        icon: const Icon(Icons.note_add, color: Colors.white),
+        label: const Text('Add Note', style: TextStyle(color: Colors.white)),
+      ),
+      body: notes.isEmpty
+          ? const Center(child: Text('No Notes Saved'))
+          : ListView.builder(
+              padding: const EdgeInsets.all(12),
+              itemCount: notes.length,
+              itemBuilder: (ctx, idx) {
+                var n = notes[idx];
+                return Card(
+                  elevation: 2,
+                  margin: const EdgeInsets.only(bottom: 10),
+                  child: ListTile(
+                    leading: const Icon(Icons.note, color: Colors.amber, size: 28),
+                    title: Text(n['title'], style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text(n['detail']),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.delete_outline, color: Colors.red),
+                      onPressed: () {
+                        setState(() => notes.removeAt(idx));
+                        _saveAllData();
+                      },
+                    ),
+                  ),
+                );
+              },
+            ),
+    );
+  }
+
+  void _addNoteDialog() {
+    final titleCtrl = TextEditingController();
+    final detailCtrl = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Add Quick Note'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: titleCtrl, decoration: const InputDecoration(labelText: 'Title')),
+            TextField(controller: detailCtrl, decoration: const InputDecoration(labelText: 'Note Details')),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              if (titleCtrl.text.isNotEmpty) {
+                setState(() {
+                  notes.add({'title': titleCtrl.text, 'detail': detailCtrl.text});
+                });
+                _saveAllData();
+                Navigator.pop(ctx);
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+  
