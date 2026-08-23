@@ -1,446 +1,525 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:sqflite/sqflite.dart';
-import 'package:path/path.dart' as p;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const TransportManagerApp());
+  runApp(const TransportUltimateApp());
 }
 
-class TransportManagerApp extends StatelessWidget {
-  const TransportManagerApp({super.key});
+class TransportUltimateApp extends StatelessWidget {
+  const TransportUltimateApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Transport Hisab Pro',
       debugShowCheckedModeBanner: false,
+      title: 'Transport ERP Ultimate',
       theme: ThemeData(
-        primarySwatch: Colors.deepPurple,
         useMaterial3: true,
+        primarySwatch: Colors.indigo,
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
       ),
-      home: const MainHomeScreen(),
+      home: const EnterpriseMainDashboard(),
     );
   }
 }
 
-// ==================== ADVANCED DATABASE HELPER ====================
-class DatabaseHelper {
-  static final DatabaseHelper instance = DatabaseHelper._init();
-  static Database? _database;
-
-  DatabaseHelper._init();
-
-  Future<Database> get database async {
-    if (_database != null) return _database!;
-    _database = await _initDB('transport_pro_enterprise_v4.db');
-    return _database!;
-  }
-
-  Future<Database> _initDB(String filePath) async {
-    final dbPath = await getDatabasesPath();
-    final path = p.join(dbPath, filePath);
-
-    return await openDatabase(
-      path,
-      version: 1,
-      onCreate: _createDB,
-    );
-  }
-
-  Future _createDB(Database db, int version) async {
-    await db.execute('''
-      CREATE TABLE vehicles (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        number TEXT NOT NULL,
-        model TEXT,
-        driver_name TEXT NOT NULL,
-        driver_phone TEXT,
-        driver_cnic TEXT,
-        last_oil_km REAL DEFAULT 0,
-        next_oil_km REAL DEFAULT 0,
-        token_tax_date TEXT,
-        is_deleted INTEGER DEFAULT 0
-      )
-    ''');
-
-    await db.execute('''
-      CREATE TABLE records (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        vehicle_id INTEGER NOT NULL,
-        type TEXT NOT NULL,
-        title TEXT NOT NULL,
-        amount REAL NOT NULL,
-        details TEXT,
-        meter_reading REAL DEFAULT 0,
-        date TEXT NOT NULL,
-        is_deleted INTEGER DEFAULT 0
-      )
-    ''');
-
-    await db.execute('''
-      CREATE TABLE bookings (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        vehicle_id INTEGER NOT NULL,
-        customer_name TEXT NOT NULL,
-        phone TEXT,
-        route TEXT NOT NULL,
-        total_freight REAL NOT NULL,
-        advance_paid REAL DEFAULT 0,
-        balance REAL NOT NULL,
-        status TEXT DEFAULT 'Pending',
-        date TEXT NOT NULL,
-        is_deleted INTEGER DEFAULT 0
-      )
-    ''');
-  }
-
-  Future<List<Map<String, dynamic>>> getVehicles() async {
-    final db = await instance.database;
-    return await db.query('vehicles', where: 'is_deleted = 0', orderBy: 'id DESC');
-  }
-
-  Future<List<Map<String, dynamic>>> getRecords(int vehicleId) async {
-    final db = await instance.database;
-    return await db.query('records', where: 'vehicle_id = ? AND is_deleted = 0', whereArgs: [vehicleId], orderBy: 'id DESC');
-  }
-
-  Future<List<Map<String, dynamic>>> getBookings(int vehicleId) async {
-    final db = await instance.database;
-    return await db.query('bookings', where: 'vehicle_id = ? AND is_deleted = 0', whereArgs: [vehicleId], orderBy: 'id DESC');
-  }
-
-  Future<int> addVehicle(String number, String model, String driverName, String driverPhone, String driverCnic, double lastOil, double nextOil, String tokenTax) async {
-    final db = await instance.database;
-    return await db.insert('vehicles', {
-      'number': number,
-      'model': model,
-      'driver_name': driverName,
-      'driver_phone': driverPhone,
-      'driver_cnic': driverCnic,
-      'last_oil_km': lastOil,
-      'next_oil_km': nextOil,
-      'token_tax_date': tokenTax,
-    });
-  }
-
-  Future<int> addRecord(int vehicleId, String type, String title, double amount, String details, double meterReading) async {
-    final db = await instance.database;
-    return await db.insert('records', {
-      'vehicle_id': vehicleId,
-      'type': type,
-      'title': title,
-      'amount': amount,
-      'details': details,
-      'meter_reading': meterReading,
-      'date': DateTime.now().toIso8601String().split('T')[0],
-    });
-  }
-
-  Future<int> updateRecord(int id, String type, String title, double amount, String details, double meterReading) async {
-    final db = await instance.database;
-    return await db.update('records', {
-      'type': type,
-      'title': title,
-      'amount': amount,
-      'details': details,
-      'meter_reading': meterReading,
-    }, where: 'id = ?', whereArgs: [id]);
-  }
-
-  Future<int> softDeleteVehicle(int id) async {
-    final db = await instance.database;
-    return await db.update('vehicles', {'is_deleted': 1}, where: 'id = ?', whereArgs: [id]);
-  }
-}
-
-// ==================== MAIN HOME SCREEN ====================
-class MainHomeScreen extends StatefulWidget {
-  const MainHomeScreen({super.key});
+class EnterpriseMainDashboard extends StatefulWidget {
+  const EnterpriseMainDashboard({super.key});
 
   @override
-  State<MainHomeScreen> createState() => _MainHomeScreenState();
+  State<EnterpriseMainDashboard> createState() => _EnterpriseMainDashboardState();
 }
 
-class _MainHomeScreenState extends State<MainHomeScreen> {
-  List<Map<String, dynamic>> vehicles = [];
+class _EnterpriseMainDashboardState extends State<EnterpriseMainDashboard> {
+  int _tabIndex = 0;
+  List<dynamic> vehicles = [];
+  List<dynamic> contacts = [];
+  List<dynamic> notes = [];
+  List<dynamic> bookings = [];
+  bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _reloadVehicles();
+    _loadAllData();
   }
 
-  void _reloadVehicles() async {
-    final data = await DatabaseHelper.instance.getVehicles();
+  Future<void> _loadAllData() async {
+    final prefs = await SharedPreferences.getInstance();
     setState(() {
-      vehicles = data;
+      vehicles = jsonDecode(prefs.getString('vehicles_v8') ?? '[]');
+      contacts = jsonDecode(prefs.getString('contacts_v8') ?? '[]');
+      notes = jsonDecode(prefs.getString('notes_v8') ?? '[]');
+      bookings = jsonDecode(prefs.getString('bookings_v8') ?? '[]');
+
+      if (vehicles.isEmpty) {
+        vehicles = [
+          {
+            'id': 'v1',
+            'no': 'LES-1054',
+            'driver': 'Shami Khan',
+            'phone': '0300-1234567',
+            'type': '10-Wheeler',
+            'address': 'Lahore Adda',
+            'workshop': 'Al-Madina Workshop'
+          }
+        ];
+      }
+      if (contacts.isEmpty) {
+        contacts = [
+          {'name': 'Tariq Diesel Shop', 'category': 'Vendor/Workshop', 'phone': '0301-1122334', 'address': 'Ring Road Lahore'},
+          {'name': 'Malik Motors Client', 'category': 'Customer', 'phone': '0302-9988776', 'address': 'Multan Goods Adda'}
+        ];
+      }
+      isLoading = false;
     });
   }
 
-  void _showAddVehicleDialog([Map<String, dynamic>? editVehicle]) {
-    final numberController = TextEditingController(text: editVehicle?['number'] ?? '');
-    final modelController = TextEditingController(text: editVehicle?['model'] ?? '');
-    final driverNameController = TextEditingController(text: editVehicle?['driver_name'] ?? '');
-    final driverPhoneController = TextEditingController(text: editVehicle?['driver_phone'] ?? '');
+  Future<void> _saveAllData() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('vehicles_v8', jsonEncode(vehicles));
+    await prefs.setString('contacts_v8', jsonEncode(contacts));
+    await prefs.setString('notes_v8', jsonEncode(notes));
+    await prefs.setString('bookings_v8', jsonEncode(bookings));
+  }
 
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text(editVehicle == null ? 'Add Vehicle' : 'Edit Vehicle'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(controller: numberController, decoration: const InputDecoration(labelText: 'Vehicle Number (e.g. LES-1234)')),
-              TextField(controller: modelController, decoration: const InputDecoration(labelText: 'Model / Type')),
-              TextField(controller: driverNameController, decoration: const InputDecoration(labelText: 'Driver Name')),
-              TextField(controller: driverPhoneController, decoration: const InputDecoration(labelText: 'Driver Phone')),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () async {
-              if (numberController.text.isNotEmpty) {
-                await DatabaseHelper.instance.addVehicle(
-                  numberController.text,
-                  modelController.text,
-                  driverNameController.text,
-                  driverPhoneController.text,
-                  '', 0, 0, '',
-                );
-                _reloadVehicles();
-                if (mounted) Navigator.pop(context);
-              }
-            },
-            child: const Text('Save'),
+  @override
+  Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    final screens = [
+      _buildDashboardTab(),
+      _buildContactsTab(),
+      _buildVehiclesTab(),
+      _buildNotePadTab(),
+      _buildBookingsTab(),
+    ];
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Transport ERP Enterprise v8.0', style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.indigo.shade100,
+      ),
+      body: screens[_tabIndex],
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _tabIndex,
+        onDestinationSelected: (i) => setState(() => _tabIndex = i),
+        destinations: const [
+          NavigationDestination(icon: Icon(Icons.dashboard), label: 'Dashboard'),
+          NavigationDestination(icon: Icon(Icons.contacts), label: 'Directory'),
+          NavigationDestination(icon: Icon(Icons.local_shipping), label: 'Fleet'),
+          NavigationDestination(icon: Icon(Icons.note_alt), label: 'NotePad'),
+          NavigationDestination(icon: Icon(Icons.receipt_long), label: 'Bookings'),
+        ],
+      ),
+    );
+  }
+
+  // --- DASHBOARD ---
+  Widget _buildDashboardTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        children: [
+          Card(
+            color: Colors.indigo.shade900,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  const Text('TRANSPORT ENTERPRISE CONTROL CENTER', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _dashStat('Garriyan', '${vehicles.length}', Colors.cyanAccent),
+                      _dashStat('Contacts Directory', '${contacts.length}', Colors.amberAccent),
+                    ],
+                  ),
+                  const Divider(color: Colors.white24, height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _dashStat('Daily Memos', '${notes.length}', Colors.greenAccent),
+                      _dashStat('Active Trips', '${bookings.length}', Colors.orangeAccent),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
+  Widget _dashStat(String title, String val, Color color) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: const TextStyle(color: Colors.white70, fontSize: 11)),
+        Text(val, style: TextStyle(color: color, fontSize: 16, fontWeight: FontWeight.bold)),
+      ],
+    );
+  }
+
+  // --- CONTACTS DIRECTORY (CUSTOMERS & VENDORS PROFILE & EDIT) ---
+  Widget _buildContactsTab() {
     return Scaffold(
-      appBar: AppBar(title: const Text('Transport Fleet Pro')),
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            const UserAccountsDrawerHeader(
-              accountName: Text('Transport Fleet Manager', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              accountEmail: Text('Enterprise v4.0'),
-              currentAccountPicture: CircleAvatar(
-                backgroundColor: Colors.white,
-                child: Icon(Icons.local_shipping, size: 40, color: Colors.deepPurple),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showContactDialog(),
+        child: const Icon(Icons.person_add),
+      ),
+      body: ListView.builder(
+        padding: const EdgeInsets.all(12),
+        itemCount: contacts.length,
+        itemBuilder: (ctx, idx) {
+          var c = contacts[idx];
+          return Card(
+            child: ListTile(
+              leading: CircleAvatar(
+                backgroundColor: c['category'] == 'Customer' ? Colors.green.shade100 : Colors.orange.shade100,
+                child: Icon(c['category'] == 'Customer' ? Icons.person : Icons.store, color: Colors.indigo),
               ),
-              decoration: BoxDecoration(color: Colors.deepPurple),
+              title: Text(c['name'], style: const TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: Text('Cat: ${c['category']} | Mobile: ${c['phone']}\nAddress: ${c['address']}'),
+              isThreeLine: true,
+              trailing: IconButton(
+                icon: const Icon(Icons.edit, color: Colors.indigo),
+                onPressed: () => _showContactDialog(contact: c, index: idx),
+              ),
             ),
-            ListTile(
-              leading: const Icon(Icons.store, color: Colors.indigo),
-              title: const Text('Vendors Khata (Shops/Udhar)'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const VendorKhataScreen()));
+          );
+        },
+      ),
+    );
+  }
+
+  void _showContactDialog({Map<String, dynamic>? contact, int? index}) {
+    final nameCtrl = TextEditingController(text: contact?['name'] ?? '');
+    final phoneCtrl = TextEditingController(text: contact?['phone'] ?? '');
+    final addressCtrl = TextEditingController(text: contact?['address'] ?? '');
+    String category = contact?['category'] ?? 'Customer';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDlg) => AlertDialog(
+          title: Text(contact == null ? 'Add New Contact' : 'Edit Contact Profile'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Name / Shop / Workshop Name')),
+              TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'Mobile Number')),
+              TextField(controller: addressCtrl, decoration: const InputDecoration(labelText: 'Address / Adda Location')),
+              DropdownButton<String>(
+                value: category,
+                isExpanded: true,
+                items: ['Customer', 'Vendor/Workshop', 'Driver', 'Mechanic'].map((val) => DropdownMenuItem(value: val, child: Text(val))).toList(),
+                onChanged: (v) => setDlg(() => category = v!),
+              )
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            ElevatedButton(
+              onPressed: () {
+                if (nameCtrl.text.isNotEmpty) {
+                  setState(() {
+                    Map<String, dynamic> item = {
+                      'name': nameCtrl.text,
+                      'phone': phoneCtrl.text,
+                      'address': addressCtrl.text,
+                      'category': category,
+                    };
+                    if (index == null) {
+                      contacts.add(item);
+                    } else {
+                      contacts[index] = item;
+                    }
+                  });
+                  _saveAllData();
+                  Navigator.pop(ctx);
+                }
               },
-            ),
-            ListTile(
-              leading: const Icon(Icons.sync, color: Colors.green),
-              title: const Text('Check Software Updates'),
-              onTap: () {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('App is up to date (v4.0 Enterprise Build)')));
-              },
-            ),
-            const Divider(),
-            const ListTile(
-              leading: Icon(Icons.info_outline),
-              title: Text('App Info & Backup'),
-              subtitle: Text('Cloud & Offline Storage Sync Active'),
-            ),
+              child: const Text('Save Profile'),
+            )
           ],
         ),
       ),
-      body: vehicles.isEmpty
-          ? const Center(child: Text('No Vehicles Added Yet.'))
+    );
+  }
+
+  // --- FLEET & VEHICLES MANAGER (FULL EDITING) ---
+  Widget _buildVehiclesTab() {
+    return Scaffold(
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showVehicleDialog(),
+        child: const Icon(Icons.add),
+      ),
+      body: ListView.builder(
+        padding: const EdgeInsets.all(12),
+        itemCount: vehicles.length,
+        itemBuilder: (ctx, idx) {
+          var v = vehicles[idx];
+          return Card(
+            child: ListTile(
+              leading: const CircleAvatar(child: Icon(Icons.directions_bus)),
+              title: Text(v['no'], style: const TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: Text('Driver: ${v['driver']} (${v['phone']})\nWorkshop: ${v['workshop']} | Adda: ${v['address']}'),
+              isThreeLine: true,
+              trailing: IconButton(
+                icon: const Icon(Icons.edit, color: Colors.indigo),
+                onPressed: () => _showVehicleDialog(vehicle: v, index: idx),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showVehicleDialog({Map<String, dynamic>? vehicle, int? index}) {
+    final noCtrl = TextEditingController(text: vehicle?['no'] ?? '');
+    final driverCtrl = TextEditingController(text: vehicle?['driver'] ?? '');
+    final phoneCtrl = TextEditingController(text: vehicle?['phone'] ?? '');
+    final typeCtrl = TextEditingController(text: vehicle?['type'] ?? '');
+    final addressCtrl = TextEditingController(text: vehicle?['address'] ?? '');
+    final workshopCtrl = TextEditingController(text: vehicle?['workshop'] ?? '');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(vehicle == null ? 'Add New Vehicle' : 'Edit Vehicle Details'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: noCtrl, decoration: const InputDecoration(labelText: 'Gari Number')),
+              TextField(controller: driverCtrl, decoration: const InputDecoration(labelText: 'Driver Name')),
+              TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'Driver Phone')),
+              TextField(controller: typeCtrl, decoration: const InputDecoration(labelText: 'Body Type / Wheeler')),
+              TextField(controller: addressCtrl, decoration: const InputDecoration(labelText: 'Base Location / Adda')),
+              TextField(controller: workshopCtrl, decoration: const InputDecoration(labelText: 'Assigned Workshop')),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              if (noCtrl.text.isNotEmpty) {
+                setState(() {
+                  Map<String, dynamic> item = {
+                    'no': noCtrl.text,
+                    'driver': driverCtrl.text,
+                    'phone': phoneCtrl.text,
+                    'type': typeCtrl.text,
+                    'address': addressCtrl.text,
+                    'workshop': workshopCtrl.text,
+                  };
+                  if (index == null) {
+                    vehicles.add(item);
+                  } else {
+                    vehicles[index] = item;
+                  }
+                });
+                _saveAllData();
+                Navigator.pop(ctx);
+              }
+            },
+            child: const Text('Save Vehicle'),
+          )
+        ],
+      ),
+    );
+  }
+
+  // --- NOTE PAD & DAILY MEMO MODULE ---
+  Widget _buildNotePadTab() {
+    return Scaffold(
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showNoteDialog,
+        child: const Icon(Icons.note_add),
+      ),
+      body: notes.isEmpty
+          ? const Center(child: Text('Koi Note / Memo add nahi hai.'))
           : ListView.builder(
-              itemCount: vehicles.length,
-              itemBuilder: (context, index) {
-                final v = vehicles[index];
+              padding: const EdgeInsets.all(12),
+              itemCount: notes.length,
+              itemBuilder: (ctx, idx) {
+                var n = notes[idx];
                 return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+                  color: Colors.amber.shade50,
                   child: ListTile(
-                    leading: const CircleAvatar(child: Icon(Icons.directions_bus)),
-                    title: Text('${v['number']} (${v['model'] ?? 'N/A'})', style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text('Driver: ${v['driver_name']} | Ph: ${v['driver_phone'] ?? 'N/A'}'),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.edit, color: Colors.blue),
-                          onPressed: () => _showAddVehicleDialog(v),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red),
-                          onPressed: () async {
-                            await DatabaseHelper.instance.softDeleteVehicle(v['id']);
-                            _reloadVehicles();
-                          },
-                        ),
-                      ],
+                    title: Text(n['title'], style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text('${n['details']}\nDate: ${n['date']}'),
+                    isThreeLine: true,
+                    trailing: IconButton(
+                      icon: const Icon(Icons.delete, color: Colors.red),
+                      onPressed: () {
+                        setState(() => notes.removeAt(idx));
+                        _saveAllData();
+                      },
                     ),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => VehicleLedgerScreen(vehicleData: v)),
-                      );
-                    },
                   ),
                 );
               },
             ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddVehicleDialog(),
-        child: const Icon(Icons.add),
-      ),
     );
   }
-}
-// ==================== VEHICLE LEDGER SCREEN ====================
-class VehicleLedgerScreen extends StatefulWidget {
-  final Map<String, dynamic> vehicleData;
 
-  const VehicleLedgerScreen({super.key, required this.vehicleData});
-
-  @override
-  State<VehicleLedgerScreen> createState() => _VehicleLedgerScreenState();
-}
-
-class _VehicleLedgerScreenState extends State<VehicleLedgerScreen> {
-  List<Map<String, dynamic>> records = [];
-  List<Map<String, dynamic>> bookings = [];
-  double totalIncome = 0.0;
-  double totalExpense = 0.0;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadLedgerData();
-  }
-
-  void _loadLedgerData() async {
-    final recData = await DatabaseHelper.instance.getRecords(widget.vehicleData['id']);
-    final bookData = await DatabaseHelper.instance.getBookings(widget.vehicleData['id']);
-
-    double inc = 0;
-    double exp = 0;
-    for (var r in recData) {
-      final amt = (r['amount'] as num).toDouble();
-      if (r['type'] == 'Income') {
-        inc += amt;
-      } else {
-        exp += amt;
-      }
-    }
-
-    setState(() {
-      records = recData;
-      bookings = bookData;
-      totalIncome = inc;
-      totalExpense = exp;
-    });
-  }
-
-  void _showRecordDialog([Map<String, dynamic>? editRecord]) {
-    final titleController = TextEditingController(text: editRecord?['title'] ?? '');
-    final amountController = TextEditingController(text: editRecord != null ? editRecord['amount'].toString() : '');
-    final detailsController = TextEditingController(text: editRecord?['details'] ?? '');
-    final meterController = TextEditingController(text: editRecord != null ? editRecord['meter_reading'].toString() : '');
-    String selectedType = editRecord?['type'] ?? 'Income';
+  void _showNoteDialog() {
+    final titleCtrl = TextEditingController();
+    final detailCtrl = TextEditingController();
 
     showDialog(
       context: context,
-      builder: (_) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: Text(editRecord == null ? 'Add Entry' : 'Edit Entry'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                DropdownButton<String>(
-                  value: selectedType,
-                  isExpanded: true,
-                  items: ['Income', 'Oil Change', 'Maintenance', 'Salary Advance', 'Tyre/Spare Parts', 'Other Expense']
-                      .map((t) => DropdownMenuItem(value: t, child: Text(t)))
-                      .toList(),
-                  onChanged: (val) {
-                    if (val != null) setDialogState(() => selectedType = val);
-                  },
-                ),
-                TextField(controller: titleController, decoration: const InputDecoration(labelText: 'Title / Description')),
-                TextField(controller: amountController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Amount')),
-                TextField(controller: meterController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Meter Reading (KM)')),
-                TextField(controller: detailsController, decoration: const InputDecoration(labelText: 'Notes / Vendor Name')),
-              ],
+      builder: (ctx) => AlertDialog(
+        title: const Text('Add Daily Note / Memo'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: titleCtrl, decoration: const InputDecoration(labelText: 'Title')),
+            TextField(controller: detailCtrl, maxLines: 3, decoration: const InputDecoration(labelText: 'Details / Note')),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              if (titleCtrl.text.isNotEmpty) {
+                setState(() {
+                  notes.add({
+                    'title': titleCtrl.text,
+                    'details': detailCtrl.text,
+                    'date': DateTime.now().toString().split(' ')[0]
+                  });
+                });
+                _saveAllData();
+                Navigator.pop(ctx);
+              }
+            },
+            child: const Text('Save Memo'),
+          )
+        ],
+      ),
+    );
+  }
+
+  // --- BOOKINGS & PRINTING MODULE ---
+  Widget _buildBookingsTab() {
+    return Scaffold(
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showBookingDialog,
+        child: const Icon(Icons.add),
+      ),
+      body: bookings.isEmpty
+          ? const Center(child: Text('Koi trip booking nahi hai.'))
+          : ListView.builder(
+              padding: const EdgeInsets.all(12),
+              itemCount: bookings.length,
+              itemBuilder: (ctx, idx) {
+                var b = bookings[idx];
+                return Card(
+                  child: ListTile(
+                    title: Text('${b['client']} (${b['vehicle']})', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text('Route: ${b['route']}\nFreight: Rs. ${b['freight']} | Advance: Rs. ${b['advance']}'),
+                    isThreeLine: true,
+                    trailing: IconButton(
+                      icon: const Icon(Icons.print, color: Colors.indigo),
+                      onPressed: () => _printInvoicePDF(b),
+                    ),
+                  ),
+                );
+              },
             ),
+    );
+  }
+
+  void _showBookingDialog() {
+    final clientCtrl = TextEditingController();
+    final routeCtrl = TextEditingController();
+    final freightCtrl = TextEditingController();
+    final advanceCtrl = TextEditingController();
+    String selectedVehicle = vehicles.isNotEmpty ? vehicles[0]['no'] : 'General';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDlg) => AlertDialog(
+          title: const Text('Generate Dynamic Trip Booking'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: clientCtrl, decoration: const InputDecoration(labelText: 'Client Name')),
+              TextField(controller: routeCtrl, decoration: const InputDecoration(labelText: 'Route (e.g. LHR to KHI)')),
+              TextField(controller: freightCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Freight Rent (Rs.)')),
+              TextField(controller: advanceCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Advance Received (Rs.)')),
+              DropdownButton<String>(
+                value: selectedVehicle,
+                isExpanded: true,
+                items: vehicles.map((v) => DropdownMenuItem<String>(value: v['no'].toString(), child: Text(v['no'].toString()))).toList(),
+                onChanged: (v) => setDlg(() => selectedVehicle = v!),
+              )
+            ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
             ElevatedButton(
-              onPressed: () async {
-                final amt = double.tryParse(amountController.text) ?? 0.0;
-                final meter = double.tryParse(meterController.text) ?? 0.0;
-                if (titleController.text.isNotEmpty && amt > 0) {
-                  if (editRecord == null) {
-                    await DatabaseHelper.instance.addRecord(widget.vehicleData['id'], selectedType, titleController.text, amt, detailsController.text, meter);
-                  } else {
-                    await DatabaseHelper.instance.updateRecord(editRecord['id'], selectedType, titleController.text, amt, detailsController.text, meter);
-                  }
-                  _loadLedgerData();
-                  if (mounted) Navigator.pop(context);
-                }
+              onPressed: () {
+                setState(() {
+                  bookings.add({
+                    'client': clientCtrl.text,
+                    'route': routeCtrl.text,
+                    'freight': double.tryParse(freightCtrl.text) ?? 0.0,
+                    'advance': double.tryParse(advanceCtrl.text) ?? 0.0,
+                    'vehicle': selectedVehicle,
+                    'date': DateTime.now().toString().split(' ')[0]
+                  });
+                });
+                _saveAllData();
+                Navigator.pop(ctx);
               },
-              child: const Text('Save Record'),
-            ),
+              child: const Text('Save Booking'),
+            )
           ],
         ),
       ),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('${widget.vehicleData['number']} Ledger'),
-      ),
-      body: Center(
-        child: Text('Income: \$${totalIncome.toStringAsFixed(2)} | Expense: \$${totalExpense.toStringAsFixed(2)}'),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showRecordDialog(),
-        child: const Icon(Icons.add),
-      ),
-    );
-  }
-}
-
-// ==================== VENDOR KHATA SCREEN ====================
-class VendorKhataScreen extends StatelessWidget {
-  const VendorKhataScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Vendors Khata (Shops/Udhar)'),
-      ),
-      body: const Center(
-        child: Text('Vendor Khata Management Coming Soon'),
+  Future<void> _printInvoicePDF(Map<String, dynamic> b) async {
+    final pdf = pw.Document();
+    pdf.addPage(
+      pw.Page(
+        build: (pw.Context context) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text('TRANSPORT ENTERPRISE FREIGHT RECEIPT', style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
+              pw.Divider(),
+              pw.SizedBox(height: 10),
+              pw.Text('Client Name: ${b['client']}'),
+              pw.Text('Assigned Vehicle: ${b['vehicle']}'),
+              pw.Text('Route: ${b['route']}'),
+              pw.Text('Date: ${b['date']}'),
+              pw.SizedBox(height: 15),
+              pw.Text('Total Freight Amount: Rs. ${b['freight']}'),
+              pw.Text('Advance Paid: Rs. ${b['advance']}'),
+              pw.Text('Net Payable Balance: Rs. ${(b['freight'] - b['advance'])}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+              pw.Spacer(),
+              pw.Divider(),
+              pw.Center(child: pw.Text('Powered by Transport ERP Ultimate'))
+            ],
+          );
+        },
       ),
     );
-  }
-}
+    await Printing.layoutPdf(onLayout: (for
