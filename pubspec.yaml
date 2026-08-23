@@ -13,13 +13,8 @@ dependencies:
   pdf: ^3.10.4
   printing: ^5.11.1
   cupertino_icons: ^1.0.6
-  
-  flutter:
-    sdk: flutter
   sqflite: ^2.3.3+1
   path: ^1.9.1
-  pdf: ^3.10.4
-  printing: ^5.11.0
   share_plus: ^10.0.0
   url_launcher: ^6.3.0
   path_provider: ^2.1.4
