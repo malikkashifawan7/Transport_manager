@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart' as p;
-import 'package:url_launcher/url_launcher.dart';
-import 'package:share_plus/share_plus.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -70,14 +68,13 @@ class DatabaseHelper {
       CREATE TABLE records (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         vehicle_id INTEGER NOT NULL,
-        type TEXT NOT NULL, 
+        type TEXT NOT NULL,
         title TEXT NOT NULL,
         amount REAL NOT NULL,
         details TEXT,
         meter_reading REAL DEFAULT 0,
         date TEXT NOT NULL,
-        is_deleted INTEGER DEFAULT 0,
-        FOREIGN KEY (vehicle_id) REFERENCES vehicles (id)
+        is_deleted INTEGER DEFAULT 0
       )
     ''');
 
@@ -85,106 +82,22 @@ class DatabaseHelper {
       CREATE TABLE bookings (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         vehicle_id INTEGER NOT NULL,
-        party_name TEXT NOT NULL,
-        party_phone TEXT,
-        pickup_loc TEXT,
-        drop_loc TEXT,
-        total_fare REAL NOT NULL,
-        advance_paid REAL NOT NULL,
-        booking_date TEXT NOT NULL,
-        status TEXT DEFAULT 'Pending',
-        is_deleted INTEGER DEFAULT 0,
-        FOREIGN KEY (vehicle_id) REFERENCES vehicles (id)
-      )
-    ''');
-
-    await db.execute('''
-      CREATE TABLE vendors (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        shop_name TEXT NOT NULL,
-        owner_name TEXT,
+        customer_name TEXT NOT NULL,
         phone TEXT,
-        category TEXT,
-        credit_balance REAL DEFAULT 0,
+        route TEXT NOT NULL,
+        total_freight REAL NOT NULL,
+        advance_paid REAL DEFAULT 0,
+        balance REAL NOT NULL,
+        status TEXT DEFAULT 'Pending',
+        date TEXT NOT NULL,
         is_deleted INTEGER DEFAULT 0
       )
     ''');
-
-    await db.execute('''
-      CREATE TABLE vendor_txns (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        vendor_id INTEGER NOT NULL,
-        type TEXT NOT NULL,
-        amount REAL NOT NULL,
-        description TEXT,
-        date TEXT NOT NULL,
-        FOREIGN KEY (vendor_id) REFERENCES vendors (id)
-      )
-    ''');
-  }
-
-  // Vehicles CRUD
-  Future<int> addVehicle(String number, String model, String driver, String phone, String cnic, double oilKm, String tokenDate) async {
-    final db = await instance.database;
-    return await db.insert('vehicles', {
-      'number': number,
-      'model': model,
-      'driver_name': driver,
-      'driver_phone': phone,
-      'driver_cnic': cnic,
-      'last_oil_km': oilKm,
-      'next_oil_km': oilKm + 5000,
-      'token_tax_date': tokenDate,
-    });
   }
 
   Future<List<Map<String, dynamic>>> getVehicles() async {
     final db = await instance.database;
-    return await db.query('vehicles', where: 'is_deleted = 0');
-  }
-
-  Future<int> updateVehicle(int id, String number, String model, String driver, String phone, String cnic, double oilKm, String tokenDate) async {
-    final db = await instance.database;
-    return await db.update('vehicles', {
-      'number': number,
-      'model': model,
-      'driver_name': driver,
-      'driver_phone': phone,
-      'driver_cnic': cnic,
-      'last_oil_km': oilKm,
-      'next_oil_km': oilKm + 5000,
-      'token_tax_date': tokenDate,
-    }, where: 'id = ?', whereArgs: [id]);
-  }
-
-  Future<int> softDeleteVehicle(int id) async {
-    final db = await instance.database;
-    return await db.update('vehicles', {'is_deleted': 1}, where: 'id = ?', whereArgs: [id]);
-  }
-
-  // Records CRUD
-  Future<int> addRecord(int vehicleId, String type, String title, double amount, String details, double meter) async {
-    final db = await instance.database;
-    return await db.insert('records', {
-      'vehicle_id': vehicleId,
-      'type': type,
-      'title': title,
-      'amount': amount,
-      'details': details,
-      'meter_reading': meter,
-      'date': DateTime.now().toIso8601String().substring(0, 10),
-    });
-  }
-
-  Future<int> updateRecord(int id, String type, String title, double amount, String details, double meter) async {
-    final db = await instance.database;
-    return await db.update('records', {
-      'type': type,
-      'title': title,
-      'amount': amount,
-      'details': details,
-      'meter_reading': meter,
-    }, where: 'id = ?', whereArgs: [id]);
+    return await db.query('vehicles', where: 'is_deleted = 0', orderBy: 'id DESC');
   }
 
   Future<List<Map<String, dynamic>>> getRecords(int vehicleId) async {
@@ -192,76 +105,56 @@ class DatabaseHelper {
     return await db.query('records', where: 'vehicle_id = ? AND is_deleted = 0', whereArgs: [vehicleId], orderBy: 'id DESC');
   }
 
-  Future<int> softDeleteRecord(int id) async {
-    final db = await instance.database;
-    return await db.update('records', {'is_deleted': 1}, where: 'id = ?', whereArgs: [id]);
-  }
-
-  // Bookings CRUD
-  Future<int> addBooking(int vehicleId, String party, String phone, String pickup, String drop, double total, double advance, String date) async {
-    final db = await instance.database;
-    return await db.insert('bookings', {
-      'vehicle_id': vehicleId,
-      'party_name': party,
-      'party_phone': phone,
-      'pickup_loc': pickup,
-      'drop_loc': drop,
-      'total_fare': total,
-      'advance_paid': advance,
-      'booking_date': date,
-      'status': 'Pending'
-    });
-  }
-
   Future<List<Map<String, dynamic>>> getBookings(int vehicleId) async {
     final db = await instance.database;
     return await db.query('bookings', where: 'vehicle_id = ? AND is_deleted = 0', whereArgs: [vehicleId], orderBy: 'id DESC');
   }
 
-  // Vendors Udhar Khata
-  Future<int> addVendor(String shop, String owner, String phone, String category) async {
+  Future<int> addVehicle(String number, String model, String driverName, String driverPhone, String driverCnic, double lastOil, double nextOil, String tokenTax) async {
     final db = await instance.database;
-    return await db.insert('vendors', {
-      'shop_name': shop,
-      'owner_name': owner,
-      'phone': phone,
-      'category': category,
-      'credit_balance': 0.0,
+    return await db.insert('vehicles', {
+      'number': number,
+      'model': model,
+      'driver_name': driverName,
+      'driver_phone': driverPhone,
+      'driver_cnic': driverCnic,
+      'last_oil_km': lastOil,
+      'next_oil_km': nextOil,
+      'token_tax_date': tokenTax,
     });
   }
 
-  Future<List<Map<String, dynamic>>> getVendors() async {
+  Future<int> addRecord(int vehicleId, String type, String title, double amount, String details, double meterReading) async {
     final db = await instance.database;
-    return await db.query('vendors', where: 'is_deleted = 0');
-  }
-
-  Future<void> addVendorTxn(int vendorId, String type, double amount, String desc) async {
-    final db = await instance.database;
-    await db.insert('vendor_txns', {
-      'vendor_id': vendorId,
+    return await db.insert('records', {
+      'vehicle_id': vehicleId,
       'type': type,
+      'title': title,
       'amount': amount,
-      'description': desc,
-      'date': DateTime.now().toIso8601String().substring(0, 10),
+      'details': details,
+      'meter_reading': meterReading,
+      'date': DateTime.now().toIso8601String().split('T')[0],
     });
-
-    final vendor = await db.query('vendors', where: 'id = ?', whereArgs: [vendorId]);
-    if (vendor.isNotEmpty) {
-      double current = (vendor.first['credit_balance'] as num).toDouble();
-      double newBal = type == 'Udhar Taken' ? current + amount : current - amount;
-      await db.update('vendors', {'credit_balance': newBal}, where: 'id = ?', whereArgs: [vendorId]);
-    }
   }
 
-  Future<List<Map<String, dynamic>>> getVendorTxns(int vendorId) async {
+  Future<int> updateRecord(int id, String type, String title, double amount, String details, double meterReading) async {
     final db = await instance.database;
-    return await db.query('vendor_txns', where: 'vendor_id = ?', whereArgs: [vendorId], orderBy: 'id DESC');
+    return await db.update('records', {
+      'type': type,
+      'title': title,
+      'amount': amount,
+      'details': details,
+      'meter_reading': meterReading,
+    }, where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<int> softDeleteVehicle(int id) async {
+    final db = await instance.database;
+    return await db.update('vehicles', {'is_deleted': 1}, where: 'id = ?', whereArgs: [id]);
   }
 }
 
-// ==================== DASHBOARD & DRAWER ====================
-class MainHomeScreen extends StatefulWidget {
-  const MainHomeScreen({super.key});
+// ==================== MAIN HOME SCREEN ====================
 class MainHomeScreen extends StatefulWidget {
   const MainHomeScreen({super.key});
 
@@ -283,6 +176,50 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
     setState(() {
       vehicles = data;
     });
+  }
+
+  void _showAddVehicleDialog([Map<String, dynamic>? editVehicle]) {
+    final numberController = TextEditingController(text: editVehicle?['number'] ?? '');
+    final modelController = TextEditingController(text: editVehicle?['model'] ?? '');
+    final driverNameController = TextEditingController(text: editVehicle?['driver_name'] ?? '');
+    final driverPhoneController = TextEditingController(text: editVehicle?['driver_phone'] ?? '');
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(editVehicle == null ? 'Add Vehicle' : 'Edit Vehicle'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: numberController, decoration: const InputDecoration(labelText: 'Vehicle Number (e.g. LES-1234)')),
+              TextField(controller: modelController, decoration: const InputDecoration(labelText: 'Model / Type')),
+              TextField(controller: driverNameController, decoration: const InputDecoration(labelText: 'Driver Name')),
+              TextField(controller: driverPhoneController, decoration: const InputDecoration(labelText: 'Driver Phone')),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              if (numberController.text.isNotEmpty) {
+                await DatabaseHelper.instance.addVehicle(
+                  numberController.text,
+                  modelController.text,
+                  driverNameController.text,
+                  driverPhoneController.text,
+                  '', 0, 0, '',
+                );
+                _reloadVehicles();
+                if (mounted) Navigator.pop(context);
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -319,16 +256,10 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
               },
             ),
             const Divider(),
-            ListTile(
-              leading: const Icon(Icons.info_outline),
-              title: const Text('App Info & Backup'),
-              subtitle: const Text('Cloud & Offline Storage Sync Active'),
-            ),
-          ],
-        ),
-      ),
-      body: vehicles.isEmpty
- Active'),
+            const ListTile(
+              leading: Icon(Icons.info_outline),
+              title: Text('App Info & Backup'),
+              subtitle: Text('Cloud & Offline Storage Sync Active'),
             ),
           ],
         ),
@@ -344,13 +275,13 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
                   child: ListTile(
                     leading: const CircleAvatar(child: Icon(Icons.directions_bus)),
                     title: Text('${v['number']} (${v['model'] ?? 'N/A'})', style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text('Driver: ${v['driver_name']} | Ph: ${v['driver_phone'] ?? "N/A"}\nNext Oil: ${v['next_oil_km']} KM'),
+                    subtitle: Text('Driver: ${v['driver_name']} | Ph: ${v['driver_phone'] ?? 'N/A'}'),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton(
                           icon: const Icon(Icons.edit, color: Colors.blue),
-                          onPressed: () => _showAddVehicleDialog(editVehicle: v),
+                          onPressed: () => _showAddVehicleDialog(v),
                         ),
                         IconButton(
                           icon: const Icon(Icons.delete, color: Colors.red),
@@ -364,25 +295,21 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(
-                          builder: (_) => VehicleLedgerScreen(vehicleData: v),
-                        ),
+                        MaterialPageRoute(builder: (_) => VehicleLedgerScreen(vehicleData: v)),
                       );
                     },
                   ),
                 );
               },
             ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddVehicleDialog(),
-        icon: const Icon(Icons.add),
-        label: const Text('Add Vehicle'),
+        child: const Icon(Icons.add),
       ),
     );
   }
 }
-
-// ==// ==================== VEHICLE LEDGER & BOOKINGS SCREEN ====================
+// ==================== VEHICLE LEDGER SCREEN ====================
 class VehicleLedgerScreen extends StatefulWidget {
   final Map<String, dynamic> vehicleData;
 
@@ -392,21 +319,7 @@ class VehicleLedgerScreen extends StatefulWidget {
   State<VehicleLedgerScreen> createState() => _VehicleLedgerScreenState();
 }
 
-class _VehicleLedgerScreenState extends State<VehicleLedgerScreen> with SingleTickerProviderStateMixin { {
-  late TabController _tabController;
-
-  List<Map<String, dynamic>> records = [];
-  List<Map<String, dynamic>> bookings = [];
-class VehicleLedgerScreen extends StatefulWidget {
-  final Map<String, dynamic> vehicleData;
-
-  const VehicleLedgerScreen({super.key, required this.vehicleData});
-
-  @override
-  State<VehicleLedgerScreen> createState() => _VehicleLedgerScreenState();
-}
-
-class _VehicleLedgerScreenState extends State<VehicleLedgerScreen> with SingleTickerProviderStateMixin {
+class _VehicleLedgerScreenState extends State<VehicleLedgerScreen> {
   List<Map<String, dynamic>> records = [];
   List<Map<String, dynamic>> bookings = [];
   double totalIncome = 0.0;
@@ -510,6 +423,23 @@ class _VehicleLedgerScreenState extends State<VehicleLedgerScreen> with SingleTi
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showRecordDialog(),
         child: const Icon(Icons.add),
+      ),
+    );
+  }
+}
+
+// ==================== VENDOR KHATA SCREEN ====================
+class VendorKhataScreen extends StatelessWidget {
+  const VendorKhataScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Vendors Khata (Shops/Udhar)'),
+      ),
+      body: const Center(
+        child: Text('Vendor Khata Management Coming Soon'),
       ),
     );
   }
