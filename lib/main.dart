@@ -1,3 +1,4 @@
+import 'dart00010000' if (false) 'dart:core';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -82,16 +83,12 @@ class _MainEnterpriseShellState extends State<MainEnterpriseShell> {
 
   void _openWhatsApp(String phone, String msg) async {
     final url = Uri.parse("https://wa.me/$phone?text=${Uri.encodeComponent(msg)}");
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
-    }
+    if (await canLaunchUrl(url)) await launchUrl(url, mode: LaunchMode.externalApplication);
   }
 
   void _openMaps(String loc) async {
     final url = Uri.parse("https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(loc)}");
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
-    }
+    if (await canLaunchUrl(url)) await launchUrl(url, mode: LaunchMode.externalApplication);
   }
 
   @override
@@ -109,7 +106,6 @@ class _MainEnterpriseShellState extends State<MainEnterpriseShell> {
       appBar: AppBar(
         title: const Text('Transport Hisab Enterprise', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         backgroundColor: Colors.indigo,
-        elevation: 2,
       ),
       body: pages[_currentIndex],
       bottomNavigationBar: NavigationBar(
@@ -127,7 +123,6 @@ class _MainEnterpriseShellState extends State<MainEnterpriseShell> {
     );
   }
 
-  // --- 1. DASHBOARD ---
   Widget _buildDashboard() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -195,7 +190,6 @@ class _MainEnterpriseShellState extends State<MainEnterpriseShell> {
     );
   }
 
-  // --- 2. FLEET MODULE ---
   Widget _buildFleetModule() {
     return Scaffold(
       floatingActionButton: FloatingActionButton(
@@ -233,23 +227,19 @@ class _MainEnterpriseShellState extends State<MainEnterpriseShell> {
     final driverCtrl = TextEditingController();
     final phoneCtrl = TextEditingController();
     final locCtrl = TextEditingController();
-    final typeCtrl = TextEditingController();
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Add Fleet Vehicle'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(controller: noCtrl, decoration: const InputDecoration(labelText: 'Vehicle No')),
-              TextField(controller: driverCtrl, decoration: const InputDecoration(labelText: 'Driver Name')),
-              TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'Driver Phone')),
-              TextField(controller: locCtrl, decoration: const InputDecoration(labelText: 'Location')),
-              TextField(controller: typeCtrl, decoration: const InputDecoration(labelText: 'Vehicle Type')),
-            ],
-          ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: noCtrl, decoration: const InputDecoration(labelText: 'Vehicle No')),
+            TextField(controller: driverCtrl, decoration: const InputDecoration(labelText: 'Driver Name')),
+            TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'Driver Phone')),
+            TextField(controller: locCtrl, decoration: const InputDecoration(labelText: 'Location')),
+          ],
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
@@ -257,20 +247,19 @@ class _MainEnterpriseShellState extends State<MainEnterpriseShell> {
             onPressed: () {
               if (noCtrl.text.isNotEmpty) {
                 setState(() {
-                  fleet.add({'no': noCtrl.text, 'driver': driverCtrl.text, 'phone': phoneCtrl.text, 'loc': locCtrl.text, 'type': typeCtrl.text});
+                  fleet.add({'no': noCtrl.text, 'driver': driverCtrl.text, 'phone': phoneCtrl.text, 'loc': locCtrl.text});
                 });
                 _saveAllData();
                 Navigator.pop(ctx);
               }
             },
             child: const Text('Save'),
-          )
+          ),
         ],
       ),
     );
   }
 
-  // --- 3. DIRECTORY ---
   Widget _buildDirectoryModule() {
     return Scaffold(
       floatingActionButton: FloatingActionButton(
@@ -304,22 +293,18 @@ class _MainEnterpriseShellState extends State<MainEnterpriseShell> {
     final nameCtrl = TextEditingController();
     final phoneCtrl = TextEditingController();
     final cityCtrl = TextEditingController();
-    final catCtrl = TextEditingController();
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Add Directory Contact'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Name')),
-              TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'Phone')),
-              TextField(controller: cityCtrl, decoration: const InputDecoration(labelText: 'City')),
-              TextField(controller: catCtrl, decoration: const InputDecoration(labelText: 'Category (Client/Mechanic)')),
-            ],
-          ),
+        title: const Text('Add Contact'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Name')),
+            TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'Phone')),
+            TextField(controller: cityCtrl, decoration: const InputDecoration(labelText: 'City')),
+          ],
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
@@ -327,20 +312,19 @@ class _MainEnterpriseShellState extends State<MainEnterpriseShell> {
             onPressed: () {
               if (nameCtrl.text.isNotEmpty) {
                 setState(() {
-                  contacts.add({'name': nameCtrl.text, 'phone': phoneCtrl.text, 'city': cityCtrl.text, 'cat': catCtrl.text});
+                  contacts.add({'name': nameCtrl.text, 'phone': phoneCtrl.text, 'city': cityCtrl.text, 'cat': 'General'});
                 });
                 _saveAllData();
                 Navigator.pop(ctx);
               }
             },
             child: const Text('Save'),
-          )
+          ),
         ],
       ),
     );
   }
 
-  // --- 4. WORKSHOPS ---
   Widget _buildWorkshopsModule() {
     return Scaffold(
       floatingActionButton: FloatingActionButton(
@@ -349,7 +333,7 @@ class _MainEnterpriseShellState extends State<MainEnterpriseShell> {
         child: const Icon(Icons.build, color: Colors.white),
       ),
       body: workshops.isEmpty
-          ? const Center(child: Text('No Workshop Records Yet'))
+          ? const Center(child: Text('No Maintenance Records'))
           : ListView.builder(
               padding: const EdgeInsets.all(12),
               itemCount: workshops.length,
@@ -372,22 +356,18 @@ class _MainEnterpriseShellState extends State<MainEnterpriseShell> {
     final shopCtrl = TextEditingController();
     final workCtrl = TextEditingController();
     final costCtrl = TextEditingController();
-    final vehCtrl = TextEditingController();
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Add Workshop Maintenance Record'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(controller: shopCtrl, decoration: const InputDecoration(labelText: 'Workshop Name')),
-              TextField(controller: vehCtrl, decoration: const InputDecoration(labelText: 'Vehicle No')),
-              TextField(controller: workCtrl, decoration: const InputDecoration(labelText: 'Maintenance Details')),
-              TextField(controller: costCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Cost (Rs.)')),
-            ],
-          ),
+        title: const Text('Add Workshop Record'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: shopCtrl, decoration: const InputDecoration(labelText: 'Shop Name')),
+            TextField(controller: workCtrl, decoration: const InputDecoration(labelText: 'Details')),
+            TextField(controller: costCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Cost')),
+          ],
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
@@ -395,20 +375,19 @@ class _MainEnterpriseShellState extends State<MainEnterpriseShell> {
             onPressed: () {
               if (shopCtrl.text.isNotEmpty) {
                 setState(() {
-                  workshops.add({'shop': shopCtrl.text, 'vehicle': vehCtrl.text, 'work': workCtrl.text, 'cost': costCtrl.text});
+                  workshops.add({'shop': shopCtrl.text, 'vehicle': 'Fleet', 'work': workCtrl.text, 'cost': costCtrl.text});
                 });
                 _saveAllData();
                 Navigator.pop(ctx);
               }
             },
             child: const Text('Save'),
-          )
+          ),
         ],
       ),
     );
   }
 
-  // --- 5. TRIPS ---
   Widget _buildTripsModule() {
     return Scaffold(
       floatingActionButton: FloatingActionButton(
@@ -417,7 +396,7 @@ class _MainEnterpriseShellState extends State<MainEnterpriseShell> {
         child: const Icon(Icons.add, color: Colors.white),
       ),
       body: trips.isEmpty
-          ? const Center(child: Text('No Trips Recorded Yet'))
+          ? const Center(child: Text('No Trips Recorded'))
           : ListView.builder(
               padding: const EdgeInsets.all(12),
               itemCount: trips.length,
@@ -425,8 +404,8 @@ class _MainEnterpriseShellState extends State<MainEnterpriseShell> {
                 var t = trips[idx];
                 return Card(
                   child: ListTile(
-                    title: Text('${t['client']} (${t['vehicle']})', style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text('Route: ${t['route']}\nFreight: Rs. ${t['freight']} | Advance: Rs. ${t['adv']}'),
+                    title: Text('${t['client']}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text('Route: ${t['route']}\nFreight: Rs. ${t['freight']}'),
                     isThreeLine: true,
                   ),
                 );
@@ -439,24 +418,18 @@ class _MainEnterpriseShellState extends State<MainEnterpriseShell> {
     final clientCtrl = TextEditingController();
     final routeCtrl = TextEditingController();
     final freightCtrl = TextEditingController();
-    final advCtrl = TextEditingController();
-    final vehCtrl = TextEditingController();
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Add Trip Freight Booking'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(controller: clientCtrl, decoration: const InputDecoration(labelText: 'Client Name')),
-              TextField(controller: vehCtrl, decoration: const InputDecoration(labelText: 'Vehicle No')),
-              TextField(controller: routeCtrl, decoration: const InputDecoration(labelText: 'Route (e.g. LHR to KHI)')),
-              TextField(controller: freightCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Freight Rent (Rs.)')),
-              TextField(controller: advCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Advance (Rs.)')),
-            ],
-          ),
+        title: const Text('Add Trip'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: clientCtrl, decoration: const InputDecoration(labelText: 'Client Name')),
+            TextField(controller: routeCtrl, decoration: const InputDecoration(labelText: 'Route')),
+            TextField(controller: freightCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Freight (Rs.)')),
+          ],
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
@@ -464,20 +437,19 @@ class _MainEnterpriseShellState extends State<MainEnterpriseShell> {
             onPressed: () {
               if (clientCtrl.text.isNotEmpty) {
                 setState(() {
-                  trips.add({'client': clientCtrl.text, 'vehicle': vehCtrl.text, 'route': routeCtrl.text, 'freight': freightCtrl.text, 'adv': advCtrl.text});
+                  trips.add({'client': clientCtrl.text, 'route': routeCtrl.text, 'freight': freightCtrl.text});
                 });
                 _saveAllData();
                 Navigator.pop(ctx);
               }
             },
             child: const Text('Save'),
-          )
+          ),
         ],
       ),
     );
   }
 
-  // --- 6. NOTES ---
   Widget _buildNotesModule() {
     return Scaffold(
       floatingActionButton: FloatingActionButton(
@@ -486,7 +458,7 @@ class _MainEnterpriseShellState extends State<MainEnterpriseShell> {
         child: const Icon(Icons.add, color: Colors.white),
       ),
       body: notes.isEmpty
-          ? const Center(child: Text('No Operational Notes Saved'))
+          ? const Center(child: Text('No Notes Saved'))
           : ListView.builder(
               padding: const EdgeInsets.all(12),
               itemCount: notes.length,
@@ -511,15 +483,30 @@ class _MainEnterpriseShellState extends State<MainEnterpriseShell> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Add Reminder Note'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(controller: titleCtrl, decoration: const InputDecoration(labelText: 'Title (e.g. Token Tax)')),
-              TextField(controller: detailCtrl, decoration: const InputDecoration(labelText: 'Details / Expiry Date')),
-            ],
-          ),
+        title: const Text('Add Note'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: titleCtrl, decoration: const InputDecoration(labelText: 'Title')),
+            TextField(controller: detailCtrl, decoration: const InputDecoration(labelText: 'Detail')),
+          ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              if (titleCtrl.text.isNotEmpty) {
+                setState(() {
+                  notes.add({'title': titleCtrl.text, 'detail': detailCtrl.text});
+                });
+                _saveAllData();
+                Navigator.pop(ctx);
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+}
