@@ -28,14 +28,15 @@ jobs:
       - name: Recreate Android Project
         run: flutter create . --platforms=android
 
-      - name: Force SDK 35 for All Plugins
+      - name: Apply Gradle Android SDK Fix
         run: |
           echo "
           subprojects {
               afterEvaluate { project ->
                   if (project.hasProperty('android')) {
                       project.android {
-                          compileSdkVersion 35
+                          compileSdkVersion 34
+                          buildToolsVersion '34.0.0'
                       }
                   }
               }
