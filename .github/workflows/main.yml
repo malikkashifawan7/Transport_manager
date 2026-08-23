@@ -28,49 +28,25 @@ jobs:
       - name: Recreate Android Project
         run: flutter create . --platforms=android
 
-      - name: Force Global SDK 35
+      - name: Configure SDK 35 globally in gradle.properties
         run: |
+          echo "android.suppressUnsupportedCompileSdk=35" >> android/gradle.properties
+          
+          # Inject compileSdkVersion into app build file safely
           python3 -c "
-          import os
-
-          # Update settings.gradle / settings.gradle.kts if needed or root build file
-          root_build = 'android/build.gradle.kts' if os.path.exists('android/build.gradle.kts') else 'android/build.gradle'
+          import os, re
           
-          override_script = '''
-          subprojects {
-              afterEvaluate {
-                  if (plugins.hasPlugin('com.android.application') || plugins.hasPlugin('com.android.library')) {
-                      configure<com.android.build.gradle.BaseExtension> {
-                          compileSdkVersion(35)
-                      }
-                  }
-              }
-          }
-          '''
-          
-          if os.path.exists('android/build.gradle'):
-              with open('android/build.gradle', 'a') as f:
-                  f.write('''
-                  subprojects {
-                      project.configurations.all {
-                          resolutionStrategy.eachDependency {
-                              if (requested.group == 'com.android.support') {
-                                  skip()
-                              }
-                          }
-                      }
-                      afterEvaluate { project ->
-                          if (project.hasProperty('android')) {
-                              project.android {
-                                  compileSdkVersion 35
-                              }
-                          }
-                      }
-                  }
-                  ''')
-          elif os.path.exists('android/build.gradle.kts'):
-              with open('android/build.gradle.kts', 'a') as f:
-                  f.write(override_script)
+          app_gradle = 'android/app/build.gradle.kts' if os.path.exists('android/app/build.gradle.kts') else 'android/app/build.gradle'
+          if os.path.exists(app_gradle):
+              with open(app_gradle, 'r') as f:
+                  content = f.read()
+              
+              # Replace compileSdk or compileSdkVersion with 35
+              content = re.sub(r'compileSdk\s*=.*', 'compileSdk = 35', content)
+              content = re.sub(r'compileSdkVersion\s+.*', 'compileSdkVersion 35', content)
+              
+              with open(app_gradle, 'w') as f:
+                  f.write(content)
           "
 
       - name: Build Release APK
