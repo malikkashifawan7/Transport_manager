@@ -307,7 +307,6 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
     );
   }
 }
-
 // ==================== VEHICLE LEDGER & AUTO CALCULATOR ====================
 class VehicleLedgerScreen extends StatefulWidget {
   final int vehicleId;
@@ -557,4 +556,76 @@ class _SalaryAdvanceLedgerScreenState extends State<SalaryAdvanceLedgerScreen> {
           : ListView.builder(
               itemCount: advances.length,
               itemBuilder: (context, index) {
-                fina
+                final item = advances[index];
+                final String titleStr = item['title'] ?? '';
+                final String dateStr = item['date'] ?? '';
+                final String detailsStr = item['details'] ?? '';
+                final double amt = item['amount'] is int ? (item['amount'] as int).toDouble() : (item['amount'] ?? 0.0);
+
+                return Card(
+                  margin: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+                  child: ListTile(
+                    leading: const CircleAvatar(child: Icon(Icons.money_off)),
+                    title: Text(titleStr, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text('Date: $dateStr | Details: $detailsStr'),
+                    trailing: Text('Rs. $amt', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+                  ),
+                );
+              },
+            ),
+    );
+  }
+}
+
+// ==================== RECYCLE BIN SCREEN ====================
+class RecycleBinScreen extends StatefulWidget {
+  const RecycleBinScreen({super.key});
+
+  @override
+  State<RecycleBinScreen> createState() => _RecycleBinScreenState();
+}
+
+class _RecycleBinScreenState extends State<RecycleBinScreen> {
+  List<Map<String, dynamic>> deletedVehicles = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDeleted();
+  }
+
+  void _loadDeleted() async {
+    final data = await DatabaseHelper.instance.getDeletedVehicles();
+    setState(() {
+      deletedVehicles = data;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Recycle Bin')),
+      body: deletedVehicles.isEmpty
+          ? const Center(child: Text('Recycle bin is empty.'))
+          : ListView.builder(
+              itemCount: deletedVehicles.length,
+              itemBuilder: (context, index) {
+                final v = deletedVehicles[index];
+                return ListTile(
+                  title: Text(v['number']),
+                  subtitle: Text('Driver: ${v['driver_name']}'),
+                  trailing: ElevatedButton.icon(
+                    icon: const Icon(Icons.restore),
+                    label: const Text('Restore'),
+                    onPressed: () async {
+                      await DatabaseHelper.instance.restoreVehicle(v['id']);
+                      _loadDeleted();
+                    },
+                  ),
+                );
+              },
+            ),
+    );
+  }
+}
+
