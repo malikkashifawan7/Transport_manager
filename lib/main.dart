@@ -461,6 +461,12 @@ class _VehicleLedgerScreenState extends State<VehicleLedgerScreen> {
                     itemBuilder: (context, index) {
                       final r = records[index];
                       final isInc = r['type'] == 'Income';
+                      final amt = r['amount'] ?? 0.0;
+                      final titleStr = r['title'] ?? '';
+                      final typeStr = r['type'] ?? '';
+                      final dateStr = r['date'] ?? '';
+                      final detailsStr = r['details'] ?? '';
+
                       return Card(
                         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                         child: ListTile(
@@ -471,13 +477,13 @@ class _VehicleLedgerScreenState extends State<VehicleLedgerScreen> {
                               color: isInc ? Colors.green : Colors.red,
                             ),
                           ),
-                          title: Text('${r['title']} [${r['type']}]', style: const TextStyle(fontWeight: FontWeight.bold)),
-                          subtitle: Text('Date: ${r['date']} | Details: ${r['details']}'),
+                          title: Text('$titleStr [$typeStr]', style: const TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: Text('Date: $dateStr | Details: $detailsStr'),
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                'Rs. ${r['amount']}',
+                                'Rs. $amt',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   color: isInc ? Colors.green : Colors.red,
@@ -537,12 +543,10 @@ class _SalaryAdvanceLedgerScreenState extends State<SalaryAdvanceLedgerScreen> {
               itemCount: advances.length,
               itemBuilder: (context, index) {
                 final item = advances[index];
+                final titleStr = item['title'] ?? '';
                 final dateStr = item['date'] ?? '';
                 final detailsStr = item['details'] ?? '';
+                final amt = item['amount'] ?? 0.0;
+
                 return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  child: ListTile(
-                    leading: const CircleAvatar(child: Icon(Icons.money_off)),
-                    title: Text(item['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text('Date: $dateStr | Details: $detailsStr'),
-                    trailing: Text('Rs. ${item['amount']}
+                  margin: const EdgeInsets.symmetric(horizontal: 12, vertic
