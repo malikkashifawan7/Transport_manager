@@ -1,283 +1,464 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const TransportUltimateApp());
+  runApp(const TransportEnterpriseApp());
 }
 
-class TransportUltimateApp extends StatelessWidget {
-  const TransportUltimateApp({super.key});
+class TransportEnterpriseApp extends StatefulWidget {
+  const TransportEnterpriseApp({super.key});
+
+  @override
+  State<TransportEnterpriseApp> createState() => _TransportEnterpriseAppState();
+}
+
+class _TransportEnterpriseAppState extends State<TransportEnterpriseApp> {
+  bool isUrdu = false;
+
+  void toggleLanguage() {
+    setState(() {
+      isUrdu = !isUrdu;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Transport ERP Ultimate',
+      title: 'Transport ERP Ultra Pro',
       theme: ThemeData(
         useMaterial3: true,
-        primarySwatch: Colors.indigo,
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
+        scaffoldBackgroundColor: const Color(0xFFF8F9FA),
       ),
-      home: const EnterpriseMainDashboard(),
+      home: LoginScreen(
+        isUrdu: isUrdu,
+        onLangToggle: toggleLanguage,
+      ),
     );
   }
 }
 
-class EnterpriseMainDashboard extends StatefulWidget {
-  const EnterpriseMainDashboard({super.key});
+// --- SECURE LOGIN / SUB-USER SYSTEM ---
+class LoginScreen extends StatefulWidget {
+  final bool isUrdu;
+  final VoidCallback onLangToggle;
+
+  const LoginScreen({super.key, required this.isUrdu, required this.onLangToggle});
 
   @override
-  State<EnterpriseMainDashboard> createState() => _EnterpriseMainDashboardState();
+  State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _EnterpriseMainDashboardState extends State<EnterpriseMainDashboard> {
-  int _tabIndex = 0;
-  List<dynamic> vehicles = [];
-  List<dynamic> contacts = [];
-  List<dynamic> notes = [];
-  List<dynamic> bookings = [];
-  bool isLoading = true;
+class _LoginScreenState extends State<LoginScreen> {
+  final _userCtrl = TextEditingController();
+  final _passCtrl = TextEditingController();
+  String _role = 'Admin';
 
-  @override
-  void initState() {
-    super.initState();
-    _loadAllData();
-  }
-
-  Future<void> _loadAllData() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      vehicles = jsonDecode(prefs.getString('vehicles_v8') ?? '[]');
-      contacts = jsonDecode(prefs.getString('contacts_v8') ?? '[]');
-      notes = jsonDecode(prefs.getString('notes_v8') ?? '[]');
-      bookings = jsonDecode(prefs.getString('bookings_v8') ?? '[]');
-
-      if (vehicles.isEmpty) {
-        vehicles = [
-          {
-            'id': 'v1',
-            'no': 'LES-1054',
-            'driver': 'Shami Khan',
-            'phone': '0300-1234567',
-            'type': '10-Wheeler',
-            'address': 'Lahore Adda',
-            'workshop': 'Al-Madina Workshop'
-          }
-        ];
-      }
-      if (contacts.isEmpty) {
-        contacts = [
-          {'name': 'Tariq Diesel Shop', 'category': 'Vendor/Workshop', 'phone': '0301-1122334', 'address': 'Ring Road Lahore'},
-          {'name': 'Malik Motors Client', 'category': 'Customer', 'phone': '0302-9988776', 'address': 'Multan Goods Adda'}
-        ];
-      }
-      isLoading = false;
-    });
-  }
-
-  Future<void> _saveAllData() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('vehicles_v8', jsonEncode(vehicles));
-    await prefs.setString('contacts_v8', jsonEncode(contacts));
-    await prefs.setString('notes_v8', jsonEncode(notes));
-    await prefs.setString('bookings_v8', jsonEncode(bookings));
+  void _login() {
+    if (_userCtrl.text.isNotEmpty && _passCtrl.text.isNotEmpty) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => MainEnterpriseShell(
+            username: _userCtrl.text,
+            role: _role,
+            isUrdu: widget.isUrdu,
+            onLangToggle: widget.onLangToggle,
+          ),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(widget.isUrdu ? 'براہ کرم یوزر نیم اور پاس ورڈ درج کریں' : 'Enter valid Username and Password')),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-
-    final screens = [
-      _buildDashboardTab(),
-      _buildContactsTab(),
-      _buildVehiclesTab(),
-      _buildNotePadTab(),
-      _buildBookingsTab(),
-    ];
-
+    bool u = widget.isUrdu;
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Transport ERP Enterprise v8.0', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.indigo.shade100,
-      ),
-      body: screens[_tabIndex],
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _tabIndex,
-        onDestinationSelected: (i) => setState(() => _tabIndex = i),
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.dashboard), label: 'Dashboard'),
-          NavigationDestination(icon: Icon(Icons.contacts), label: 'Directory'),
-          NavigationDestination(icon: Icon(Icons.local_shipping), label: 'Fleet'),
-          NavigationDestination(icon: Icon(Icons.note_alt), label: 'NotePad'),
-          NavigationDestination(icon: Icon(Icons.receipt_long), label: 'Bookings'),
-        ],
-      ),
-    );
-  }
-
-  // --- DASHBOARD ---
-  Widget _buildDashboardTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        children: [
-          Card(
-            color: Colors.indigo.shade900,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  const Text('TRANSPORT ENTERPRISE CONTROL CENTER', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _dashStat('Garriyan', '${vehicles.length}', Colors.cyanAccent),
-                      _dashStat('Contacts Directory', '${contacts.length}', Colors.amberAccent),
-                    ],
-                  ),
-                  const Divider(color: Colors.white24, height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _dashStat('Daily Memos', '${notes.length}', Colors.greenAccent),
-                      _dashStat('Active Trips', '${bookings.length}', Colors.orangeAccent),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _dashStat(String title, String val, Color color) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(title, style: const TextStyle(color: Colors.white70, fontSize: 11)),
-        Text(val, style: TextStyle(color: color, fontSize: 16, fontWeight: FontWeight.bold)),
-      ],
-    );
-  }
-
-  // --- CONTACTS DIRECTORY ---
-  Widget _buildContactsTab() {
-    return Scaffold(
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showContactDialog(),
-        child: const Icon(Icons.person_add),
-      ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(12),
-        itemCount: contacts.length,
-        itemBuilder: (ctx, idx) {
-          var c = contacts[idx];
-          return Card(
-            child: ListTile(
-              leading: CircleAvatar(
-                backgroundColor: c['category'] == 'Customer' ? Colors.green.shade100 : Colors.orange.shade100,
-                child: Icon(c['category'] == 'Customer' ? Icons.person : Icons.store, color: Colors.indigo),
-              ),
-              title: Text(c['name'], style: const TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: Text('Cat: ${c['category']} | Mobile: ${c['phone']}\nAddress: ${c['address']}'),
-              isThreeLine: true,
-              trailing: IconButton(
-                icon: const Icon(Icons.edit, color: Colors.indigo),
-                onPressed: () => _showContactDialog(contact: c, index: idx),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  void _showContactDialog({Map<String, dynamic>? contact, int? index}) {
-    final nameCtrl = TextEditingController(text: contact?['name'] ?? '');
-    final phoneCtrl = TextEditingController(text: contact?['phone'] ?? '');
-    final addressCtrl = TextEditingController(text: contact?['address'] ?? '');
-    String category = contact?['category'] ?? 'Customer';
-
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setDlg) => AlertDialog(
-          title: Text(contact == null ? 'Add New Contact' : 'Edit Contact Profile'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Name / Shop / Workshop Name')),
-              TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'Mobile Number')),
-              TextField(controller: addressCtrl, decoration: const InputDecoration(labelText: 'Address / Adda Location')),
-              DropdownButton<String>(
-                value: category,
-                isExpanded: true,
-                items: ['Customer', 'Vendor/Workshop', 'Driver', 'Mechanic'].map((val) => DropdownMenuItem(value: val, child: Text(val))).toList(),
-                onChanged: (v) => setDlg(() => category = v!),
-              )
+              const Icon(Icons.local_shipping_rounded, size: 70, color: Colors.indigo),
+              const SizedBox(height: 10),
+              Text(
+                u ? 'ٹرانسپورٹ ای آر پی انٹرپرائز' : 'Transport ERP Enterprise',
+                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.indigo),
+              ),
+              const SizedBox(height: 20),
+              Card(
+                elevation: 4,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(u ? 'لاگ ان کریں' : 'System Login', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                          TextButton.icon(
+                            onPressed: widget.onLangToggle,
+                            icon: const Icon(Icons.language),
+                            label: Text(u ? 'English' : 'اردو'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 15),
+                      TextField(
+                        controller: _userCtrl,
+                        decoration: InputDecoration(
+                          labelText: u ? 'یوزر نیم' : 'Username / Sub-User ID',
+                          prefixIcon: const Icon(Icons.person),
+                          border: const OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 15),
+                      TextField(
+                        controller: _passCtrl,
+                        obscureText: true,
+                        decoration: InputDecoration(
+                          labelText: u ? 'پاس ورڈ' : 'Password',
+                          prefixIcon: const Icon(Icons.lock),
+                          border: const OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 15),
+                      DropdownButtonFormField<String>(
+                        value: _role,
+                        decoration: InputDecoration(
+                          labelText: u ? 'صلاحیت / رول' : 'User Role',
+                          border: const OutlineInputBorder(),
+                        ),
+                        items: ['Admin', 'Manager', 'Sub-User / Analyst']
+                            .map((r) => DropdownMenuItem(value: r, child: Text(r)))
+                            .toList(),
+                        onChanged: (val) => setState(() => _role = val!),
+                      ),
+                      const SizedBox(height: 20),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.indigo,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                          onPressed: _login,
+                          child: Text(
+                            u ? 'سسٹم میں داخل ہوں' : 'LOGIN TO ENTERPRISE',
+                            style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-            ElevatedButton(
-              onPressed: () {
-                if (nameCtrl.text.isNotEmpty) {
-                  setState(() {
-                    Map<String, dynamic> item = {
-                      'name': nameCtrl.text,
-                      'phone': phoneCtrl.text,
-                      'address': addressCtrl.text,
-                      'category': category,
-                    };
-                    if (index == null) {
-                      contacts.add(item);
-                    } else {
-                      contacts[index] = item;
-                    }
-                  });
-                  _saveAllData();
-                  Navigator.pop(ctx);
-                }
-              },
-              child: const Text('Save Profile'),
-            )
-          ],
         ),
       ),
     );
   }
+}
 
-  // --- FLEET & VEHICLES MANAGER ---
-  Widget _buildVehiclesTab() {
+// --- MAIN SHELL / NAVIGATION CONTROLLER ---
+class MainEnterpriseShell extends StatefulWidget {
+  final String username;
+  final String role;
+  final bool isUrdu;
+  final VoidCallback onLangToggle;
+
+  const MainEnterpriseShell({
+    super.key,
+    required this.username,
+    required this.role,
+    required this.isUrdu,
+    required this.onLangToggle,
+  });
+
+  @override
+  State<MainEnterpriseShell> createState() => _MainEnterpriseShellState();
+}
+
+class _MainEnterpriseShellState extends State<MainEnterpriseShell> {
+  int _currentIndex = 0;
+  List<dynamic> fleet = [];
+  List<dynamic> contacts = [];
+  List<dynamic> trips = [];
+  List<dynamic> workshops = [];
+  List<dynamic> reminders = [];
+
+  String searchQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadInitialData();
+  }
+
+  Future<void> _loadInitialData() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      fleet = jsonDecode(prefs.getString('pro_fleet') ?? '[]');
+      contacts = jsonDecode(prefs.getString('pro_contacts') ?? '[]');
+      trips = jsonDecode(prefs.getString('pro_trips') ?? '[]');
+      workshops = jsonDecode(prefs.getString('pro_workshops') ?? '[]');
+      reminders = jsonDecode(prefs.getString('pro_reminders') ?? '[]');
+
+      if (fleet.isEmpty) {
+        fleet = [
+          {'no': 'LES-1054', 'driver': 'Shami Khan', 'phone': '03001234567', 'status': 'Active', 'location': 'Lahore Ring Road', 'type': '10-Wheeler Container'},
+          {'no': 'KHI-9921', 'driver': 'Ali Raza', 'phone': '03219876543', 'status': 'In Workshop', 'location': 'Multan Goods Adda', 'type': 'Flatbed Trailer'}
+        ];
+      }
+      if (contacts.isEmpty) {
+        contacts = [
+          {'name': 'Tariq Diesel Workshop', 'category': 'Workshop/Mechanic', 'phone': '03011122334', 'city': 'Lahore'},
+          {'name': 'Malik Transport Client', 'category': 'Customer/Client', 'phone': '03029988776', 'city': 'Multan'}
+        ];
+      }
+    });
+  }
+
+  Future<void> _saveData() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('pro_fleet', jsonEncode(fleet));
+    await prefs.setString('pro_contacts', jsonEncode(contacts));
+    await prefs.setString('pro_trips', jsonEncode(trips));
+    await prefs.setString('pro_workshops', jsonEncode(workshops));
+    await prefs.setString('pro_reminders', jsonEncode(reminders));
+  }
+
+  void _launchWhatsApp(String phone, String msg) async {
+    final url = Uri.parse("https://wa.me/$phone?text=${Uri.encodeComponent(msg)}");
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  void _openGoogleMaps(String location) async {
+    final url = Uri.parse("https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(location)}");
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    bool u = widget.isUrdu;
+    final pages = [
+      _buildControlDashboard(u),
+      _buildFleetModule(u),
+      _buildDirectoryModule(u),
+      _buildWorkshopsModule(u),
+      _buildBookingsAndInvoices(u),
+      _buildRemindersAndHelp(u),
+    ];
+
     return Scaffold(
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showVehicleDialog(),
-        child: const Icon(Icons.add),
+      appBar: AppBar(
+        backgroundColor: Colors.indigo,
+        foregroundColor: Colors.white,
+        title: Text(u ? 'ٹرانسپورٹ کنٹرول سینٹر' : 'Transport ERP Pro (${widget.role})'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.language),
+            onPressed: widget.onLangToggle,
+            tooltip: 'Language Toggle',
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (ctx) => LoginScreen(isUrdu: u, onLangToggle: widget.onLangToggle)),
+              );
+            },
+          ),
+        ],
+      ),
+      body: pages[_currentIndex],
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _currentIndex,
+        onDestinationSelected: (idx) => setState(() => _currentIndex = idx),
+        destinations: [
+          NavigationDestination(icon: const Icon(Icons.dashboard), label: u ? 'ڈیش بورڈ' : 'Dashboard'),
+          NavigationDestination(icon: const Icon(Icons.local_shipping), label: u ? 'گاڑیاں' : 'Fleet'),
+          NavigationDestination(icon: const Icon(Icons.contacts), label: u ? 'کانٹیکٹس' : 'Directory'),
+          NavigationDestination(icon: const Icon(Icons.build), label: u ? 'ورک شاپ' : 'Workshops'),
+          NavigationDestination(icon: const Icon(Icons.receipt_long), label: u ? 'ٹرپ بُکنگ' : 'Trips'),
+          NavigationDestination(icon: const Icon(Icons.help_center), label: u ? 'مدد/ریمارکس' : 'Help/Notes'),
+        ],
+      ),
+    );
+  }
+
+  // --- 1. CONTROL DASHBOARD ---
+  Widget _buildControlDashboard(bool u) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(colors: [Colors.indigo.shade800, Colors.indigo.shade500]),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  u ? 'خوش آمدید، ${widget.username} (${widget.role})' : 'Welcome, ${widget.username} [${widget.role}]',
+                  style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  u ? 'سسٹم کا مکمل لائیو کنٹرول اور تجارتی تجزیہ' : 'Live System Fleet & Operational Summary Analytics',
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                ),
+                const Divider(color: Colors.white30, height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _dashMetric(u ? 'کل گاڑیاں' : 'Total Fleet', '${fleet.length}', Colors.lightBlueAccent),
+                    _dashMetric(u ? 'ایکٹو ٹرپس' : 'Active Trips', '${trips.length}', Colors.lightGreenAccent),
+                    _dashMetric(u ? 'ورک شاپس' : 'Workshops', '${workshops.length}', Colors.orangeAccent),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(u ? 'فوری تلاش اور فلٹر (Global Search)' : 'Global Enterprise Search Engine', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          TextField(
+            onChanged: (v) => setState(() => searchQuery = v.toLowerCase()),
+            decoration: InputDecoration(
+              hintText: u ? 'گاڑی کا نمبر، نام یا شہر تلاش کریں...' : 'Search Vehicle No, Driver, Contact, or City...',
+              prefixIcon: const Icon(Icons.search),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              filled: true,
+              fillColor: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(u ? 'گاڑیوں کی لائیو لوکیشن اور اسٹیٹس' : 'Fleet Quick Overview & Live Location', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: fleet.length,
+            itemBuilder: (ctx, idx) {
+              var f = fleet[idx];
+              if (searchQuery.isNotEmpty &&
+                  !f['no'].toString().toLowerCase().contains(searchQuery) &&
+                  !f['driver'].toString().toLowerCase().contains(searchQuery)) {
+                return const SizedBox.shrink();
+              }
+              return Card(
+                margin: const EdgeInsets.only(bottom: 10),
+                child: ListTile(
+                  leading: const CircleAvatar(backgroundColor: Colors.indigo, child: Icon(Icons.local_shipping, color: Colors.white)),
+                  title: Text('${f['no']} (${f['type']})', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: Text('Driver: ${f['driver']} | Location: ${f['location']}'),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.map, color: Colors.redAccent),
+                        tooltip: 'Google Maps Location',
+                        onPressed: () => _openGoogleMaps(f['location']),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.chat, color: Colors.green),
+                        tooltip: 'WhatsApp Contact',
+                        onPressed: () => _launchWhatsApp(f['phone'], 'Assalam O Alaikum ${f['driver']}, Vehicle ${f['no']} status update?'),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _dashMetric(String title, String val, Color c) {
+    return Column(
+      children: [
+        Text(val, style: TextStyle(color: c, fontSize: 22, fontWeight: FontWeight.bold)),
+        Text(title, style: const TextStyle(color: Colors.white70, fontSize: 11)),
+      ],
+    );
+  }
+
+  // --- 2. FLEET MODULE ---
+  Widget _buildFleetModule(bool u) {
+    return Scaffold(
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: Colors.indigo,
+        onPressed: () => _showAddVehicleDialog(u),
+        icon: const Icon(Icons.add),
+        label: Text(u ? 'نئی گاڑی شامل کریں' : 'Add Vehicle'),
       ),
       body: ListView.builder(
         padding: const EdgeInsets.all(12),
-        itemCount: vehicles.length,
+        itemCount: fleet.length,
         itemBuilder: (ctx, idx) {
-          var v = vehicles[idx];
+          var v = fleet[idx];
           return Card(
-            child: ListTile(
-              leading: const CircleAvatar(child: Icon(Icons.directions_bus)),
+            child: ExpansionTile(
+              leading: const Icon(Icons.directions_bus, color: Colors.indigo),
               title: Text(v['no'], style: const TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: Text('Driver: ${v['driver']} (${v['phone']})\nWorkshop: ${v['workshop']} | Adda: ${v['address']}'),
-              isThreeLine: true,
-              trailing: IconButton(
-                icon: const Icon(Icons.edit, color: Colors.indigo),
-                onPressed: () => _showVehicleDialog(vehicle: v, index: idx),
-              ),
+              subtitle: Text('Driver: ${v['driver']} (${v['phone']})'),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Vehicle Body/Type: ${v['type']}'),
+                      Text('Current Location: ${v['location']}'),
+                      Text('Status: ${v['status']}'),
+                      const SizedBox(height: 10),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
+                            onPressed: () => _launchWhatsApp(v['phone'], 'Vehicle ${v['no']} Update Required.'),
+                            icon: const Icon(Icons.messenger),
+                            label: const Text('WhatsApp Driver'),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton.icon(
+                            onPressed: () => _openGoogleMaps(v['location']),
+                            icon: const Icon(Icons.map),
+                            label: const Text('Live Map'),
+                          ),
+                        ],
+                      )
+                    ],
+                  ),
+                )
+              ],
             ),
           );
         },
@@ -285,30 +466,26 @@ class _EnterpriseMainDashboardState extends State<EnterpriseMainDashboard> {
     );
   }
 
-  void _showVehicleDialog({Map<String, dynamic>? vehicle, int? index}) {
-    final noCtrl = TextEditingController(text: vehicle?['no'] ?? '');
-    final driverCtrl = TextEditingController(text: vehicle?['driver'] ?? '');
-    final phoneCtrl = TextEditingController(text: vehicle?['phone'] ?? '');
-    final typeCtrl = TextEditingController(text: vehicle?['type'] ?? '');
-    final addressCtrl = TextEditingController(text: vehicle?['address'] ?? '');
-    final workshopCtrl = TextEditingController(text: vehicle?['workshop'] ?? '');
+  void _showAddVehicleDialog(bool u) {
+    final noCtrl = TextEditingController();
+    final driverCtrl = TextEditingController();
+    final phoneCtrl = TextEditingController();
+    final locCtrl = TextEditingController();
+    final typeCtrl = TextEditingController();
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(vehicle == null ? 'Add New Vehicle' : 'Edit Vehicle Details'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(controller: noCtrl, decoration: const InputDecoration(labelText: 'Gari Number')),
-              TextField(controller: driverCtrl, decoration: const InputDecoration(labelText: 'Driver Name')),
-              TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'Driver Phone')),
-              TextField(controller: typeCtrl, decoration: const InputDecoration(labelText: 'Body Type / Wheeler')),
-              TextField(controller: addressCtrl, decoration: const InputDecoration(labelText: 'Base Location / Adda')),
-              TextField(controller: workshopCtrl, decoration: const InputDecoration(labelText: 'Assigned Workshop')),
-            ],
-          ),
+        title: Text(u ? 'نئی گاڑی شامل کریں' : 'Add Fleet Vehicle'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: noCtrl, decoration: const InputDecoration(labelText: 'Gari Number (e.g. LES-1054)')),
+            TextField(controller: driverCtrl, decoration: const InputDecoration(labelText: 'Driver Name')),
+            TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'Driver WhatsApp/Phone')),
+            TextField(controller: locCtrl, decoration: const InputDecoration(labelText: 'Current Adda / Map Location')),
+            TextField(controller: typeCtrl, decoration: const InputDecoration(labelText: 'Type (10-Wheeler, Trailer, Flatbed)')),
+          ],
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
@@ -316,213 +493,10 @@ class _EnterpriseMainDashboardState extends State<EnterpriseMainDashboard> {
             onPressed: () {
               if (noCtrl.text.isNotEmpty) {
                 setState(() {
-                  Map<String, dynamic> item = {
+                  fleet.add({
                     'no': noCtrl.text,
                     'driver': driverCtrl.text,
                     'phone': phoneCtrl.text,
+                    'location': locCtrl.text,
                     'type': typeCtrl.text,
-                    'address': addressCtrl.text,
-                    'workshop': workshopCtrl.text,
-                  };
-                  if (index == null) {
-                    vehicles.add(item);
-                  } else {
-                    vehicles[index] = item;
-                  }
-                });
-                _saveAllData();
-                Navigator.pop(ctx);
-              }
-            },
-            child: const Text('Save Vehicle'),
-          )
-        ],
-      ),
-    );
-  }
-
-  // --- NOTE PAD MODULE ---
-  Widget _buildNotePadTab() {
-    return Scaffold(
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showNoteDialog,
-        child: const Icon(Icons.note_add),
-      ),
-      body: notes.isEmpty
-          ? const Center(child: Text('Koi Note / Memo add nahi hai.'))
-          : ListView.builder(
-              padding: const EdgeInsets.all(12),
-              itemCount: notes.length,
-              itemBuilder: (ctx, idx) {
-                var n = notes[idx];
-                return Card(
-                  color: Colors.amber.shade50,
-                  child: ListTile(
-                    title: Text(n['title'], style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text('${n['details']}\nDate: ${n['date']}'),
-                    isThreeLine: true,
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () {
-                        setState(() => notes.removeAt(idx));
-                        _saveAllData();
-                      },
-                    ),
-                  ),
-                );
-              },
-            ),
-    );
-  }
-
-  void _showNoteDialog() {
-    final titleCtrl = TextEditingController();
-    final detailCtrl = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Add Daily Note / Memo'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: titleCtrl, decoration: const InputDecoration(labelText: 'Title')),
-            TextField(controller: detailCtrl, maxLines: 3, decoration: const InputDecoration(labelText: 'Details / Note')),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () {
-              if (titleCtrl.text.isNotEmpty) {
-                setState(() {
-                  notes.add({
-                    'title': titleCtrl.text,
-                    'details': detailCtrl.text,
-                    'date': DateTime.now().toString().split(' ')[0]
-                  });
-                });
-                _saveAllData();
-                Navigator.pop(ctx);
-              }
-            },
-            child: const Text('Save Memo'),
-          )
-        ],
-      ),
-    );
-  }
-
-  // --- BOOKINGS MODULE ---
-  Widget _buildBookingsTab() {
-    return Scaffold(
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showBookingDialog,
-        child: const Icon(Icons.add),
-      ),
-      body: bookings.isEmpty
-          ? const Center(child: Text('Koi trip booking nahi hai.'))
-          : ListView.builder(
-              padding: const EdgeInsets.all(12),
-              itemCount: bookings.length,
-              itemBuilder: (ctx, idx) {
-                var b = bookings[idx];
-                return Card(
-                  child: ListTile(
-                    title: Text('${b['client']} (${b['vehicle']})', style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text('Route: ${b['route']}\nFreight: Rs. ${b['freight']} | Advance: Rs. ${b['advance']}'),
-                    isThreeLine: true,
-                    trailing: IconButton(
-                      icon: const Icon(Icons.print, color: Colors.indigo),
-                      onPressed: () => _printInvoicePDF(b),
-                    ),
-                  ),
-                );
-              },
-            ),
-    );
-  }
-
-  void _showBookingDialog() {
-    final clientCtrl = TextEditingController();
-    final routeCtrl = TextEditingController();
-    final freightCtrl = TextEditingController();
-    final advanceCtrl = TextEditingController();
-    String selectedVehicle = vehicles.isNotEmpty ? vehicles[0]['no'] : 'General';
-
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setDlg) => AlertDialog(
-          title: const Text('Generate Dynamic Trip Booking'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(controller: clientCtrl, decoration: const InputDecoration(labelText: 'Client Name')),
-              TextField(controller: routeCtrl, decoration: const InputDecoration(labelText: 'Route (e.g. LHR to KHI)')),
-              TextField(controller: freightCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Freight Rent (Rs.)')),
-              TextField(controller: advanceCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Advance Received (Rs.)')),
-              DropdownButton<String>(
-                value: selectedVehicle,
-                isExpanded: true,
-                items: vehicles.map((v) => DropdownMenuItem<String>(value: v['no'].toString(), child: Text(v['no'].toString()))).toList(),
-                onChanged: (v) => setDlg(() => selectedVehicle = v!),
-              )
-            ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-            ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  bookings.add({
-                    'client': clientCtrl.text,
-                    'route': routeCtrl.text,
-                    'freight': double.tryParse(freightCtrl.text) ?? 0.0,
-                    'advance': double.tryParse(advanceCtrl.text) ?? 0.0,
-                    'vehicle': selectedVehicle,
-                    'date': DateTime.now().toString().split(' ')[0]
-                  });
-                });
-                _saveAllData();
-                Navigator.pop(ctx);
-              },
-              child: const Text('Save Booking'),
-            )
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _printInvoicePDF(Map<String, dynamic> b) async {
-    final pdf = pw.Document();
-    pdf.addPage(
-      pw.Page(
-        build: (pw.Context context) {
-          return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Text('TRANSPORT ENTERPRISE FREIGHT RECEIPT', style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
-              pw.Divider(),
-              pw.SizedBox(height: 10),
-              pw.Text('Client Name: ${b['client']}'),
-              pw.Text('Assigned Vehicle: ${b['vehicle']}'),
-              pw.Text('Route: ${b['route']}'),
-              pw.Text('Date: ${b['date']}'),
-              pw.SizedBox(height: 15),
-              pw.Text('Total Freight Amount: Rs. ${b['freight']}'),
-              pw.Text('Advance Paid: Rs. ${b['advance']}'),
-              pw.Text('Net Payable Balance: Rs. ${(b['freight'] - b['advance'])}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-              pw.Spacer(),
-              pw.Divider(),
-              pw.Center(child: pw.Text('Powered by Transport ERP Ultimate'))
-            ],
-          );
-        },
-      ),
-    );
-    await Printing.layoutPdf(onLayout: (format) async => pdf.save());
-  }
-}
-
+   
