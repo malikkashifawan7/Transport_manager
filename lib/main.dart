@@ -217,7 +217,10 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
             icon: const Icon(Icons.delete_sweep),
             tooltip: 'Recycle Bin',
             onPressed: () {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const RecycleBinScreen())).then((_) => _loadVehicles());
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const RecycleBinScreen()),
+              ).then((_) => _loadVehicles());
             },
           ),
         ],
@@ -235,7 +238,10 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
               title: const Text('Driver Salary Advances'),
               onTap: () {
                 Navigator.pop(context);
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const SalaryAdvanceLedgerScreen()));
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SalaryAdvanceLedgerScreen()),
+                );
               },
             ),
             ListTile(
@@ -256,7 +262,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
               itemBuilder: (context, index) {
                 final v = vehicles[index];
                 return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  margin: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
                   child: ListTile(
                     leading: const CircleAvatar(child: Icon(Icons.directions_car)),
                     title: Text(v['number'], style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -281,7 +287,11 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => VehicleLedgerScreen(vehicleId: v['id'], vehicleNumber: v['number'], driverName: v['driver_name']),
+                          builder: (_) => VehicleLedgerScreen(
+                            vehicleId: v['id'],
+                            vehicleNumber: v['number'],
+                            driverName: v['driver_name'],
+                          ),
                         ),
                       );
                     },
@@ -304,7 +314,12 @@ class VehicleLedgerScreen extends StatefulWidget {
   final String vehicleNumber;
   final String driverName;
 
-  const VehicleLedgerScreen({super.key, required this.vehicleId, required this.vehicleNumber, required this.driverName});
+  const VehicleLedgerScreen({
+    super.key,
+    required this.vehicleId,
+    required this.vehicleNumber,
+    required this.driverName,
+  });
 
   @override
   State<VehicleLedgerScreen> createState() => _VehicleLedgerScreenState();
@@ -415,11 +430,11 @@ class _VehicleLedgerScreenState extends State<VehicleLedgerScreen> {
       body: Column(
         children: [
           Container(
-            margin: const EdgeInsets.all(12),
-            padding: const EdgeInsets.all(16),
+            margin: const EdgeInsets.all(12.0),
+            padding: const EdgeInsets.all(16.0),
             decoration: BoxDecoration(
               color: Colors.blue.shade50,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(12.0),
               border: Border.all(color: Colors.blue.shade200),
             ),
             child: Column(
@@ -444,7 +459,7 @@ class _VehicleLedgerScreenState extends State<VehicleLedgerScreen> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 12.0),
             child: ElevatedButton.icon(
               style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(45)),
               onPressed: _addRecordDialog,
@@ -461,14 +476,14 @@ class _VehicleLedgerScreenState extends State<VehicleLedgerScreen> {
                     itemBuilder: (context, index) {
                       final r = records[index];
                       final isInc = r['type'] == 'Income';
-                      final amt = r['amount'] ?? 0.0;
-                      final titleStr = r['title'] ?? '';
-                      final typeStr = r['type'] ?? '';
-                      final dateStr = r['date'] ?? '';
-                      final detailsStr = r['details'] ?? '';
+                      final double amt = r['amount'] is int ? (r['amount'] as int).toDouble() : (r['amount'] ?? 0.0);
+                      final String titleStr = r['title'] ?? '';
+                      final String typeStr = r['type'] ?? '';
+                      final String dateStr = r['date'] ?? '';
+                      final String detailsStr = r['details'] ?? '';
 
                       return Card(
-                        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        margin: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
                         child: ListTile(
                           leading: CircleAvatar(
                             backgroundColor: isInc ? Colors.green.shade100 : Colors.red.shade100,
@@ -542,11 +557,4 @@ class _SalaryAdvanceLedgerScreenState extends State<SalaryAdvanceLedgerScreen> {
           : ListView.builder(
               itemCount: advances.length,
               itemBuilder: (context, index) {
-                final item = advances[index];
-                final titleStr = item['title'] ?? '';
-                final dateStr = item['date'] ?? '';
-                final detailsStr = item['details'] ?? '';
-                final amt = item['amount'] ?? 0.0;
-
-                return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 12, vertic
+                fina
