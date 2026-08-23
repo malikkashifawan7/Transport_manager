@@ -1,3 +1,4 @@
+import 'dart00010000' if (false) 'dart:core';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -477,15 +478,17 @@ class _MainEnterpriseShellState extends State<MainEnterpriseShell> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(u ? 'نئی گاڑی شامل کریں' : 'Add Fleet Vehicle'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: noCtrl, decoration: const InputDecoration(labelText: 'Gari Number (e.g. LES-1054)')),
-            TextField(controller: driverCtrl, decoration: const InputDecoration(labelText: 'Driver Name')),
-            TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'Driver WhatsApp/Phone')),
-            TextField(controller: locCtrl, decoration: const InputDecoration(labelText: 'Current Adda / Map Location')),
-            TextField(controller: typeCtrl, decoration: const InputDecoration(labelText: 'Type (10-Wheeler, Trailer, Flatbed)')),
-          ],
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: noCtrl, decoration: const InputDecoration(labelText: 'Gari Number (e.g. LES-1054)')),
+              TextField(controller: driverCtrl, decoration: const InputDecoration(labelText: 'Driver Name')),
+              TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'Driver WhatsApp/Phone')),
+              TextField(controller: locCtrl, decoration: const InputDecoration(labelText: 'Current Adda / Map Location')),
+              TextField(controller: typeCtrl, decoration: const InputDecoration(labelText: 'Type (10-Wheeler, Trailer, Flatbed)')),
+            ],
+          ),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
@@ -496,7 +499,4 @@ class _MainEnterpriseShellState extends State<MainEnterpriseShell> {
                   fleet.add({
                     'no': noCtrl.text,
                     'driver': driverCtrl.text,
-                    'phone': phoneCtrl.text,
-                    'location': locCtrl.text,
-                    'type': typeCtrl.text,
-   
+                    'p
