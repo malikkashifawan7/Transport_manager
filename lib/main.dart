@@ -130,7 +130,7 @@ class _AdvancedFleetScreenState extends State<AdvancedFleetScreen> {
     pdf.addPage(
       pw.Page(
         build: (pw.Context context) => pw.Column(
-          cross: pw.CrossAxisAlignment.start,
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
             pw.Text("TRANSPORT HISAB - OFFICIAL BILL INVOICE", style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
             pw.Divider(),
