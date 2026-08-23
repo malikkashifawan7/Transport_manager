@@ -11,7 +11,7 @@ import 'package:path_provider/path_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runconst MyApp();
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -124,7 +124,9 @@ class _AdvancedFleetScreenState extends State<AdvancedFleetScreen> {
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Could not open Google Maps")));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Could not open Google Maps")));
+      }
     }
   }
 
@@ -165,7 +167,7 @@ class _AdvancedFleetScreenState extends State<AdvancedFleetScreen> {
 
   // Add / Edit Trip Dialog with Subcategories
   void _showTripDialog({Map<String, dynamic>? existingTrip}) {
-    String selectedCategory = existingTrip != nullptr ? (existingTrip?['category'] ?? 'Factory Shift') : 'Factory Shift';
+    String selectedCategory = existingTrip != null ? (existingTrip['category'] ?? 'Factory Shift') : 'Factory Shift';
     TextEditingController routeController = TextEditingController(text: existingTrip?['route_details'] ?? '');
     TextEditingController incomeController = TextEditingController(text: existingTrip?['total_income']?.toString() ?? '');
     TextEditingController advanceController = TextEditingController(text: existingTrip?['advance']?.toString() ?? '');
@@ -214,7 +216,7 @@ class _AdvancedFleetScreenState extends State<AdvancedFleetScreen> {
                 await DBService.instance.updateTrip(existingTrip['id'], data);
               }
 
-              Navigator.pop(context);
+              if (mounted) Navigator.pop(context);
               _loadData();
             },
             child: const Text("Save Entry"),
@@ -235,7 +237,6 @@ class _AdvancedFleetScreenState extends State<AdvancedFleetScreen> {
           IconButton(
             icon: const Icon(Icons.print),
             onPressed: () async {
-              // Direct Print sample using Printing package
               await Printing.layoutPdf(onLayout: (format) async => pw.Document().save());
             },
           )
@@ -243,7 +244,6 @@ class _AdvancedFleetScreenState extends State<AdvancedFleetScreen> {
       ),
       body: Column(
         children: [
-          // Dashboard Summary Card
           Card(
             margin: const EdgeInsets.all(12),
             color: Colors.blue.shade50,
@@ -265,8 +265,6 @@ class _AdvancedFleetScreenState extends State<AdvancedFleetScreen> {
               ),
             ),
           ),
-
-          // Action Button to Add Entry
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12.0),
             child: ElevatedButton.icon(
@@ -276,10 +274,7 @@ class _AdvancedFleetScreenState extends State<AdvancedFleetScreen> {
               label: const Text("Add New Trip / Booking / Sub-category"),
             ),
           ),
-
           const SizedBox(height: 10),
-
-          // List of Entries with Edit, Delete, Google Map & Bill Share
           Expanded(
             child: ListView.builder(
               itemCount: _trips.length,
@@ -294,23 +289,18 @@ class _AdvancedFleetScreenState extends State<AdvancedFleetScreen> {
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Google Map Button
                         IconButton(
                           icon: const Icon(Icons.map, color: Colors.blue),
                           onPressed: () => _openGoogleMap(trip['route_details']),
-                          tooltip: "Open in Google Maps",
                         ),
-                        // Edit Button
                         IconButton(
                           icon: const Icon(Icons.edit, color: Colors.orange),
                           onPressed: () => _showTripDialog(existingTrip: trip),
                         ),
-                        // Share Bill Invoice PDF Button
                         IconButton(
                           icon: const Icon(Icons.share, color: Colors.green),
                           onPressed: () => _generatePDF(trip),
                         ),
-                        // Delete Button
                         IconButton(
                           icon: const Icon(Icons.delete, color: Colors.red),
                           onPressed: () async {
@@ -330,3 +320,4 @@ class _AdvancedFleetScreenState extends State<AdvancedFleetScreen> {
     );
   }
 }
+
