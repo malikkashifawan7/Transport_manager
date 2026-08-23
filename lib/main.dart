@@ -422,14 +422,13 @@ Navigator.push(context, MaterialPageRoute(builder: (_) => VendorKhataScreen()));
   }
 }
 
-// ==================== VEHICLE LEDGER & BOOKINGS SCREEN ====================
-// ==================== VEHICLE LEDGER & BOOKINGS SCREEN ====================
+// ==// ==================== VEHICLE LEDGER & BOOKINGS SCREEN ====================
 class VehicleLedgerScreen extends StatefulWidget {
   final Map<String, dynamic> vehicleData;
 
   const VehicleLedgerScreen({super.key, required this.vehicleData});
 
-        @override
+  @override
   State<VehicleLedgerScreen> createState() => _VehicleLedgerScreenState();
 }
 
@@ -438,7 +437,6 @@ class _VehicleLedgerScreenState extends State<VehicleLedgerScreen> with SingleTi
 
   List<Map<String, dynamic>> records = [];
   List<Map<String, dynamic>> bookings = [];
-
 
   double totalIncome = 0.0;
   double totalExpense = 0.0;
@@ -471,7 +469,9 @@ class _VehicleLedgerScreenState extends State<VehicleLedgerScreen> with SingleTi
       totalExpense = exp;
     });
   }
-      void _showRecordDialog([Map<String, dynamic>? editRecord]) {
+
+  void _showRecordDialog([Map<String, dynamic>? editRecord]) {
+
     final titleController = TextEditingController(text: editRecord?['title'] ?? '');
     final amountController = TextEditingController(text: editRecord != null ? editRecord['amount'].toString() : '');
     final detailsController = TextEditingController(text: editRecord?['details'] ?? '');
