@@ -28,8 +28,22 @@ jobs:
       - name: Recreate Android Project
         run: flutter create . --platforms=android
 
+      - name: Force SDK 34 for All Plugins
+        run: |
+          echo "
+          subprojects {
+              afterEvaluate { project ->
+                  if (project.hasProperty('android')) {
+                      project.android {
+                          compileSdkVersion 34
+                      }
+                  }
+              }
+          }
+          " >> android/build.gradle
+
       - name: Build Release APK
-        run: flutter build apk --release --extra-abstract-byte-code-options=ignore --target-platform android-arm64 --build-number=1 --build-name=1.0.0 --extra-front-end-options=--no-implicit-casts || flutter build apk --release --target-platform android-arm64
+        run: flutter build apk --release
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
