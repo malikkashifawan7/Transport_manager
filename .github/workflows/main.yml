@@ -28,45 +28,53 @@ jobs:
       - name: Recreate Android Project
         run: flutter create . --platforms=android
 
-      - name: Force Global SDK 36 on ALL Subprojects
+      - name: Override SDK 36 Safe Injection
         run: |
           echo "android.suppressUnsupportedCompileSdk=36" >> android/gradle.properties
-          
+
           python3 -c "
           import os
 
-          # Inject into root build.gradle / build.gradle.kts
           groovy_build = 'android/build.gradle'
           kotlin_build = 'android/build.gradle.kts'
 
-          groovy_override = '''
+          groovy_code = '''
           subprojects {
-              afterEvaluate { project ->
-                  if (project.hasProperty('android')) {
-                      project.android {
-                          compileSdkVersion 36
-                      }
-                  }
+              project.buildDir = \"${rootProject.buildDir}/${project.name}\"
+              project.evaluationDependsOn(':app')
+          }
+          subprojects {
+              plugins.withId('com.android.library') {
+                  android { compileSdkVersion 36 }
+              }
+              plugins.withId('com.android.application') {
+                  android { compileSdkVersion 36 }
               }
           }
           '''
 
-          kotlin_override = '''
+          kotlin_code = '''
           subprojects {
-              afterEvaluate {
-                  val android = extensions.findByName(\"android\") as? com.android.build.gradle.BaseExtension
-                  android?.compileSdkVersion(36)
+              plugins.withId(\"com.android.library\") {
+                  configure<com.android.build.gradle.BaseExtension> {
+                      compileSdkVersion(36)
+                  }
+              }
+              plugins.withId(\"com.android.application\") {
+                  configure<com.android.build.gradle.BaseExtension> {
+                      compileSdkVersion(36)
+                  }
               }
           }
           '''
 
           if os.path.exists(groovy_build):
               with open(groovy_build, 'a') as f:
-                  f.write(groovy_override)
+                  f.write(groovy_code)
 
           if os.path.exists(kotlin_build):
               with open(kotlin_build, 'a') as f:
-                  f.write(kotlin_override)
+                  f.write(kotlin_code)
           "
 
       - name: Build Release APK
