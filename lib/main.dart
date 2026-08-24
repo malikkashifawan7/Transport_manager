@@ -33,7 +33,7 @@ class DatabaseHelper {
 
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _database = await _initDB('transport_hisab_v8.db');
+    _database = await _initDB('transport_hisab_v9.db');
     return _database!;
   }
 
@@ -303,7 +303,6 @@ class _HomeScreenTabState extends State<HomeScreenTab> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Universal Search Bar
             TextField(
               decoration: InputDecoration(
                 hintText: 'Search Vehicle Number or Driver...',
@@ -314,8 +313,6 @@ class _HomeScreenTabState extends State<HomeScreenTab> {
               onChanged: (val) => setState(() => searchQuery = val),
             ),
             const SizedBox(height: 16),
-
-            // Overall Summary Card
             Card(
               elevation: 4,
               color: Colors.indigo.shade900,
@@ -347,26 +344,29 @@ class _HomeScreenTabState extends State<HomeScreenTab> {
                 ),
               ),
             ),
-
             const SizedBox(height: 20),
             const Text('Fleet Overview & Live Quick Status', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: filteredVehicles.length,
-              itemBuilder: (context, index) {
-                final v = filteredVehicles[index];
-                return Card(
-                  child: ListTile(
-                    leading: const CircleAvatar(backgroundColor: Colors.indigo, child: Icon(Icons.directions_bus, color: Colors.white)),
-                    title: Text('${v['number']} (${v['type']})', style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text('Driver: ${v['driver_name']} | Loc: ${v['location']}'),
+            filteredVehicles.isEmpty
+                ? const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 20),
+                    child: Center(child: Text('No vehicles found. Add from Fleet Tab.')),
+                  )
+                : ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: filteredVehicles.length,
+                    itemBuilder: (context, index) {
+                      final v = filteredVehicles[index];
+                      return Card(
+                        child: ListTile(
+                          leading: const CircleAvatar(backgroundColor: Colors.indigo, child: Icon(Icons.directions_bus, color: Colors.white)),
+                          title: Text('${v['number']} (${v['type']})', style: const TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: Text('Driver: ${v['driver_name']} | Loc: ${v['location']}'),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           ],
         ),
       ),
@@ -395,16 +395,76 @@ class _FleetScreenTabState extends State<FleetScreenTab> {
     setState(() => vehicles = v);
   }
 
+  void _addVehicleDialog() {
+    final number = TextEditingController();
+    final model = TextEditingController();
+    final driver = TextEditingController();
+    final phone = TextEditingController();
+    final cnic = TextEditingController();
+    final location = TextEditingController();
+    String selectedType = '10-Wheeler';
+
+    showDialog(
+      context: context,
+      builder: (_) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Add Fleet Vehicle'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButton<String>(
+                  value: selectedType,
+                  isExpanded: true,
+                  items: ['6-Wheeler', '10-Wheeler', 'Trailer', 'Container', 'Oil Tanker', 'Flatbed']
+                      .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                      .toList(),
+                  onChanged: (val) => setDialogState(() => selectedType = val!),
+                ),
+                TextField(controller: number, decoration: const InputDecoration(labelText: 'Vehicle Number')),
+                TextField(controller: model, decoration: const InputDecoration(labelText: 'Model / Year')),
+                TextField(controller: driver, decoration: const InputDecoration(labelText: 'Driver Name')),
+                TextField(controller: phone, decoration: const InputDecoration(labelText: 'Driver Phone')),
+                TextField(controller: cnic, decoration: const InputDecoration(labelText: 'Driver CNIC')),
+                TextField(controller: location, decoration: const InputDecoration(labelText: 'Current Location')),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+            ElevatedButton(
+              onPressed: () async {
+                if (number.text.isNotEmpty) {
+                  await DatabaseHelper.instance.addVehicle(number.text, model.text, selectedType, driver.text, phone.text, cnic.text, location.text);
+                  _loadVehicles();
+                  if (mounted) Navigator.pop(context);
+                }
+              },
+              child: const Text('Add Vehicle'),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Fleet Profit / Loss Performance'), backgroundColor: Colors.indigo, foregroundColor: Colors.white),
-      body: ListView.builder(
-        itemCount: vehicles.length,
-        itemBuilder: (context, index) {
-          final v = vehicles[index];
-          return VehicleProfitBarCard(vehicle: v);
-        },
+      body: vehicles.isEmpty
+          ? const Center(child: Text('No vehicles added. Tap + to add.'))
+          : ListView.builder(
+              itemCount: vehicles.length,
+              itemBuilder: (context, index) {
+                final v = vehicles[index];
+                return VehicleProfitBarCard(vehicle: v);
+              },
+            ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _addVehicleDialog,
+        backgroundColor: Colors.indigo,
+        child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }
@@ -473,8 +533,6 @@ class _VehicleProfitBarCardState extends State<VehicleProfitBarCard> {
             const SizedBox(height: 6),
             Text('Driver: ${widget.vehicle['driver_name']} | ${widget.vehicle['type']}'),
             const SizedBox(height: 10),
-
-            // Visual Profit/Loss Bar
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: LinearProgressIndicator(
@@ -510,7 +568,7 @@ class _VehicleProfitBarCardState extends State<VehicleProfitBarCard> {
   }
 }
 
-// ==================== INDIVIDUAL / MONTHLY LEDGER WITH SUB-CATEGORIES ====================
+// ==================== INDIVIDUAL / MONTHLY LEDGER ====================
 class IndividualLedgerScreen extends StatefulWidget {
   final Map<String, dynamic> vehicle;
 
@@ -522,7 +580,7 @@ class IndividualLedgerScreen extends StatefulWidget {
 
 class _IndividualLedgerScreenState extends State<IndividualLedgerScreen> {
   List<Map<String, dynamic>> records = [];
-  String selectedMonth = ''; // Format: YYYY-MM
+  String selectedMonth = '';
 
   final Map<String, List<String>> categoriesWithSub = {
     'Fuel': ['Diesel filling', 'AdBlue/Def', 'Generator Diesel'],
@@ -638,7 +696,7 @@ class _IndividualLedgerScreenState extends State<IndividualLedgerScreen> {
                 const Text('Monthly Filter: ', style: TextStyle(fontWeight: FontWeight.bold)),
                 Expanded(
                   child: TextField(
-                    decoration: const InputDecoration(hintText: 'e.g. 2026-08 (Leave empty for all)'),
+                    decoration: const InputDecoration(hintText: 'e.g. 2026-08'),
                     onChanged: (v) {
                       selectedMonth = v.trim();
                       _loadLedger();
@@ -649,22 +707,24 @@ class _IndividualLedgerScreenState extends State<IndividualLedgerScreen> {
             ),
           ),
           Expanded(
-            child: ListView.builder(
-              itemCount: records.length,
-              itemBuilder: (context, index) {
-                final r = records[index];
-                final isInc = r['type'] == 'Income';
-                return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  child: ListTile(
-                    leading: Icon(isInc ? Icons.arrow_circle_down : Icons.arrow_circle_up, color: isInc ? Colors.green : Colors.red),
-                    title: Text('${r['title']} [${r['sub_category']}]'),
-                    subtitle: Text('${r['date']} | ${r['main_category']} | Meter: ${r['meter_reading']} KM'),
-                    trailing: Text('Rs. ${r['amount']}', style: TextStyle(color: isInc ? Colors.green : Colors.red, fontWeight: FontWeight.bold)),
+            child: records.isEmpty
+                ? const Center(child: Text('No entries found.'))
+                : ListView.builder(
+                    itemCount: records.length,
+                    itemBuilder: (context, index) {
+                      final r = records[index];
+                      final isInc = r['type'] == 'Income';
+                      return Card(
+                        margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        child: ListTile(
+                          leading: Icon(isInc ? Icons.arrow_circle_down : Icons.arrow_circle_up, color: isInc ? Colors.green : Colors.red),
+                          title: Text('${r['title']} [${r['sub_category']}]'),
+                          subtitle: Text('${r['date']} | ${r['main_category']} | Meter: ${r['meter_reading']} KM'),
+                          trailing: Text('Rs. ${r['amount']}', style: TextStyle(color: isInc ? Colors.green : Colors.red, fontWeight: FontWeight.bold)),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           )
         ],
       ),
@@ -715,7 +775,7 @@ class _DirectoryAndVendorsTabState extends State<DirectoryAndVendorsTab> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(controller: name, decoration: const InputDecoration(labelText: 'Name (e.g. Mechanic / Spare Parts)')),
+              TextField(controller: name, decoration: const InputDecoration(labelText: 'Name (e.g. Mechanic)')),
               TextField(controller: shop, decoration: const InputDecoration(labelText: 'Shop / Company Name')),
               TextField(controller: phone, decoration: const InputDecoration(labelText: 'Phone Number')),
               TextField(controller: address, decoration: const InputDecoration(labelText: 'Address')),
@@ -746,21 +806,23 @@ class _DirectoryAndVendorsTabState extends State<DirectoryAndVendorsTab> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Phone Directory & Vendors Khata'), backgroundColor: Colors.indigo, foregroundColor: Colors.white),
-      body: ListView.builder(
-        itemCount: vendors.length,
-        itemBuilder: (context, index) {
-          final v = vendors[index];
-          return Card(
-            margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            child: ListTile(
-              leading: const CircleAvatar(child: Icon(Icons.person)),
-              title: Text('${v['name']} (${v['shop_name']})'),
-              subtitle: Text('${v['phone']} | ${v['address']}, ${v['city']}'),
-              trailing: Text('Bal: Rs. ${v['udhar_balance']}', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+      body: vendors.isEmpty
+          ? const Center(child: Text('No contacts/vendors added yet.'))
+          : ListView.builder(
+              itemCount: vendors.length,
+              itemBuilder: (context, index) {
+                final v = vendors[index];
+                return Card(
+                  margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  child: ListTile(
+                    leading: const CircleAvatar(child: Icon(Icons.person)),
+                    title: Text('${v['name']} (${v['shop_name']})'),
+                    subtitle: Text('${v['phone']} | ${v['address']}, ${v['city']}'),
+                    trailing: Text('Bal: Rs. ${v['udhar_balance']}', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                  ),
+                );
+              },
             ),
-          );
-        },
-      ),
       floatingActionButton: FloatingActionButton(
         onPressed: _addVendorDialog,
         backgroundColor: Colors.indigo,
@@ -840,92 +902,4 @@ class _RemindersTabState extends State<RemindersTab> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Maintenance Reminders'), backgroundColor: Colors.indigo, foregroundColor: Colors.white),
-      body: ListView.builder(
-        itemCount: reminders.length,
-        itemBuilder: (context, index) {
-          final r = reminders[index];
-          return ListTile(
-            leading: const Icon(Icons.notifications_active, color: Colors.orange),
-            title: Text('${r['title']} [${r['type']}]'),
-            subtitle: Text('Due Date: ${r['due_date']} | Notes: ${r['details']}'),
-          );
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _addReminderDialog,
-        backgroundColor: Colors.indigo,
-        child: const Icon(Icons.add_alert, color: Colors.white),
-      ),
-    );
-  }
-}
-
-// ==================== USER MANUAL & HELP TAB ====================
-class UserManualHelpTab extends StatelessWidget {
-  const UserManualHelpTab({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('User Manual & Help System'),
-          backgroundColor: Colors.indigo,
-          foregroundColor: Colors.white,
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: 'Urdu Guidance (اردو)'),
-              Tab(text: 'English Guide'),
-            ],
-          ),
-        ),
-        body: const TabBarView(
-          children: [
-            UrduManualView(),
-            EnglishManualView(),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class UrduManualView extends StatelessWidget {
-  const UrduManualView({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const SingleChildScrollView(
-      padding: EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Text('ٹرانسپورٹ حساب پرو - استعمال کرنے کا طریقہ', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.indigo)),
-          SizedBox(height: 12),
-          Text('1. نئی گاڑی شامل کرنا:', style: TextStyle(fontWeight: FontWeight.bold)),
-          Text('Fleet Tab میں جا کر + کا بٹن دبائیں، گاڑی کا نمبر، ڈرائیور کا نام اور موبائل نمبر درج کریں۔'),
-          SizedBox(height: 12),
-          Text('2. گاڑی کا لیجر اور حساب:', style: TextStyle(fontWeight: FontWeight.bold)),
-          Text('ہر گاڑی کے نیچے "Open Detailed Ledger" کا بٹن ہے۔ وہاں ڈیزل، مرمت، اور فرائیٹ کا مکمل حساب درج کریں۔'),
-          SizedBox(height: 12),
-          Text('3. نوٹیفکیشن اور آئل چینج:', style: TextStyle(fontWeight: FontWeight.bold)),
-          Text('Reminders Tab میں آئل چینج اور ٹوکن ٹیکس کی آخری تاریخ درج کریں تاکہ وقت پر یاد دہانی ہو۔'),
-        ],
-      ),
-    );
-  }
-}
-
-class EnglishManualView extends StatelessWidget {
-  const EnglishManualView({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const SingleChildScrollView(
-      padding: EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('T
+      appBar: AppBar(title: const Text('Maintenance Reminders'), backgroundColor: Colors.indigo, fo
