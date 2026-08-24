@@ -203,7 +203,8 @@ class DatabaseHelper {
 
 // ==================== PDF REPORT ENGINE ====================
 class PdfReportService {
-  static Future<void> generateAndPrintVehicleLedger(Map<String, dynamic> vehicle, List<Map<String, dynamic>> records) async {
+  static Future<void> generateAndPrintVehicleLedger(
+      Map<String, dynamic> vehicle, List<Map<String, dynamic>> records) async {
     final pdf = pw.Document();
 
     pdf.addPage(
@@ -213,20 +214,28 @@ class PdfReportService {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              pw.Header(level: 0, child: pw.Text('Transport Hisab Pro - Vehicle Statement', style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold))),
+              pw.Header(
+                level: 0,
+                child: pw.Text(
+                  'Transport Hisab Pro - Vehicle Statement',
+                  style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold),
+                ),
+              ),
               pw.SizedBox(height: 10),
               pw.Text('Vehicle No: ${vehicle['number']} (${vehicle['type']})'),
               pw.Text('Driver Name: ${vehicle['driver_name']} | Contact: ${vehicle['driver_phone']}'),
               pw.SizedBox(height: 15),
               pw.Table.fromTextArray(
                 headers: ['Date', 'Title', 'Category', 'Type', 'Amount (PKR)'],
-                data: records.map((r) => [
-                  r['date'].toString(),
-                  r['title'].toString(),
-                  r['sub_category'].toString(),
-                  r['type'].toString(),
-                  r['amount'].toString()
-                ]).toList(),
+                data: records
+                    .map((r) => [
+                          r['date'].toString(),
+                          r['title'].toString(),
+                          r['sub_category'].toString(),
+                          r['type'].toString(),
+                          r['amount'].toString()
+                        ])
+                    .toList(),
               ),
             ],
           );
@@ -235,6 +244,9 @@ class PdfReportService {
     );
 
     await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save());
+  }
+}
+
   }
 }
 
