@@ -1,11 +1,9 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart' as p;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import 'package:share_plus/share_plus.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -117,7 +115,6 @@ class DatabaseHelper {
     ''');
   }
 
-  // CRUD Operations
   Future<List<Map<String, dynamic>>> getVehicles() async {
     final db = await instance.database;
     return await db.query('vehicles', orderBy: 'id DESC');
@@ -149,11 +146,6 @@ class DatabaseHelper {
     return await db.insert('bookings', row);
   }
 
-  Future<int> deleteBooking(int id) async {
-    final db = await instance.database;
-    return await db.delete('bookings', where: 'id = ?', whereArgs: [id]);
-  }
-
   Future<List<Map<String, dynamic>>> getRecords(int? vehicleId) async {
     final db = await instance.database;
     if (vehicleId == null) return await db.query('records', orderBy: 'id DESC');
@@ -180,11 +172,6 @@ class DatabaseHelper {
     return await db.insert('vendors', row);
   }
 
-  Future<int> deleteVendor(int id) async {
-    final db = await instance.database;
-    return await db.delete('vendors', where: 'id = ?', whereArgs: [id]);
-  }
-
   Future<List<Map<String, dynamic>>> getReminders() async {
     final db = await instance.database;
     return await db.query('reminders', orderBy: 'due_date ASC');
@@ -193,11 +180,6 @@ class DatabaseHelper {
   Future<int> addReminder(Map<String, dynamic> row) async {
     final db = await instance.database;
     return await db.insert('reminders', row);
-  }
-
-  Future<int> deleteReminder(int id) async {
-    final db = await instance.database;
-    return await db.delete('reminders', where: 'id = ?', whereArgs: [id]);
   }
 }
 
@@ -243,17 +225,11 @@ class PdfReportService {
       ),
     );
 
-    await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save());
+    await Printing.layoutPdf(
+      onLayout: (PdfPageFormat format) async => pdf.save(),
+    );
   }
 }
-
-  }
-}
-
-    await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save());
-  }
-}
-
 // ==================== MAIN SHELL NAVIGATION ====================
 class MainEnterpriseShell extends StatefulWidget {
   const MainEnterpriseShell({super.key});
@@ -294,6 +270,7 @@ class _MainEnterpriseShellState extends State<MainEnterpriseShell> {
     );
   }
 }
+
 class HomeScreenTab extends StatefulWidget {
   const HomeScreenTab({super.key});
 
@@ -373,7 +350,7 @@ class _HomeScreenTabState extends State<HomeScreenTab> {
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   children: [
-                    const Text('Total Enterprise Overview (Auto Calculated)', style: TextStyle(color: Colors.white70)),
+                    const Text('Total Enterprise Overview', style: TextStyle(color: Colors.white70)),
                     const SizedBox(height: 12),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -387,7 +364,7 @@ class _HomeScreenTabState extends State<HomeScreenTab> {
                           Text('Rs. ${totalExpense.toStringAsFixed(0)}', style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 16)),
                         ]),
                         Column(children: [
-                          const Text('Net Profit', style: TextStyle(color: Colors.white)),
+                          const Text('Net Balance', style: TextStyle(color: Colors.white)),
                           Text('Rs. ${(totalIncome - totalExpense).toStringAsFixed(0)}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
                         ]),
                       ],
@@ -400,7 +377,7 @@ class _HomeScreenTabState extends State<HomeScreenTab> {
             const Text('Fleet Quick View', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             filteredVehicles.isEmpty
-                ? const Center(child: Padding(padding: EdgeInsets.all(20), child: Text('No vehicles registered.')))
+                ? const Center(child: Padding(padding: EdgeInsets.all(20), child: Text('No vehicles found.')))
                 : ListView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
@@ -648,6 +625,7 @@ class _VehicleProfitCardState extends State<VehicleProfitCard> {
     );
   }
 }
+
 class IndividualLedgerScreen extends StatefulWidget {
   final Map<String, dynamic> vehicle;
   const IndividualLedgerScreen({super.key, required this.vehicle});
@@ -724,13 +702,13 @@ class _IndividualLedgerScreenState extends State<IndividualLedgerScreen> {
                     items: categories[mainCat]!.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
                     onChanged: (v) => setDialogState(() => subCat = v!),
                   ),
-                  TextField(controller: title, decoration: const InputDecoration(labelText: 'Party / Vendor / Title')),
+                  TextField(controller: title, decoration: const InputDecoration(labelText: 'Title / Party')),
                   TextField(controller: amount, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Amount (PKR)')),
                   if (subCat == 'Diesel filling') ...[
                     TextField(controller: litres, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Litres Filled'), onChanged: (_) => setDialogState(() {})),
                     TextField(controller: meter, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Odometer (KM Cover)'), onChanged: (_) => setDialogState(() {})),
                     const SizedBox(height: 8),
-                    Text('Auto Calculated Average: ${avg.toStringAsFixed(2)} KM/L', style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
+                    Text('Auto Average: ${avg.toStringAsFixed(2)} KM/L', style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
                   ],
                   TextField(controller: details, decoration: const InputDecoration(labelText: 'Notes')),
                 ],
@@ -770,43 +748,8 @@ class _IndividualLedgerScreenState extends State<IndividualLedgerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('${widget.vehicle['number']} Ledger'), backgroundColor: Colors.indigo, foregroundColor: Colors.white),
-      body: records.isEmpty
-          ? const Center(child: Text('No transactions registered.'))
-          : ListView.builder(
-              itemCount: records.length,
-              itemBuilder: (context, index) {
-                final r = records[index];
-                final isInc = r['type'] == 'Income';
-                return ListTile(
-                  leading: Icon(isInc ? Icons.arrow_downward : Icons.arrow_upward, color: isInc ? Colors.green : Colors.red),
-                  title: Text('${r['title']} [${r['sub_category']}]'),
-                  subtitle: Text('${r['date']} ${r['litres'] > 0 ? '| ${r['litres']}L' : ''}'),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text('Rs. ${r['amount']}', style: TextStyle(color: isInc ? Colors.green : Colors.red, fontWeight: FontWeight.bold)),
-                      IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.grey),
-                        onPressed: () async {
-                          await DatabaseHelper.instance.deleteRecord(r['id']);
-                          _loadLedger();
-                        },
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _addRecordDialog,
-        backgroundColor: Colors.indigo,
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
-    );
-  }
-}
-
+      appBar: AppBar(title: Text('${widget.vehicle['number']} Ledger'), backgroundColor: Colors.indigo, foregroundColor: Colors.wh
+// ==================== BOOKINGS, VENDORS & REMINDERS ====================
 class BookingsTab extends StatefulWidget {
   const BookingsTab({super.key});
 
@@ -852,7 +795,7 @@ class _BookingsTabState extends State<BookingsTab> {
           double remaining = f - a;
 
           return AlertDialog(
-            title: const Text('New Advance Trip Booking'),
+            title: const Text('New Trip Booking'),
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -870,7 +813,7 @@ class _BookingsTabState extends State<BookingsTab> {
                   TextField(controller: advance, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Advance Paid (PKR)'), onChanged: (_) => setDialogState(() {})),
                   TextField(controller: comm, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Commission (PKR)')),
                   const SizedBox(height: 8),
-                  Text('Auto Calculated Remaining: Rs. ${remaining.toStringAsFixed(0)}', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                  Text('Auto Remaining: Rs. ${remaining.toStringAsFixed(0)}', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
                 ],
               ),
             ),
@@ -1109,3 +1052,4 @@ class _RemindersTabState extends State<RemindersTab> {
     );
   }
 }
+                     
