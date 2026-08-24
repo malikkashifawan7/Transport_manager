@@ -9,7 +9,7 @@ class DatabaseHelper {
 
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _database = await _initDB('transport_manager.db');
+    _database = await _initDB('transport_manager_erp.db');
     return _database!;
   }
 
@@ -19,8 +19,16 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _createDB,
+      onUpgrade: (db, oldVersion, newVersion) async {
+        await db.execute('DROP TABLE IF EXISTS vehicles');
+        await db.execute('DROP TABLE IF EXISTS records');
+        await db.execute('DROP TABLE IF EXISTS vendors');
+        await db.execute('DROP TABLE IF EXISTS reminders');
+        await db.execute('DROP TABLE IF EXISTS bookings');
+        await _createDB(db, newVersion);
+      },
     );
   }
 
@@ -29,8 +37,13 @@ class DatabaseHelper {
       CREATE TABLE vehicles (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         number TEXT NOT NULL,
+        type TEXT,
+        model TEXT,
         driver_name TEXT,
-        model TEXT
+        driver_phone TEXT,
+        driver_cnic TEXT,
+        location TEXT,
+        status TEXT DEFAULT 'Active'
       )
     ''');
 
@@ -54,7 +67,7 @@ class DatabaseHelper {
         name TEXT NOT NULL,
         phone TEXT,
         type TEXT,
-        balance REAL
+        balance REAL DEFAULT 0.0
       )
     ''');
 
@@ -63,25 +76,27 @@ class DatabaseHelper {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT NOT NULL,
         date TEXT,
-        status TEXT
+        status TEXT DEFAULT 'Pending'
       )
     ''');
 
     await db.execute('''
       CREATE TABLE bookings (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT NOT NULL,
+        vehicle_number TEXT,
         client TEXT,
+        route TEXT,
         amount REAL,
-        date TEXT
+        date TEXT,
+        status TEXT DEFAULT 'Booked'
       )
     ''');
   }
 
-  // --- VEHICLES METHODS ---
+  // Vehicles
   Future<List<Map<String, dynamic>>> getVehicles() async {
     final db = await instance.database;
-    return await db.query('vehicles');
+    return await db.query('vehicles', orderBy: 'id DESC');
   }
 
   Future<int> addVehicle(Map<String, dynamic> row) async {
@@ -99,25 +114,35 @@ class DatabaseHelper {
     return await db.delete('vehicles', where: 'id = ?', whereArgs: [id]);
   }
 
-  // --- RECORDS METHODS ---
+  // Records / Ledger
   Future<List<Map<String, dynamic>>> getRecords(int? vehicleId) async {
     final db = await instance.database;
     if (vehicleId != null) {
-      return await db.query('records', where: 'vehicle_id = ?', whereArgs: [vehicleId]);
+      return await db.query('records', where: 'vehicle_id = ?', orderBy: 'id DESC', whereArgs: [vehicleId]);
     }
-    return await db.query('records');
+    return await db.query('records', orderBy: 'id DESC');
   }
 
-  // --- BOOKINGS METHODS ---
+  Future<int> addRecord(Map<String, dynamic> row) async {
+    final db = await instance.database;
+    return await db.insert('records', row);
+  }
+
+  // Bookings
   Future<List<Map<String, dynamic>>> getBookings(dynamic filter) async {
     final db = await instance.database;
-    return await db.query('bookings');
+    return await db.query('bookings', orderBy: 'id DESC');
   }
 
-  // --- VENDORS METHODS ---
+  Future<int> addBooking(Map<String, dynamic> row) async {
+    final db = await instance.database;
+    return await db.insert('bookings', row);
+  }
+
+  // Vendors
   Future<List<Map<String, dynamic>>> getVendors() async {
     final db = await instance.database;
-    return await db.query('vendors');
+    return await db.query('vendors', orderBy: 'id DESC');
   }
 
   Future<int> addVendor(Map<String, dynamic> row) async {
@@ -135,10 +160,10 @@ class DatabaseHelper {
     return await db.delete('vendors', where: 'id = ?', whereArgs: [id]);
   }
 
-  // --- REMINDERS METHODS ---
+  // Reminders
   Future<List<Map<String, dynamic>>> getReminders() async {
     final db = await instance.database;
-    return await db.query('reminders');
+    return await db.query('reminders', orderBy: 'id DESC');
   }
 
   Future<int> addReminder(Map<String, dynamic> row) async {
@@ -156,4 +181,3 @@ class DatabaseHelper {
     return await db.delete('reminders', where: 'id = ?', whereArgs: [id]);
   }
 }
-
