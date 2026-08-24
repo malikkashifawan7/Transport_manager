@@ -57,17 +57,23 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
         selectedIndex: _selectedIndex,
         onDestinationSelected: (idx) => setState(() => _selectedIndex = idx),
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.directions_bus_rounded), label: 'Fleet Hub'),
-          NavigationDestination(icon: Icon(Icons.analytics_rounded), label: 'Total Ledger'),
-          NavigationDestination(icon: Icon(Icons.calculate_rounded), label: 'Avg Calculator'),
-          NavigationDestination(icon: Icon(Icons.folder_shared_rounded), label: 'Notepad'),
+          NavigationDestination(
+              icon: Icon(Icons.directions_bus_rounded), label: 'Fleet Hub'),
+          NavigationDestination(
+              icon: Icon(Icons.analytics_rounded), label: 'Total Ledger'),
+          NavigationDestination(
+              icon: Icon(Icons.calculate_rounded), label: 'Avg Calculator'),
+          NavigationDestination(
+              icon: Icon(Icons.folder_shared_rounded), label: 'Notepad'),
         ],
       ),
     );
   }
 }
 
-// 1. Fleet Hub (With Edit, Delete, Map & Add)
+// ---------------------------------------------------------
+// 1. FLEET DASHBOARD SCREEN
+// ---------------------------------------------------------
 class FleetDashboardScreen extends StatefulWidget {
   const FleetDashboardScreen({super.key});
 
@@ -108,37 +114,63 @@ class _FleetDashboardScreenState extends State<FleetDashboardScreen> {
     return _vehicles.where((v) {
       final num = (v['number'] ?? '').toString().toLowerCase();
       final driver = (v['driver_name'] ?? '').toString().toLowerCase();
-      return num.contains(_searchQuery.toLowerCase()) || driver.contains(_searchQuery.toLowerCase());
+      return num.contains(_searchQuery.toLowerCase()) ||
+          driver.contains(_searchQuery.toLowerCase());
     }).toList();
   }
 
   void _openVehicleDialog({Map<String, dynamic>? vehicle}) {
     final numCtrl = TextEditingController(text: vehicle?['number'] ?? '');
-    final driverCtrl = TextEditingController(text: vehicle?['driver_name'] ?? '');
-    final phoneCtrl = TextEditingController(text: vehicle?['driver_phone'] ?? '');
+    final driverCtrl =
+        TextEditingController(text: vehicle?['driver_name'] ?? '');
+    final phoneCtrl =
+        TextEditingController(text: vehicle?['driver_phone'] ?? '');
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom + 20, left: 20, right: 20, top: 20),
+        padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+            left: 20,
+            right: 20,
+            top: 20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(vehicle == null ? 'Add Fleet Vehicle' : 'Edit Fleet Vehicle', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(
+                vehicle == null
+                    ? 'Add Fleet Vehicle'
+                    : 'Edit Fleet Vehicle',
+                style: const TextStyle(
+                    fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
-            TextField(controller: numCtrl, decoration: const InputDecoration(labelText: 'Reg Number (e.g. LES-786)', border: OutlineInputBorder())),
+            TextField(
+                controller: numCtrl,
+                decoration: const InputDecoration(
+                    labelText: 'Reg Number (e.g. LES-786)',
+                    border: OutlineInputBorder())),
             const SizedBox(height: 10),
-            TextField(controller: driverCtrl, decoration: const InputDecoration(labelText: 'Driver Name', border: OutlineInputBorder())),
+            TextField(
+                controller: driverCtrl,
+                decoration: const InputDecoration(
+                    labelText: 'Driver Name', border: OutlineInputBorder())),
             const SizedBox(height: 10),
-            TextField(controller: phoneCtrl, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Phone', border: OutlineInputBorder())),
+            TextField(
+                controller: phoneCtrl,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(
+                    labelText: 'Phone', border: OutlineInputBorder())),
             const SizedBox(height: 15),
             SizedBox(
               width: double.infinity,
               height: 48,
               child: ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0F172A), foregroundColor: Colors.white),
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0F172A),
+                    foregroundColor: Colors.white),
                 onPressed: () async {
                   if (numCtrl.text.isNotEmpty) {
                     final data = {
@@ -150,13 +182,15 @@ class _FleetDashboardScreenState extends State<FleetDashboardScreen> {
                     if (vehicle == null) {
                       await DatabaseHelper.instance.addVehicle(data);
                     } else {
-                      await DatabaseHelper.instance.updateVehicle(vehicle['id'], data);
+                      await DatabaseHelper.instance
+                          .updateVehicle(vehicle['id'], data);
                     }
                     _loadDashboardData();
                     if (mounted) Navigator.pop(ctx);
                   }
                 },
-                child: Text(vehicle == null ? 'SAVE VEHICLE' : 'UPDATE VEHICLE'),
+                child:
+                    Text(vehicle == null ? 'SAVE VEHICLE' : 'UPDATE VEHICLE'),
               ),
             )
           ],
@@ -167,8 +201,18 @@ class _FleetDashboardScreenState extends State<FleetDashboardScreen> {
 
   void _openGoogleMaps() async {
     final Uri url = Uri.parse('https://www.google.com/maps');
-    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not launch Google Maps')));
+    try {
+      if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Could not launch Google Maps')));
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error launching maps: $e')));
+      }
     }
   }
 
@@ -178,7 +222,8 @@ class _FleetDashboardScreenState extends State<FleetDashboardScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Fleet Operations Hub', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Fleet Operations Hub',
+            style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: const Color(0xFF0F172A),
         foregroundColor: Colors.white,
         elevation: 0,
@@ -188,7 +233,9 @@ class _FleetDashboardScreenState extends State<FleetDashboardScreen> {
             tooltip: 'Google Maps Navigation',
             onPressed: _openGoogleMaps,
           ),
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _loadDashboardData),
+          IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: _loadDashboardData),
         ],
       ),
       body: Column(
@@ -197,17 +244,33 @@ class _FleetDashboardScreenState extends State<FleetDashboardScreen> {
             padding: const EdgeInsets.all(16),
             decoration: const BoxDecoration(
               color: Color(0xFF0F172A),
-              borderRadius: BorderRadius.only(bottomLeft: Radius.circular(20), bottomRight: Radius.circular(20)),
+              borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(20),
+                  bottomRight: Radius.circular(20)),
             ),
             child: Column(
               children: [
                 Row(
                   children: [
-                    Expanded(child: _buildMetricCard('ACTIVE UNITS', '${_vehicles.length}', Colors.blueAccent)),
+                    Expanded(
+                        child: _buildMetricCard(
+                            'ACTIVE UNITS',
+                            '${_vehicles.length}',
+                            Colors.blueAccent)),
                     const SizedBox(width: 8),
-                    Expanded(child: _buildMetricCard('TOTAL REVENUE', 'PKR ${totalIncome.toStringAsFixed(0)}', Colors.greenAccent)),
+                    Expanded(
+                        child: _buildMetricCard(
+                            'TOTAL REVENUE',
+                            'PKR ${totalIncome.toStringAsFixed(0)}',
+                            Colors.greenAccent)),
                     const SizedBox(width: 8),
-                    Expanded(child: _buildMetricCard('NET PROFIT', 'PKR ${netProfit.toStringAsFixed(0)}', netProfit >= 0 ? Colors.greenAccent : Colors.redAccent)),
+                    Expanded(
+                        child: _buildMetricCard(
+                            'NET PROFIT',
+                            'PKR ${netProfit.toStringAsFixed(0)}',
+                            netProfit >= 0
+                                ? Colors.greenAccent
+                                : Colors.redAccent)),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -217,11 +280,14 @@ class _FleetDashboardScreenState extends State<FleetDashboardScreen> {
                   decoration: InputDecoration(
                     hintText: 'Search Vehicle No or Driver...',
                     hintStyle: const TextStyle(color: Colors.white54),
-                    prefixIcon: const Icon(Icons.search, color: Colors.white70),
+                    prefixIcon:
+                        const Icon(Icons.search, color: Colors.white70),
                     filled: true,
                     fillColor: Colors.white12,
                     contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none),
                   ),
                 ),
               ],
@@ -236,28 +302,42 @@ class _FleetDashboardScreenState extends State<FleetDashboardScreen> {
                 return Card(
                   margin: const EdgeInsets.only(bottom: 10),
                   elevation: 2,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
                   child: ListTile(
                     contentPadding: const EdgeInsets.all(12),
                     leading: Container(
                       padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(color: const Color(0xFF0F172A).withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
-                      child: const Icon(Icons.local_shipping_rounded, color: Color(0xFF0F172A), size: 28),
+                      decoration: BoxDecoration(
+                          color: const Color(0xFF0F172A).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(10)),
+                      child: const Icon(Icons.local_shipping_rounded,
+                          color: Color(0xFF0F172A), size: 28),
                     ),
                     title: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(v['number'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        Text(v['number'],
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 16)),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(6)),
-                          child: const Text('ACTIVE', style: TextStyle(color: Colors.green, fontSize: 10, fontWeight: FontWeight.bold)),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                              color: Colors.green.shade50,
+                              borderRadius: BorderRadius.circular(6)),
+                          child: const Text('ACTIVE',
+                              style: TextStyle(
+                                  color: Colors.green,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold)),
                         ),
                       ],
                     ),
                     subtitle: Padding(
                       padding: const EdgeInsets.only(top: 4),
-                      child: Text('Driver: ${v['driver_name']} | Contact: ${v['driver_phone']}'),
+                      child: Text(
+                          'Driver: ${v['driver_name']} | Contact: ${v['driver_phone']}'),
                     ),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -267,9 +347,11 @@ class _FleetDashboardScreenState extends State<FleetDashboardScreen> {
                           onPressed: () => _openVehicleDialog(vehicle: v),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                          icon: const Icon(Icons.delete_outline,
+                              color: Colors.redAccent),
                           onPressed: () async {
-                            await DatabaseHelper.instance.deleteVehicle(v['id']);
+                            await DatabaseHelper.instance
+                                .deleteVehicle(v['id']);
                             _loadDashboardData();
                           },
                         ),
@@ -278,7 +360,8 @@ class _FleetDashboardScreenState extends State<FleetDashboardScreen> {
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => VehicleDetailsScreen(vehicle: v)),
+                        MaterialPageRoute(
+                            builder: (_) => VehicleDetailsScreen(vehicle: v)),
                       ).then((_) => _loadDashboardData());
                     },
                   ),
@@ -301,19 +384,33 @@ class _FleetDashboardScreenState extends State<FleetDashboardScreen> {
   Widget _buildMetricCard(String label, String value, Color valueColor) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-      decoration: BoxDecoration(color: Colors.white.withOpacity(0.08), borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(12)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(color: Colors.white60, fontSize: 9, fontWeight: FontWeight.bold)),
+          Text(label,
+              style: const TextStyle(
+                  color: Colors.white60,
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
-          FittedBox(fit: BoxFit.scaleDown, child: Text(value, style: TextStyle(color: valueColor, fontSize: 13, fontWeight: FontWeight.bold))),
+          FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(value,
+                  style: TextStyle(
+                      color: valueColor,
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold))),
         ],
       ),
     );
   }
 }
-// 2. Vehicle Details with PDF Printing & Sharing
+// ---------------------------------------------------------
+// 2. VEHICLE DETAILS WITH PDF PRINTING & SHARING
+// ---------------------------------------------------------
 class VehicleDetailsScreen extends StatefulWidget {
   final Map<String, dynamic> vehicle;
   const VehicleDetailsScreen({super.key, required this.vehicle});
@@ -345,7 +442,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
       pw.Page(
         build: (pw.Context context) {
           return pw.Column(
-            cross: pw.CrossAxisAlignment.start,
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
               pw.Text('Vehicle Ledger Statement', style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold)),
               pw.SizedBox(height: 8),
@@ -548,7 +645,9 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
   }
 }
 
-// 3. Fuel Average Calculator
+// ---------------------------------------------------------
+// 3. FUEL AVERAGE CALCULATOR
+// ---------------------------------------------------------
 class FuelAverageCalculatorScreen extends StatefulWidget {
   const FuelAverageCalculatorScreen({super.key});
 
@@ -621,7 +720,9 @@ class _FuelAverageCalculatorScreenState extends State<FuelAverageCalculatorScree
   }
 }
 
-// 4. Global Ledger
+// ---------------------------------------------------------
+// 4. GLOBAL LEDGER
+// ---------------------------------------------------------
 class GlobalAnalyticsAndLedgerScreen extends StatefulWidget {
   const GlobalAnalyticsAndLedgerScreen({super.key});
 
@@ -702,7 +803,9 @@ class _GlobalAnalyticsAndLedgerScreenState extends State<GlobalAnalyticsAndLedge
   }
 }
 
-// 5. Notepad & Reminders
+// ---------------------------------------------------------
+// 5. NOTEPAD & REMINDERS
+// ---------------------------------------------------------
 class DirectoryAndNotesScreen extends StatefulWidget {
   const DirectoryAndNotesScreen({super.key});
 
@@ -783,20 +886,4 @@ class _DirectoryAndNotesScreenState extends State<DirectoryAndNotesScreen> {
                 children: [
                   IconButton(icon: const Icon(Icons.edit, color: Colors.blue), onPressed: () => _addNoteDialog(note: n)),
                   IconButton(
-                    icon: const Icon(Icons.delete_outline, color: Colors.red),
-                    onPressed: () async {
-                      await DatabaseHelper.instance.deleteNote(n['id']);
-                      _loadNotes();
-                    },
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: const Color(0xFF0F172A),
-        foregroundColor: Colors.white,
-        onPressed: () => _addNoteDialog(),
-        
+                    icon: const Icon(Icons.dele
