@@ -1,124 +1,250 @@
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'excel_export_service.dart';
-import 'pdf_export_service.dart';
+import 'database_helper.dart';
 
 class VehicleDetailsScreen extends StatefulWidget {
   final Map<String, dynamic> vehicle;
   final List<Map<String, dynamic>> records;
 
   const VehicleDetailsScreen({
-    Key? key,
+    super.key,
     required this.vehicle,
     required this.records,
-  }) : super(key: key);
+  });
 
   @override
-  _VehicleDetailsScreenState createState() => _VehicleDetailsScreenState();
+  State<VehicleDetailsScreen> createState() => _VehicleDetailsScreenState();
 }
 
 class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
-  // Auto Average Calculator (KM/L)
-  double calculateAverage() {
-    double totalKm = 0;
-    double totalLitres = 0;
+  late List<Map<String, dynamic>> _recordsList;
 
-    for (var r in widget.records) {
-      if (r['litres'] != null && (r['litres'] as num) > 0) {
-        totalLitres += (r['litres'] as num).toDouble();
-        totalKm += (r['meter_reading'] as num).toDouble();
-      }
-    }
+  @override
+  void initState() {
+    super.initState();
+    _recordsList = List.from(widget.records);
+  }
 
-    if (totalLitres == 0) return 0.0;
-    return totalKm / totalLitres;
+  void _refreshRecords() async {
+    final updated = await DatabaseHelper.instance.getRecords(widget.vehicle['id']);
+    setState(() {
+      _recordsList = updated;
+    });
+  }
+
+  double get totalIncome => _recordsList
+      .where((r) => r['type'] == 'Income')
+      .fold(0.0, (sum, item) => sum + ((item['amount'] ?? 0) as num).toDouble());
+
+  double get totalExpense => _recordsList
+      .where((r) => r['type'] == 'Expense')
+      .fold(0.0, (sum, item) => sum + ((item['amount'] ?? 0) as num).toDouble());
+
+  void _openAddRecordDialog() {
+    String selectedType = 'Expense';
+    String category = 'Fuel / Diesel';
+    final amountCtrl = TextEditingController();
+    final litresCtrl = TextEditingController();
+    final meterCtrl = TextEditingController();
+    final titleCtrl = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) => Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+            left: 16,
+            right: 16,
+            top: 16,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Add Entry - ${widget.vehicle['number']}',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ChoiceChip(
+                        label: const Center(child: Text('Expense')),
+                        selected: selectedType == 'Expense',
+                        selectedColor: Colors.red.shade100,
+                        onSelected: (val) {
+                          if (val) setModalState(() => selectedType = 'Expense');
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: ChoiceChip(
+                        label: const Center(child: Text('Income / Freight')),
+                        selected: selectedType == 'Income',
+                        selectedColor: Colors.green.shade100,
+                        onSelected: (val) {
+                          if (val) setModalState(() => selectedType = 'Income');
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  value: category,
+                  decoration: const InputDecoration(labelText: 'Category', border: OutlineInputBorder()),
+                  items: ['Fuel / Diesel', 'Maintenance & Repair', 'Driver Salary / Bhatta', 'Toll & Taxes', 'Freight Income', 'Other']
+                      .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                      .toList(),
+                  onChanged: (val) => setModalState(() => category = val ?? category),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: titleCtrl,
+                  decoration: const InputDecoration(labelText: 'Description / Details', border: OutlineInputBorder()),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: amountCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'Amount (PKR)', border: OutlineInputBorder()),
+                ),
+                const SizedBox(height: 8),
+                if (category == 'Fuel / Diesel') ...[
+                  TextField(
+                    controller: litresCtrl,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'Fuel Litres', border: OutlineInputBorder()),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: meterCtrl,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'Odometer Reading (KM)', border: OutlineInputBorder()),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1E3A8A),
+                      foregroundColor: Colors.white,
+                    ),
+                    onPressed: () async {
+                      if (amountCtrl.text.isNotEmpty) {
+                        try {
+                          await DatabaseHelper.instance.addRecord({
+                            'vehicle_id': widget.vehicle['id'],
+                            'date': DateTime.now().toString().split(' ')[0],
+                            'type': selectedType,
+                            'sub_category': category,
+                            'title': titleCtrl.text.isEmpty ? category : titleCtrl.text,
+                            'amount': double.tryParse(amountCtrl.text) ?? 0.0,
+                            'litres': double.tryParse(litresCtrl.text) ?? 0.0,
+                            'meter_reading': double.tryParse(meterCtrl.text) ?? 0.0,
+                          });
+                          _refreshRecords();
+                          if (mounted) Navigator.pop(ctx);
+                        } catch (e) {
+                          debugPrint("Save error: $e");
+                        }
+                      }
+                    },
+                    child: const Text('Save Entry'),
+                  ),
+                )
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    double avg = calculateAverage();
+    final netProfit = totalIncome - totalExpense;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('${widget.vehicle['number']} - Details'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.picture_as_pdf),
-            tooltip: 'Export PDF',
-            onPressed: () {
-              PdfReportService.generateAndPrintVehicleLedger(
-                  widget.vehicle, widget.records);
-            },
+        title: Text('${widget.vehicle['number']} Ledger'),
+        backgroundColor: const Color(0xFF1E3A8A),
+        foregroundColor: Colors.white,
+      ),
+      body: Column(
+        children: [
+          // Enterprise Summary Banner
+          Container(
+            padding: const EdgeInsets.all(16),
+            color: Colors.blue.shade50,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildStatCard('Income', 'PKR ${totalIncome.toStringAsFixed(0)}', Colors.green),
+                _buildStatCard('Expense', 'PKR ${totalExpense.toStringAsFixed(0)}', Colors.red),
+                _buildStatCard('Net Profit', 'PKR ${netProfit.toStringAsFixed(0)}', netProfit >= 0 ? Colors.green.shade800 : Colors.red.shade800),
+              ],
+            ),
           ),
-          IconButton(
-            icon: const Icon(Icons.table_chart),
-            tooltip: 'Export Excel',
-            onPressed: () {
-              ExcelExportService.exportLedgerToExcel(
-                  widget.vehicle['number'], widget.records);
-            },
+          const Divider(height: 1),
+          // Record List
+          Expanded(
+            child: _recordsList.isEmpty
+                ? const Center(child: Text('No Ledger entries found. Tap + to add.'))
+                : ListView.builder(
+                    itemCount: _recordsList.length,
+                    itemBuilder: (context, index) {
+                      final item = _recordsList[index];
+                      final isIncome = item['type'] == 'Income';
+                      return Card(
+                        margin: const EdgeInsets.horizontal(12, vertical: 4),
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: isIncome ? Colors.green.shade100 : Colors.red.shade100,
+                            child: Icon(
+                              isIncome ? Icons.arrow_downward : Icons.arrow_upward,
+                              color: isIncome ? Colors.green : Colors.red,
+                            ),
+                          ),
+                          title: Text(item['title'] ?? item['sub_category'] ?? 'Entry'),
+                          subtitle: Text('${item['date']} • ${item['sub_category']}'),
+                          trailing: Text(
+                            '${isIncome ? "+" : "-"} PKR ${item['amount']}',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                              color: isIncome ? Colors.green : Colors.red,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Status Bar Card
-            Card(
-              elevation: 3,
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Driver: ${widget.vehicle['driver_name'] ?? "N/A"}',
-                        style: const TextStyle(fontWeight: FontWeight.bold)),
-                    Text('Model: ${widget.vehicle['model'] ?? "N/A"}'),
-                    const SizedBox(height: 10),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text('Fuel Average:'),
-                        Text(
-                          '${avg.toStringAsFixed(2)} KM/L',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: avg > 3 ? Colors.green : Colors.orange,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 15),
-
-            // Google Map View Widget
-            const Text('Vehicle Location Map',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Container(
-              height: 200,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                color: Colors.grey[300],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: GoogleMap(
-                  initialCameraPosition: CameraPosition(
-                    target: LatLng(31.5204, 74.3587),
-                    zoom: 12,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: const Color(0xFF1E3A8A),
+        foregroundColor: Colors.white,
+        onPressed: _openAddRecordDialog,
+        icon: const Icon(Icons.add),
+        label: const Text('Add Entry'),
       ),
+    );
+  }
+
+  Widget _buildStatCard(String title, String value, Color color) {
+    return Column(
+      children: [
+        Text(title, style: const TextStyle(fontSize: 12, color: Colors.black54)),
+        const SizedBox(height: 4),
+        Text(value, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: color)),
+      ],
     );
   }
 }
