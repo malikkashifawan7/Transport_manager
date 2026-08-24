@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'database_helper.dart';
 
 void main() {
@@ -41,7 +45,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
   final List<Widget> _screens = [
     const FleetDashboardScreen(),
     const GlobalAnalyticsAndLedgerScreen(),
-    const AdvanceBookingsScreen(),
+    const FuelAverageCalculatorScreen(),
     const DirectoryAndNotesScreen(),
   ];
 
@@ -55,15 +59,15 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
         destinations: const [
           NavigationDestination(icon: Icon(Icons.directions_bus_rounded), label: 'Fleet Hub'),
           NavigationDestination(icon: Icon(Icons.analytics_rounded), label: 'Total Ledger'),
-          NavigationDestination(icon: Icon(Icons.book_online_rounded), label: 'Bookings'),
-          NavigationDestination(icon: Icon(Icons.folder_shared_rounded), label: 'Directory/Notes'),
+          NavigationDestination(icon: Icon(Icons.calculate_rounded), label: 'Avg Calculator'),
+          NavigationDestination(icon: Icon(Icons.folder_shared_rounded), label: 'Notepad'),
         ],
       ),
     );
   }
 }
 
-// 1. Fleet Dashboard Screen
+// 1. Fleet Hub (With Edit, Delete, Map & Add)
 class FleetDashboardScreen extends StatefulWidget {
   const FleetDashboardScreen({super.key});
 
@@ -108,10 +112,10 @@ class _FleetDashboardScreenState extends State<FleetDashboardScreen> {
     }).toList();
   }
 
-  void _openAddVehicleDialog() {
-    final numCtrl = TextEditingController();
-    final driverCtrl = TextEditingController();
-    final phoneCtrl = TextEditingController();
+  void _openVehicleDialog({Map<String, dynamic>? vehicle}) {
+    final numCtrl = TextEditingController(text: vehicle?['number'] ?? '');
+    final driverCtrl = TextEditingController(text: vehicle?['driver_name'] ?? '');
+    final phoneCtrl = TextEditingController(text: vehicle?['driver_phone'] ?? '');
 
     showModalBottomSheet(
       context: context,
@@ -122,7 +126,7 @@ class _FleetDashboardScreenState extends State<FleetDashboardScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Add Fleet Vehicle', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(vehicle == null ? 'Add Fleet Vehicle' : 'Edit Fleet Vehicle', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
             TextField(controller: numCtrl, decoration: const InputDecoration(labelText: 'Reg Number (e.g. LES-786)', border: OutlineInputBorder())),
             const SizedBox(height: 10),
@@ -137,23 +141,35 @@ class _FleetDashboardScreenState extends State<FleetDashboardScreen> {
                 style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0F172A), foregroundColor: Colors.white),
                 onPressed: () async {
                   if (numCtrl.text.isNotEmpty) {
-                    await DatabaseHelper.instance.addVehicle({
+                    final data = {
                       'number': numCtrl.text,
                       'driver_name': driverCtrl.text,
                       'driver_phone': phoneCtrl.text,
                       'type': 'Truck / Trailer',
-                    });
+                    };
+                    if (vehicle == null) {
+                      await DatabaseHelper.instance.addVehicle(data);
+                    } else {
+                      await DatabaseHelper.instance.updateVehicle(vehicle['id'], data);
+                    }
                     _loadDashboardData();
                     if (mounted) Navigator.pop(ctx);
                   }
                 },
-                child: const Text('SAVE VEHICLE'),
+                child: Text(vehicle == null ? 'SAVE VEHICLE' : 'UPDATE VEHICLE'),
               ),
             )
           ],
         ),
       ),
     );
+  }
+
+  void _openGoogleMaps() async {
+    final Uri url = Uri.parse('https://www.google.com/maps');
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not launch Google Maps')));
+    }
   }
 
   @override
@@ -167,6 +183,11 @@ class _FleetDashboardScreenState extends State<FleetDashboardScreen> {
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.map_rounded),
+            tooltip: 'Google Maps Navigation',
+            onPressed: _openGoogleMaps,
+          ),
           IconButton(icon: const Icon(Icons.refresh), onPressed: _loadDashboardData),
         ],
       ),
@@ -194,7 +215,7 @@ class _FleetDashboardScreenState extends State<FleetDashboardScreen> {
                   onChanged: (val) => setState(() => _searchQuery = val),
                   style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
-                    hintText: 'Search by Vehicle No or Driver...',
+                    hintText: 'Search Vehicle No or Driver...',
                     hintStyle: const TextStyle(color: Colors.white54),
                     prefixIcon: const Icon(Icons.search, color: Colors.white70),
                     filled: true,
@@ -238,19 +259,26 @@ class _FleetDashboardScreenState extends State<FleetDashboardScreen> {
                       padding: const EdgeInsets.only(top: 4),
                       child: Text('Driver: ${v['driver_name']} | Contact: ${v['driver_phone']}'),
                     ),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                      onPressed: () async {
-                        await DatabaseHelper.instance.deleteVehicle(v['id']);
-                        _loadDashboardData();
-                      },
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.edit, color: Colors.blueAccent),
+                          onPressed: () => _openVehicleDialog(vehicle: v),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                          onPressed: () async {
+                            await DatabaseHelper.instance.deleteVehicle(v['id']);
+                            _loadDashboardData();
+                          },
+                        ),
+                      ],
                     ),
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(
-                          builder: (_) => VehicleDetailsScreen(vehicle: v),
-                        ),
+                        MaterialPageRoute(builder: (_) => VehicleDetailsScreen(vehicle: v)),
                       ).then((_) => _loadDashboardData());
                     },
                   ),
@@ -263,7 +291,7 @@ class _FleetDashboardScreenState extends State<FleetDashboardScreen> {
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: const Color(0xFF0F172A),
         foregroundColor: Colors.white,
-        onPressed: _openAddVehicleDialog,
+        onPressed: () => _openVehicleDialog(),
         icon: const Icon(Icons.add),
         label: const Text('Add Vehicle'),
       ),
@@ -285,7 +313,7 @@ class _FleetDashboardScreenState extends State<FleetDashboardScreen> {
     );
   }
 }
-// 2. Dynamic Vehicle Details & Transactions Screen
+// 2. Vehicle Details with PDF Printing & Sharing
 class VehicleDetailsScreen extends StatefulWidget {
   final Map<String, dynamic> vehicle;
   const VehicleDetailsScreen({super.key, required this.vehicle});
@@ -308,13 +336,37 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
     setState(() => _records = data);
   }
 
-  double get vehicleIncome => _records
-      .where((r) => r['type'] == 'Income')
-      .fold(0.0, (s, i) => s + ((i['amount'] ?? 0) as num).toDouble());
+  double get vehicleIncome => _records.where((r) => r['type'] == 'Income').fold(0.0, (s, i) => s + ((i['amount'] ?? 0) as num).toDouble());
+  double get vehicleExpense => _records.where((r) => r['type'] == 'Expense').fold(0.0, (s, i) => s + ((i['amount'] ?? 0) as num).toDouble());
 
-  double get vehicleExpense => _records
-      .where((r) => r['type'] == 'Expense')
-      .fold(0.0, (s, i) => s + ((i['amount'] ?? 0) as num).toDouble());
+  void _generateAndSharePdf() async {
+    final pdf = pw.Document();
+    pdf.addPage(
+      pw.Page(
+        build: (pw.Context context) {
+          return pw.Column(
+            cross: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text('Vehicle Ledger Statement', style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold)),
+              pw.SizedBox(height: 8),
+              pw.Text('Vehicle: ${widget.vehicle['number']} | Driver: ${widget.vehicle['driver_name']}'),
+              pw.SizedBox(height: 16),
+              pw.Table.fromTextArray(
+                headers: ['Date', 'Type', 'Category', 'Description', 'Party', 'Amount (PKR)'],
+                data: _records.map((r) => [r['date'], r['type'], r['sub_category'], r['title'], r['party_name'] ?? '-', r['amount'].toString()]).toList(),
+              ),
+              pw.SizedBox(height: 20),
+              pw.Text('Total Income: PKR $vehicleIncome'),
+              pw.Text('Total Expense: PKR $vehicleExpense'),
+              pw.Text('Net Balance: PKR ${vehicleIncome - vehicleExpense}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+            ],
+          );
+        },
+      ),
+    );
+
+    await Printing.sharePdf(bytes: await pdf.save(), filename: 'Ledger_${widget.vehicle['number']}.pdf');
+  }
 
   void _addTransactionDialog() {
     final titleCtrl = TextEditingController();
@@ -374,7 +426,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                 onChanged: (val) => setModalState(() => subCategory = val!),
               ),
               const SizedBox(height: 10),
-              TextField(controller: titleCtrl, decoration: const InputDecoration(labelText: 'Description / Route Details', border: OutlineInputBorder())),
+              TextField(controller: titleCtrl, decoration: const InputDecoration(labelText: 'Description / Route', border: OutlineInputBorder())),
               const SizedBox(height: 10),
               TextField(controller: amountCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Amount (PKR)', border: OutlineInputBorder())),
               const SizedBox(height: 10),
@@ -419,6 +471,13 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
         title: Text(widget.vehicle['number']),
         backgroundColor: const Color(0xFF0F172A),
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.print_rounded),
+            tooltip: 'Print / Share PDF',
+            onPressed: _generateAndSharePdf,
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -436,7 +495,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
           ),
           Expanded(
             child: _records.isEmpty
-                ? const Center(child: Text('No transaction records found for this vehicle.'))
+                ? const Center(child: Text('No transaction records found.'))
                 : ListView.builder(
                     padding: const EdgeInsets.all(12),
                     itemCount: _records.length,
@@ -445,15 +504,21 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                       final isIncome = item['type'] == 'Income';
                       return Card(
                         child: ListTile(
-                          leading: Icon(
-                            isIncome ? Icons.arrow_downward : Icons.arrow_upward,
-                            color: isIncome ? Colors.green : Colors.red,
-                          ),
+                          leading: Icon(isIncome ? Icons.arrow_downward : Icons.arrow_upward, color: isIncome ? Colors.green : Colors.red),
                           title: Text(item['title'] ?? item['sub_category']),
                           subtitle: Text('${item['date']} • Party: ${item['party_name'] ?? "Direct"}'),
-                          trailing: Text(
-                            '${isIncome ? "+" : "-"} PKR ${item['amount']}',
-                            style: TextStyle(fontWeight: FontWeight.bold, color: isIncome ? Colors.green : Colors.red),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text('${isIncome ? "+" : "-"} PKR ${item['amount']}', style: TextStyle(fontWeight: FontWeight.bold, color: isIncome ? Colors.green : Colors.red)),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline, size: 20, color: Colors.grey),
+                                onPressed: () async {
+                                  await DatabaseHelper.instance.deleteRecord(item['id']);
+                                  _loadVehicleRecords();
+                                },
+                              ),
+                            ],
                           ),
                         ),
                       );
@@ -483,7 +548,80 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
   }
 }
 
-// 3. Global Consolidated Ledger
+// 3. Fuel Average Calculator
+class FuelAverageCalculatorScreen extends StatefulWidget {
+  const FuelAverageCalculatorScreen({super.key});
+
+  @override
+  State<FuelAverageCalculatorScreen> createState() => _FuelAverageCalculatorScreenState();
+}
+
+class _FuelAverageCalculatorScreenState extends State<FuelAverageCalculatorScreen> {
+  final _kmsCtrl = TextEditingController();
+  final _litersCtrl = TextEditingController();
+  final _fuelPriceCtrl = TextEditingController();
+
+  double _avgKmPerLiter = 0.0;
+  double _costPerKm = 0.0;
+
+  void _calculate() {
+    final kms = double.tryParse(_kmsCtrl.text) ?? 0.0;
+    final liters = double.tryParse(_litersCtrl.text) ?? 0.0;
+    final price = double.tryParse(_fuelPriceCtrl.text) ?? 0.0;
+
+    if (kms > 0 && liters > 0) {
+      setState(() {
+        _avgKmPerLiter = kms / liters;
+        _costPerKm = (liters * price) / kms;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Fuel Mileage Calculator'), backgroundColor: const Color(0xFF0F172A), foregroundColor: Colors.white),
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            TextField(controller: _kmsCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Total Distance Driven (KM)', border: OutlineInputBorder())),
+            const SizedBox(height: 12),
+            TextField(controller: _litersCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Total Fuel Consumed (Liters)', border: OutlineInputBorder())),
+            const SizedBox(height: 12),
+            TextField(controller: _fuelPriceCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Fuel Price per Liter (PKR)', border: OutlineInputBorder())),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0F172A), foregroundColor: Colors.white),
+                onPressed: _calculate,
+                child: const Text('CALCULATE AVERAGE'),
+              ),
+            ),
+            const SizedBox(height: 30),
+            Card(
+              elevation: 4,
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    Text('Average Mileage: ${_avgKmPerLiter.toStringAsFixed(2)} KM / Liter', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.green)),
+                    const SizedBox(height: 10),
+                    Text('Fuel Cost per KM: PKR ${_costPerKm.toStringAsFixed(2)}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.blueAccent)),
+                  ],
+                ),
+              ),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// 4. Global Ledger
 class GlobalAnalyticsAndLedgerScreen extends StatefulWidget {
   const GlobalAnalyticsAndLedgerScreen({super.key});
 
@@ -558,107 +696,13 @@ class _GlobalAnalyticsAndLedgerScreenState extends State<GlobalAnalyticsAndLedge
       children: [
         Text(title, style: const TextStyle(color: Colors.white70, fontSize: 11)),
         const SizedBox(height: 4),
-        Text(value, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 14)),
+        Text(value, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13)),
       ],
     );
   }
 }
 
-// 4. Advance Bookings System
-class AdvanceBookingsScreen extends StatefulWidget {
-  const AdvanceBookingsScreen({super.key});
-
-  @override
-  State<AdvanceBookingsScreen> createState() => _AdvanceBookingsScreenState();
-}
-
-class _AdvanceBookingsScreenState extends State<AdvanceBookingsScreen> {
-  List<Map<String, dynamic>> _bookings = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _loadBookings();
-  }
-
-  void _loadBookings() async {
-    final data = await DatabaseHelper.instance.getBookings();
-    setState(() => _bookings = data);
-  }
-
-  void _addBookingDialog() {
-    final clientCtrl = TextEditingController();
-    final routeCtrl = TextEditingController();
-    final amountCtrl = TextEditingController();
-    final advanceCtrl = TextEditingController();
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom + 20, left: 20, right: 20, top: 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('New Trip Booking', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 10),
-            TextField(controller: clientCtrl, decoration: const InputDecoration(labelText: 'Client Name', border: OutlineInputBorder())),
-            const SizedBox(height: 10),
-            TextField(controller: routeCtrl, decoration: const InputDecoration(labelText: 'Route (e.g. LHR to KHI)', border: OutlineInputBorder())),
-            const SizedBox(height: 10),
-            TextField(controller: amountCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Total Freight (PKR)', border: OutlineInputBorder())),
-            const SizedBox(height: 10),
-            TextField(controller: advanceCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Advance Received (PKR)', border: OutlineInputBorder())),
-            const SizedBox(height: 15),
-            ElevatedButton(
-              onPressed: () async {
-                await DatabaseHelper.instance.addBooking({
-                  'client': clientCtrl.text,
-                  'route': routeCtrl.text,
-                  'amount': double.tryParse(amountCtrl.text) ?? 0.0,
-                  'advance': double.tryParse(advanceCtrl.text) ?? 0.0,
-                  'date': DateTime.now().toString().split(' ')[0],
-                });
-                _loadBookings();
-                if (mounted) Navigator.pop(ctx);
-              },
-              child: const Text('CREATE BOOKING'),
-            )
-          ],
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Advance Trip Bookings'), backgroundColor: const Color(0xFF0F172A), foregroundColor: Colors.white),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(12),
-        itemCount: _bookings.length,
-        itemBuilder: (context, index) {
-          final b = _bookings[index];
-          return Card(
-            child: ListTile(
-              title: Text('${b['client']} - ${b['route']}'),
-              subtitle: Text('Date: ${b['date']} | Total: PKR ${b['amount']}'),
-              trailing: Text('Advance: PKR ${b['advance']}', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-            ),
-          );
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: const Color(0xFF0F172A),
-        foregroundColor: Colors.white,
-        onPressed: _addBookingDialog,
-        child: const Icon(Icons.add),
-      ),
-    );
-  }
-}
-
-// 5. Directory & Notepad
+// 5. Notepad & Reminders
 class DirectoryAndNotesScreen extends StatefulWidget {
   const DirectoryAndNotesScreen({super.key});
 
@@ -680,9 +724,9 @@ class _DirectoryAndNotesScreenState extends State<DirectoryAndNotesScreen> {
     setState(() => _notes = data);
   }
 
-  void _addNoteDialog() {
-    final titleCtrl = TextEditingController();
-    final contentCtrl = TextEditingController();
+  void _addNoteDialog({Map<String, dynamic>? note}) {
+    final titleCtrl = TextEditingController(text: note?['title'] ?? '');
+    final contentCtrl = TextEditingController(text: note?['content'] ?? '');
 
     showModalBottomSheet(
       context: context,
@@ -692,23 +736,28 @@ class _DirectoryAndNotesScreenState extends State<DirectoryAndNotesScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Add Memo / Reminder Note', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(note == null ? 'Add Note / Memo' : 'Edit Note', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 10),
             TextField(controller: titleCtrl, decoration: const InputDecoration(labelText: 'Title', border: OutlineInputBorder())),
             const SizedBox(height: 10),
-            TextField(controller: contentCtrl, maxLines: 3, decoration: const InputDecoration(labelText: 'Details / Note', border: OutlineInputBorder())),
+            TextField(controller: contentCtrl, maxLines: 3, decoration: const InputDecoration(labelText: 'Details', border: OutlineInputBorder())),
             const SizedBox(height: 15),
             ElevatedButton(
               onPressed: () async {
-                await DatabaseHelper.instance.addNote({
+                final data = {
                   'title': titleCtrl.text,
                   'content': contentCtrl.text,
                   'date': DateTime.now().toString().split(' ')[0],
-                });
+                };
+                if (note == null) {
+                  await DatabaseHelper.instance.addNote(data);
+                } else {
+                  await DatabaseHelper.instance.updateNote(note['id'], data);
+                }
                 _loadNotes();
                 if (mounted) Navigator.pop(ctx);
               },
-              child: const Text('SAVE NOTE'),
+              child: Text(note == null ? 'SAVE NOTE' : 'UPDATE NOTE'),
             )
           ],
         ),
@@ -719,7 +768,7 @@ class _DirectoryAndNotesScreenState extends State<DirectoryAndNotesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Enterprise Notepad & Reminders'), backgroundColor: const Color(0xFF0F172A), foregroundColor: Colors.white),
+      appBar: AppBar(title: const Text('Notepad & Reminders'), backgroundColor: const Color(0xFF0F172A), foregroundColor: Colors.white),
       body: ListView.builder(
         padding: const EdgeInsets.all(12),
         itemCount: _notes.length,
@@ -729,7 +778,19 @@ class _DirectoryAndNotesScreenState extends State<DirectoryAndNotesScreen> {
             child: ListTile(
               title: Text(n['title'] ?? 'Note'),
               subtitle: Text(n['content'] ?? ''),
-              trailing: Text(n['date'] ?? ''),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(icon: const Icon(Icons.edit, color: Colors.blue), onPressed: () => _addNoteDialog(note: n)),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline, color: Colors.red),
+                    onPressed: () async {
+                      await DatabaseHelper.instance.deleteNote(n['id']);
+                      _loadNotes();
+                    },
+                  ),
+                ],
+              ),
             ),
           );
         },
@@ -737,10 +798,5 @@ class _DirectoryAndNotesScreenState extends State<DirectoryAndNotesScreen> {
       floatingActionButton: FloatingActionButton(
         backgroundColor: const Color(0xFF0F172A),
         foregroundColor: Colors.white,
-        onPressed: _addNoteDialog,
-        child: const Icon(Icons.add),
-      ),
-    );
-  }
-}
-
+        onPressed: () => _addNoteDialog(),
+        
