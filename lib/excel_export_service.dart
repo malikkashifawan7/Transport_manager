@@ -12,30 +12,30 @@ class ExcelExportService {
 
     // Headers
     sheetObject.appendRow([
-      TextCellValue('Date'),
-      TextCellValue('Type'),
-      TextCellValue('Category'),
-      TextCellValue('Title'),
-      TextCellValue('Amount (PKR)'),
-      TextCellValue('Litres'),
-      TextCellValue('Odometer (KM)')
+      'Date',
+      'Type',
+      'Category',
+      'Title',
+      'Amount (PKR)',
+      'Litres',
+      'Odometer (KM)'
     ]);
 
     // Data Rows
     for (var r in records) {
       sheetObject.appendRow([
-        TextCellValue(r['date']?.toString() ?? ''),
-        TextCellValue(r['type']?.toString() ?? ''),
-        TextCellValue(r['sub_category']?.toString() ?? ''),
-        TextCellValue(r['title']?.toString() ?? ''),
-        DoubleCellValue((r['amount'] as num).toDouble()),
-        DoubleCellValue((r['litres'] as num).toDouble()),
-        DoubleCellValue((r['meter_reading'] as num).toDouble()),
+        r['date']?.toString() ?? '',
+        r['type']?.toString() ?? '',
+        r['sub_category']?.toString() ?? '',
+        r['title']?.toString() ?? '',
+        r['amount'] ?? 0,
+        r['litres'] ?? 0,
+        r['meter_reading'] ?? 0,
       ]);
     }
 
     final directory = await getApplicationDocumentsDirectory();
-    final path = "${directory.path}/$vehicleNumber_Ledger.xlsx";
+    final path = "${directory.path}/${vehicleNumber}_Ledger.xlsx";
     final file = File(path);
     await file.writeAsBytes(excel.encode()!);
 
@@ -43,4 +43,3 @@ class ExcelExportService {
     await Share.shareXFiles([XFile(path)], text: 'Vehicle $vehicleNumber Ledger Report');
   }
 }
-
