@@ -1,166 +1,125 @@
 import 'package:flutter/material.dart';
 import 'database_helper.dart';
 import 'vehicle_details_screen.dart';
-import 'vendors_reminders_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const TransportManagerApp());
+  runApp(const TransportERPApp());
 }
 
-class TransportManagerApp extends StatelessWidget {
-  const TransportManagerApp({super.key});
+class TransportERPApp extends StatelessWidget {
+  const TransportERPApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Transport Hisab ERP',
+      title: 'EUI Elite Pro Transport ERP',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0F172A)),
         useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF1E3A8A),
-          primary: const Color(0xFF1E3A8A),
-        ),
+        scaffoldBackgroundColor: const Color(0xFFF8FAFC),
       ),
-      home: const MainNavigationScreen(),
+      home: const MainHomeScreen(),
     );
   }
 }
 
-class MainNavigationScreen extends StatefulWidget {
-  const MainNavigationScreen({super.key});
+class MainHomeScreen extends StatefulWidget {
+  const MainHomeScreen({super.key});
 
   @override
-  State<MainNavigationScreen> createState() => _MainNavigationScreenState();
+  State<MainHomeScreen> createState() => _MainHomeScreenState();
 }
 
-class _MainNavigationScreenState extends State<MainNavigationScreen> {
-  int _currentIndex = 0;
+class _MainHomeScreenState extends State<MainHomeScreen> {
+  int _selectedIndex = 0;
 
-  final List<Widget> _screens = const [
-    FleetHomeScreen(),
-    BookingsScreen(),
-    VendorsRemindersScreen(),
-    SettingsScreen(),
+  final List<Widget> _screens = [
+    const FleetDashboardScreen(),
+    const GlobalAnalyticsAndLedgerScreen(),
+    const AdvanceBookingsScreen(),
+    const DirectoryAndNotesScreen(),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
-      ),
+      body: _screens[_selectedIndex],
       bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
-        onDestinationSelected: (idx) => setState(() => _currentIndex = idx),
+        selectedIndex: _selectedIndex,
+        onDestinationSelected: (idx) => setState(() => _selectedIndex = idx),
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.directions_bus), label: 'Fleet'),
-          NavigationDestination(icon: Icon(Icons.assignment), label: 'Bookings'),
-          NavigationDestination(icon: Icon(Icons.store), label: 'Vendors & Alerts'),
-          NavigationDestination(icon: Icon(Icons.settings), label: 'Settings'),
+          NavigationDestination(icon: Icon(Icons.directions_bus_rounded), label: 'Fleet Hub'),
+          NavigationDestination(icon: Icon(Icons.analytics_rounded), label: 'Total Ledger'),
+          NavigationDestination(icon: Icon(Icons.book_online_rounded), label: 'Bookings'),
+          NavigationDestination(icon: Icon(Icons.folder_shared_rounded), label: 'Directory/Notes'),
         ],
       ),
     );
   }
 }
 
-class FleetHomeScreen extends StatefulWidget {
-  const FleetHomeScreen({super.key});
+// 1. Fleet Dashboard
+class FleetDashboardScreen extends StatefulWidget {
+  const FleetDashboardScreen({super.key});
 
   @override
-  State<FleetHomeScreen> createState() => _FleetHomeScreenState();
+  State<FleetDashboardScreen> createState() => _FleetDashboardScreenState();
 }
 
-class _FleetHomeScreenState extends State<FleetHomeScreen> {
-  List<Map<String, dynamic>> vehicles = [];
+class _FleetDashboardScreenState extends State<FleetDashboardScreen> {
+  List<Map<String, dynamic>> _vehicles = [];
 
   @override
   void initState() {
     super.initState();
-    _refreshFleet();
+    _loadVehicles();
   }
 
-  void _refreshFleet() async {
+  void _loadVehicles() async {
     final data = await DatabaseHelper.instance.getVehicles();
-    setState(() => vehicles = data);
+    setState(() => _vehicles = data);
   }
 
-  void _openAddVehicleDialog([Map<String, dynamic>? v]) {
-    final numberCtrl = TextEditingController(text: v?['number'] ?? '');
-    final typeCtrl = TextEditingController(text: v?['type'] ?? '10-Wheeler');
-    final modelCtrl = TextEditingController(text: v?['model'] ?? '');
-    final driverCtrl = TextEditingController(text: v?['driver_name'] ?? '');
-    final phoneCtrl = TextEditingController(text: v?['driver_phone'] ?? '');
-    final cnicCtrl = TextEditingController(text: v?['driver_cnic'] ?? '');
-    final locCtrl = TextEditingController(text: v?['location'] ?? '');
+  void _openAddVehicleDialog() {
+    final numCtrl = TextEditingController();
+    final driverCtrl = TextEditingController();
+    final phoneCtrl = TextEditingController();
+    String type = 'Truck / Trailer';
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (dialogCtx) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(dialogCtx).viewInsets.bottom + 16,
-          left: 16,
-          right: 16,
-          top: 16,
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(v == null ? 'Add Enterprise Vehicle' : 'Edit Vehicle',
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 12),
-              TextField(controller: numberCtrl, decoration: const InputDecoration(labelText: 'Vehicle Number (e.g. LES-1234)', border: OutlineInputBorder())),
-              const SizedBox(height: 8),
-              TextField(controller: typeCtrl, decoration: const InputDecoration(labelText: 'Vehicle Type', border: OutlineInputBorder())),
-              const SizedBox(height: 8),
-              TextField(controller: modelCtrl, decoration: const InputDecoration(labelText: 'Model / Year', border: OutlineInputBorder())),
-              const SizedBox(height: 8),
-              TextField(controller: driverCtrl, decoration: const InputDecoration(labelText: 'Driver Name', border: OutlineInputBorder())),
-              const SizedBox(height: 8),
-              TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'Driver Phone', border: OutlineInputBorder())),
-              const SizedBox(height: 8),
-              TextField(controller: cnicCtrl, decoration: const InputDecoration(labelText: 'Driver CNIC', border: OutlineInputBorder())),
-              const SizedBox(height: 8),
-              TextField(controller: locCtrl, decoration: const InputDecoration(labelText: 'Base Location', border: OutlineInputBorder())),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E3A8A), foregroundColor: Colors.white),
-                  onPressed: () async {
-                    if (numberCtrl.text.isNotEmpty) {
-                      final payload = {
-                        'number': numberCtrl.text,
-                        'type': typeCtrl.text,
-                        'model': modelCtrl.text,
-                        'driver_name': driverCtrl.text,
-                        'driver_phone': phoneCtrl.text,
-                        'driver_cnic': cnicCtrl.text,
-                        'location': locCtrl.text,
-                      };
-                      try {
-                        if (v == null) {
-                          await DatabaseHelper.instance.addVehicle(payload);
-                        } else {
-                          await DatabaseHelper.instance.updateVehicle(v['id'], payload);
-                        }
-                        _refreshFleet();
-                        if (mounted) Navigator.pop(dialogCtx);
-                      } catch (e) {
-                        debugPrint('Error saving vehicle: $e');
-                      }
-                    }
-                  },
-                  child: const Text('Save Vehicle'),
-                ),
-              )
-            ],
-          ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom + 20, left: 20, right: 20, top: 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Add Fleet Vehicle', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 10),
+            TextField(controller: numCtrl, decoration: const InputDecoration(labelText: 'Reg Number (e.g. LES-786)', border: OutlineInputBorder())),
+            const SizedBox(height: 10),
+            TextField(controller: driverCtrl, decoration: const InputDecoration(labelText: 'Driver Name', border: OutlineInputBorder())),
+            const SizedBox(height: 10),
+            TextField(controller: phoneCtrl, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Phone', border: OutlineInputBorder())),
+            const SizedBox(height: 15),
+            ElevatedButton(
+              onPressed: () async {
+                if (numCtrl.text.isNotEmpty) {
+                  await DatabaseHelper.instance.addVehicle({
+                    'number': numCtrl.text,
+                    'driver_name': driverCtrl.text,
+                    'driver_phone': phoneCtrl.text,
+                    'type': type,
+                  });
+                  _loadVehicles();
+                  if (mounted) Navigator.pop(ctx);
+                }
+              },
+              child: const Text('ADD VEHICLE'),
+            )
+          ],
         ),
       ),
     );
@@ -169,90 +128,135 @@ class _FleetHomeScreenState extends State<FleetHomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Fleet Management ERP'),
-        backgroundColor: const Color(0xFF1E3A8A),
-        foregroundColor: Colors.white,
-      ),
-      body: vehicles.isEmpty
-          ? const Center(child: Text('No Vehicles in Fleet. Tap + to add.'))
-          : ListView.builder(
-              padding: const EdgeInsets.all(12),
-              itemCount: vehicles.length,
-              itemBuilder: (context, idx) {
-                final item = vehicles[idx];
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(item['number'], style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                            Chip(label: Text(item['type'] ?? 'Truck'), backgroundColor: Colors.blue.shade50),
-                          ],
-                        ),
-                        Text('Driver: ${item['driver_name']} (${item['driver_phone']})'),
-                        Text('Location: ${item['location']} | CNIC: ${item['driver_cnic']}'),
-                        const Divider(),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.edit, color: Colors.blue),
-                              onPressed: () => _openAddVehicleDialog(item),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete, color: Colors.red),
-                              onPressed: () async {
-                                await DatabaseHelper.instance.deleteVehicle(item['id']);
-                                _refreshFleet();
-                              },
-                            ),
-                            ElevatedButton.icon(
-                              icon: const Icon(Icons.analytics),
-                              label: const Text('Details & Ledger'),
-                              onPressed: () async {
-                                final recs = await DatabaseHelper.instance.getRecords(item['id']);
-                                if (context.mounted) {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => VehicleDetailsScreen(vehicle: item, records: recs),
-                                    ),
-                                  );
-                                }
-                              },
-                            )
-                          ],
-                        )
-                      ],
-                    ),
-                  ),
-                );
+      appBar: AppBar(title: const Text('Fleet Management Hub'), backgroundColor: const Color(0xFF0F172A), foregroundColor: Colors.white),
+      body: ListView.builder(
+        padding: const EdgeInsets.all(12),
+        itemCount: _vehicles.length,
+        itemBuilder: (context, index) {
+          final v = _vehicles[index];
+          return Card(
+            child: ListTile(
+              leading: const Icon(Icons.local_shipping, size: 32, color: Color(0xFF0F172A)),
+              title: Text(v['number'], style: const TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: Text('Driver: ${v['driver_name']} | Ph: ${v['driver_phone']}'),
+              trailing: IconButton(
+                icon: const Icon(Icons.delete, color: Colors.grey),
+                onPressed: () async {
+                  await DatabaseHelper.instance.deleteVehicle(v['id']);
+                  _loadVehicles();
+                },
+              ),
+              onTap: () async {
+                final records = await DatabaseHelper.instance.getRecords(v['id']);
+                if (context.mounted) {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => VehicleDetailsScreen(vehicle: v, records: records)));
+                }
               },
             ),
+          );
+        },
+      ),
       floatingActionButton: FloatingActionButton(
-        backgroundColor: const Color(0xFF1E3A8A),
-        onPressed: () => _openAddVehicleDialog(),
-        child: const Icon(Icons.add, color: Colors.white),
+        backgroundColor: const Color(0xFF0F172A),
+        foregroundColor: Colors.white,
+        onPressed: _openAddVehicleDialog,
+        child: const Icon(Icons.add),
       ),
     );
   }
 }
 
-class BookingsScreen extends StatefulWidget {
-  const BookingsScreen({super.key});
+// 2. Global Consolidated Ledger & One-Click Profit/Loss
+class GlobalAnalyticsAndLedgerScreen extends StatefulWidget {
+  const GlobalAnalyticsAndLedgerScreen({super.key});
 
   @override
-  State<BookingsScreen> createState() => _BookingsScreenState();
+  State<GlobalAnalyticsAndLedgerScreen> createState() => _GlobalAnalyticsAndLedgerScreenState();
 }
 
-class _BookingsScreenState extends State<BookingsScreen> {
-  List<Map<String, dynamic>> bookings = [];
+class _GlobalAnalyticsAndLedgerScreenState extends State<GlobalAnalyticsAndLedgerScreen> {
+  List<Map<String, dynamic>> _allRecords = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAllData();
+  }
+
+  void _loadAllData() async {
+    final data = await DatabaseHelper.instance.getRecords(null);
+    setState(() => _allRecords = data);
+  }
+
+  double get totalFleetIncome => _allRecords.where((r) => r['type'] == 'Income').fold(0.0, (s, i) => s + ((i['amount'] ?? 0) as num).toDouble());
+  double get totalFleetExpense => _allRecords.where((r) => r['type'] == 'Expense').fold(0.0, (s, i) => s + ((i['amount'] ?? 0) as num).toDouble());
+
+  @override
+  Widget build(BuildContext context) {
+    final netProfit = totalFleetIncome - totalFleetExpense;
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Overall Fleet Ledger & Profit/Loss'), backgroundColor: const Color(0xFF0F172A), foregroundColor: Colors.white),
+      body: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            color: const Color(0xFF0F172A),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildCard('Total Revenue', 'PKR ${totalFleetIncome.toStringAsFixed(0)}', Colors.greenAccent),
+                _buildCard('Total Expense', 'PKR ${totalFleetExpense.toStringAsFixed(0)}', Colors.redAccent),
+                _buildCard('Net Profit/Loss', 'PKR ${netProfit.toStringAsFixed(0)}', netProfit >= 0 ? Colors.greenAccent : Colors.redAccent),
+              ],
+            ),
+          ),
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.all(12),
+              itemCount: _allRecords.length,
+              itemBuilder: (context, index) {
+                final item = _allRecords[index];
+                final isIncome = item['type'] == 'Income';
+                return Card(
+                  child: ListTile(
+                    title: Text(item['title'] ?? item['sub_category']),
+                    subtitle: Text('${item['date']} • Party: ${item['party_name'] ?? "Direct"}'),
+                    trailing: Text(
+                      '${isIncome ? "+" : "-"} PKR ${item['amount']}',
+                      style: TextStyle(fontWeight: FontWeight.bold, color: isIncome ? Colors.green : Colors.red),
+                    ),
+                  ),
+                );
+              },
+            ),
+          )
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCard(String title, String value, Color color) {
+    return Column(
+      children: [
+        Text(title, style: const TextStyle(color: Colors.white70, fontSize: 11)),
+        const SizedBox(height: 4),
+        Text(value, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 14)),
+      ],
+    );
+  }
+}
+
+// 3. Advance Booking System
+class AdvanceBookingsScreen extends StatefulWidget {
+  const AdvanceBookingsScreen({super.key});
+
+  @override
+  State<AdvanceBookingsScreen> createState() => _AdvanceBookingsScreenState();
+}
+
+class _AdvanceBookingsScreenState extends State<AdvanceBookingsScreen> {
+  List<Map<String, dynamic>> _bookings = [];
 
   @override
   void initState() {
@@ -261,48 +265,50 @@ class _BookingsScreenState extends State<BookingsScreen> {
   }
 
   void _loadBookings() async {
-    final b = await DatabaseHelper.instance.getBookings(null);
-    setState(() => bookings = b);
+    final data = await DatabaseHelper.instance.getBookings();
+    setState(() => _bookings = data);
   }
 
-  void _openAddBookingDialog() {
-    final vehicleCtrl = TextEditingController();
+  void _addBookingDialog() {
     final clientCtrl = TextEditingController();
     final routeCtrl = TextEditingController();
     final amountCtrl = TextEditingController();
+    final advanceCtrl = TextEditingController();
 
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (dialogCtx) => AlertDialog(
-        title: const Text('Add New Trip Booking'),
-        content: Column(
+      isScrollControlled: true,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom + 20, left: 20, right: 20, top: 20),
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(controller: vehicleCtrl, decoration: const InputDecoration(labelText: 'Vehicle Number')),
-            TextField(controller: clientCtrl, decoration: const InputDecoration(labelText: 'Client Name')),
-            TextField(controller: routeCtrl, decoration: const InputDecoration(labelText: 'Route (e.g. LHR to KHI)')),
-            TextField(controller: amountCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Amount (PKR)')),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogCtx), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () async {
-              if (clientCtrl.text.isNotEmpty) {
+            const Text('New Trip Booking', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 10),
+            TextField(controller: clientCtrl, decoration: const InputDecoration(labelText: 'Client Name', border: OutlineInputBorder())),
+            const SizedBox(height: 10),
+            TextField(controller: routeCtrl, decoration: const InputDecoration(labelText: 'Route (e.g. LHR to KHI)', border: OutlineInputBorder())),
+            const SizedBox(height: 10),
+            TextField(controller: amountCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Total Freight (PKR)', border: OutlineInputBorder())),
+            const SizedBox(height: 10),
+            TextField(controller: advanceCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Advance Received (PKR)', border: OutlineInputBorder())),
+            const SizedBox(height: 15),
+            ElevatedButton(
+              onPressed: () async {
                 await DatabaseHelper.instance.addBooking({
-                  'vehicle_number': vehicleCtrl.text,
                   'client': clientCtrl.text,
                   'route': routeCtrl.text,
                   'amount': double.tryParse(amountCtrl.text) ?? 0.0,
+                  'advance': double.tryParse(advanceCtrl.text) ?? 0.0,
                   'date': DateTime.now().toString().split(' ')[0],
                 });
                 _loadBookings();
-                if (mounted) Navigator.pop(dialogCtx);
-              }
-            },
-            child: const Text('Save Booking'),
-          )
-        ],
+                if (mounted) Navigator.pop(ctx);
+              },
+              child: const Text('CREATE BOOKING'),
+            )
+          ],
+        ),
       ),
     );
   }
@@ -310,52 +316,113 @@ class _BookingsScreenState extends State<BookingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Trip Bookings'), backgroundColor: const Color(0xFF1E3A8A), foregroundColor: Colors.white),
-      body: bookings.isEmpty
-          ? const Center(child: Text('No Active Bookings'))
-          : ListView.builder(
-              padding: const EdgeInsets.all(12),
-              itemCount: bookings.length,
-              itemBuilder: (context, i) {
-                final item = bookings[i];
-                return Card(
-                  child: ListTile(
-                    title: Text('${item['vehicle_number']} • ${item['client']}'),
-                    subtitle: Text('Route: ${item['route']} | Date: ${item['date']}'),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text('PKR ${item['amount']}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
-                        IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red),
-                          onPressed: () async {
-                            await DatabaseHelper.instance.deleteBooking(item['id']);
-                            _loadBookings();
-                          },
-                        )
-                      ],
-                    ),
-                  ),
-                );
-              },
+      appBar: AppBar(title: const Text('Advance Trip Bookings'), backgroundColor: const Color(0xFF0F172A), foregroundColor: Colors.white),
+      body: ListView.builder(
+        padding: const EdgeInsets.all(12),
+        itemCount: _bookings.length,
+        itemBuilder: (context, index) {
+          final b = _bookings[index];
+          return Card(
+            child: ListTile(
+              title: Text('${b['client']} - ${b['route']}'),
+              subtitle: Text('Date: ${b['date']} | Total: PKR ${b['amount']}'),
+              trailing: Text('Advance: PKR ${b['advance']}', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
             ),
+          );
+        },
+      ),
       floatingActionButton: FloatingActionButton(
-        backgroundColor: const Color(0xFF1E3A8A),
-        onPressed: _openAddBookingDialog,
-        child: const Icon(Icons.add, color: Colors.white),
+        backgroundColor: const Color(0xFF0F172A),
+        foregroundColor: Colors.white,
+        onPressed: _addBookingDialog,
+        child: const Icon(Icons.add),
       ),
     );
   }
 }
 
-class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({super.key});
+// 4. Directory & Enterprise Notepad
+class DirectoryAndNotesScreen extends StatefulWidget {
+  const DirectoryAndNotesScreen({super.key});
+
+  @override
+  State<DirectoryAndNotesScreen> createState() => _DirectoryAndNotesScreenState();
+}
+
+class _DirectoryAndNotesScreenState extends State<DirectoryAndNotesScreen> {
+  List<Map<String, dynamic>> _notes = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNotes();
+  }
+
+  void _loadNotes() async {
+    final data = await DatabaseHelper.instance.getNotes();
+    setState(() => _notes = data);
+  }
+
+  void _addNoteDialog() {
+    final titleCtrl = TextEditingController();
+    final contentCtrl = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom + 20, left: 20, right: 20, top: 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Add Memo / Reminder Note', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 10),
+            TextField(controller: titleCtrl, decoration: const InputDecoration(labelText: 'Title', border: OutlineInputBorder())),
+            const SizedBox(height: 10),
+            TextField(controller: contentCtrl, maxLines: 3, decoration: const InputDecoration(labelText: 'Details / Note', border: OutlineInputBorder())),
+            const SizedBox(height: 15),
+            ElevatedButton(
+              onPressed: () async {
+                await DatabaseHelper.instance.addNote({
+                  'title': titleCtrl.text,
+                  'content': contentCtrl.text,
+                  'date': DateTime.now().toString().split(' ')[0],
+                });
+                _loadNotes();
+                if (mounted) Navigator.pop(ctx);
+              },
+              child: const Text('SAVE NOTE'),
+            )
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('System Settings'), backgroundColor: const Color(0xFF1E3A8A), foregroundColor: Colors.white),
-      body: const Center(child: Text('Enterprise ERP Configuration v3.0')),
+      appBar: AppBar(title: const Text('Enterprise Notepad & Reminders'), backgroundColor: const Color(0xFF0F172A), foregroundColor: Colors.white),
+      body: ListView.builder(
+        padding: const EdgeInsets.all(12),
+        itemCount: _notes.length,
+        itemBuilder: (context, index) {
+          final n = _notes[index];
+          return Card(
+            child: ListTile(
+              title: Text(n['title'] ?? 'Note'),
+              subtitle: Text(n['content'] ?? ''),
+              trailing: Text(n['date'] ?? ''),
+            ),
+          );
+        },
+      ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: const Color(0xFF0F172A),
+        foregroundColor: Colors.white,
+        onPressed: _addNoteDialog,
+        child: const Icon(Icons.add),
+      ),
     );
   }
 }
