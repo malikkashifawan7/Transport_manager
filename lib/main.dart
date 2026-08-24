@@ -13,7 +13,7 @@ class TransportHisabProApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Transport Hisab Pro Plus Enterprise',
+      title: 'Transport Hisab Pro',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primarySwatch: Colors.indigo,
@@ -24,7 +24,6 @@ class TransportHisabProApp extends StatelessWidget {
   }
 }
 
-// ==================== ENTERPRISE DATABASE HELPER ====================
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;
@@ -33,7 +32,7 @@ class DatabaseHelper {
 
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _database = await _initDB('transport_hisab_v9.db');
+    _database = await _initDB('transport_hisab_v10.db');
     return _database!;
   }
 
@@ -58,8 +57,7 @@ class DatabaseHelper {
         driver_name TEXT NOT NULL,
         driver_phone TEXT,
         driver_cnic TEXT,
-        location TEXT,
-        status TEXT DEFAULT 'Active'
+        location TEXT
       )
     ''');
 
@@ -150,7 +148,6 @@ class DatabaseHelper {
       'driver_phone': phone,
       'driver_cnic': cnic,
       'location': loc,
-      'status': 'Active',
     });
   }
 
@@ -192,7 +189,6 @@ class DatabaseHelper {
   }
 }
 
-// ==================== MAIN SHELL ====================
 class MainEnterpriseShell extends StatefulWidget {
   const MainEnterpriseShell({super.key});
 
@@ -221,21 +217,17 @@ class _MainEnterpriseShellState extends State<MainEnterpriseShell> {
         unselectedItemColor: Colors.grey.shade600,
         onTap: (index) => setState(() => _currentIndex = index),
         type: BottomNavigationBarType.fixed,
-        selectedFontSize: 11,
-        unselectedFontSize: 10,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.dashboard_rounded), label: 'Dashboard'),
-          BottomNavigationBarItem(icon: Icon(Icons.directions_bus_rounded), label: 'Fleet & Profit'),
-          BottomNavigationBarItem(icon: Icon(Icons.contacts_rounded), label: 'Directory'),
-          BottomNavigationBarItem(icon: Icon(Icons.alarm_rounded), label: 'Reminders'),
-          BottomNavigationBarItem(icon: Icon(Icons.help_center_rounded), label: 'Help / Manual'),
+          BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'Dashboard'),
+          BottomNavigationBarItem(icon: Icon(Icons.directions_bus), label: 'Fleet'),
+          BottomNavigationBarItem(icon: Icon(Icons.contacts), label: 'Directory'),
+          BottomNavigationBarItem(icon: Icon(Icons.alarm), label: 'Reminders'),
+          BottomNavigationBarItem(icon: Icon(Icons.help), label: 'Manual'),
         ],
       ),
     );
   }
 }
-
-// ==================== DASHBOARD TAB ====================
 class HomeScreenTab extends StatefulWidget {
   const HomeScreenTab({super.key});
 
@@ -292,10 +284,7 @@ class _HomeScreenTabState extends State<HomeScreenTab> {
         backgroundColor: Colors.indigo,
         foregroundColor: Colors.white,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _refreshData,
-          )
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _refreshData)
         ],
       ),
       body: SingleChildScrollView(
@@ -305,10 +294,9 @@ class _HomeScreenTabState extends State<HomeScreenTab> {
           children: [
             TextField(
               decoration: InputDecoration(
-                hintText: 'Search Vehicle Number or Driver...',
+                hintText: 'Search Vehicle or Driver...',
                 prefixIcon: const Icon(Icons.search),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
               ),
               onChanged: (val) => setState(() => searchQuery = val),
             ),
@@ -321,22 +309,22 @@ class _HomeScreenTabState extends State<HomeScreenTab> {
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   children: [
-                    const Text('Total Enterprise Financial Overview', style: TextStyle(color: Colors.white70, fontSize: 14)),
+                    const Text('Total Enterprise Overview', style: TextStyle(color: Colors.white70)),
                     const SizedBox(height: 12),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
                         Column(children: [
-                          const Text('Total Freight', style: TextStyle(color: Colors.greenAccent, fontSize: 12)),
-                          Text('Rs. ${totalIncome.toStringAsFixed(0)}', style: const TextStyle(color: Colors.greenAccent, fontSize: 16, fontWeight: FontWeight.bold)),
+                          const Text('Income', style: TextStyle(color: Colors.greenAccent)),
+                          Text('Rs. ${totalIncome.toStringAsFixed(0)}', style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold)),
                         ]),
                         Column(children: [
-                          const Text('Total Expense', style: TextStyle(color: Colors.redAccent, fontSize: 12)),
-                          Text('Rs. ${totalExpense.toStringAsFixed(0)}', style: const TextStyle(color: Colors.redAccent, fontSize: 16, fontWeight: FontWeight.bold)),
+                          const Text('Expense', style: TextStyle(color: Colors.redAccent)),
+                          Text('Rs. ${totalExpense.toStringAsFixed(0)}', style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
                         ]),
                         Column(children: [
-                          const Text('Net Balance', style: TextStyle(color: Colors.white, fontSize: 12)),
-                          Text('Rs. ${(totalIncome - totalExpense).toStringAsFixed(0)}', style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                          const Text('Balance', style: TextStyle(color: Colors.white)),
+                          Text('Rs. ${(totalIncome - totalExpense).toStringAsFixed(0)}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                         ]),
                       ],
                     ),
@@ -345,13 +333,10 @@ class _HomeScreenTabState extends State<HomeScreenTab> {
               ),
             ),
             const SizedBox(height: 20),
-            const Text('Fleet Overview & Live Quick Status', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const Text('Fleet Quick View', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             filteredVehicles.isEmpty
-                ? const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 20),
-                    child: Center(child: Text('No vehicles found. Add from Fleet Tab.')),
-                  )
+                ? const Center(child: Padding(padding: EdgeInsets.all(20), child: Text('No vehicles found.')))
                 : ListView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
@@ -361,7 +346,7 @@ class _HomeScreenTabState extends State<HomeScreenTab> {
                       return Card(
                         child: ListTile(
                           leading: const CircleAvatar(backgroundColor: Colors.indigo, child: Icon(Icons.directions_bus, color: Colors.white)),
-                          title: Text('${v['number']} (${v['type']})', style: const TextStyle(fontWeight: FontWeight.bold)),
+                          title: Text('${v['number']} (${v['type']})'),
                           subtitle: Text('Driver: ${v['driver_name']} | Loc: ${v['location']}'),
                         ),
                       );
@@ -373,7 +358,7 @@ class _HomeScreenTabState extends State<HomeScreenTab> {
     );
   }
 }
-// ==================== FLEET & PROFIT BARS TAB ====================
+
 class FleetScreenTab extends StatefulWidget {
   const FleetScreenTab({super.key});
 
@@ -422,11 +407,11 @@ class _FleetScreenTabState extends State<FleetScreenTab> {
                   onChanged: (val) => setDialogState(() => selectedType = val!),
                 ),
                 TextField(controller: number, decoration: const InputDecoration(labelText: 'Vehicle Number')),
-                TextField(controller: model, decoration: const InputDecoration(labelText: 'Model / Year')),
+                TextField(controller: model, decoration: const InputDecoration(labelText: 'Model')),
                 TextField(controller: driver, decoration: const InputDecoration(labelText: 'Driver Name')),
                 TextField(controller: phone, decoration: const InputDecoration(labelText: 'Driver Phone')),
                 TextField(controller: cnic, decoration: const InputDecoration(labelText: 'Driver CNIC')),
-                TextField(controller: location, decoration: const InputDecoration(labelText: 'Current Location')),
+                TextField(controller: location, decoration: const InputDecoration(labelText: 'Location')),
               ],
             ),
           ),
@@ -440,7 +425,7 @@ class _FleetScreenTabState extends State<FleetScreenTab> {
                   if (mounted) Navigator.pop(context);
                 }
               },
-              child: const Text('Add Vehicle'),
+              child: const Text('Add'),
             )
           ],
         ),
@@ -451,15 +436,12 @@ class _FleetScreenTabState extends State<FleetScreenTab> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Fleet Profit / Loss Performance'), backgroundColor: Colors.indigo, foregroundColor: Colors.white),
+      appBar: AppBar(title: const Text('Fleet Profit Performance'), backgroundColor: Colors.indigo, foregroundColor: Colors.white),
       body: vehicles.isEmpty
-          ? const Center(child: Text('No vehicles added. Tap + to add.'))
+          ? const Center(child: Text('No vehicles added.'))
           : ListView.builder(
               itemCount: vehicles.length,
-              itemBuilder: (context, index) {
-                final v = vehicles[index];
-                return VehicleProfitBarCard(vehicle: v);
-              },
+              itemBuilder: (context, index) => VehicleProfitBarCard(vehicle: vehicles[index]),
             ),
       floatingActionButton: FloatingActionButton(
         onPressed: _addVehicleDialog,
@@ -472,7 +454,6 @@ class _FleetScreenTabState extends State<FleetScreenTab> {
 
 class VehicleProfitBarCard extends StatefulWidget {
   final Map<String, dynamic> vehicle;
-
   const VehicleProfitBarCard({super.key, required this.vehicle});
 
   @override
@@ -523,39 +504,28 @@ class _VehicleProfitBarCardState extends State<VehicleProfitBarCard> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(widget.vehicle['number'], style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                Text(widget.vehicle['number'], style: const TextStyle(fontWeight: FontWeight.bold)),
                 Text(
-                  net >= 0 ? '+ Rs. ${net.toStringAsFixed(0)} (Profit)' : '- Rs. ${net.abs().toStringAsFixed(0)} (Loss)',
+                  net >= 0 ? '+ Rs. ${net.toStringAsFixed(0)}' : '- Rs. ${net.abs().toStringAsFixed(0)}',
                   style: TextStyle(color: net >= 0 ? Colors.green : Colors.red, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
             const SizedBox(height: 6),
-            Text('Driver: ${widget.vehicle['driver_name']} | ${widget.vehicle['type']}'),
+            Text('Driver: ${widget.vehicle['driver_name']}'),
             const SizedBox(height: 10),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: LinearProgressIndicator(
-                value: incomeRatio,
-                minHeight: 12,
-                backgroundColor: Colors.red.shade300,
-                color: Colors.green,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Income: Rs. ${income.toStringAsFixed(0)}', style: const TextStyle(color: Colors.green, fontSize: 11, fontWeight: FontWeight.bold)),
-                Text('Expense: Rs. ${expense.toStringAsFixed(0)}', style: const TextStyle(color: Colors.red, fontSize: 11, fontWeight: FontWeight.bold)),
-              ],
+            LinearProgressIndicator(
+              value: incomeRatio,
+              minHeight: 10,
+              backgroundColor: Colors.red.shade300,
+              color: Colors.green,
             ),
             const Divider(),
             Align(
               alignment: Alignment.centerRight,
               child: TextButton.icon(
                 icon: const Icon(Icons.receipt_long),
-                label: const Text('Open Detailed Ledger'),
+                label: const Text('Open Ledger'),
                 onPressed: () {
                   Navigator.push(context, MaterialPageRoute(builder: (_) => IndividualLedgerScreen(vehicle: widget.vehicle)));
                 },
@@ -567,11 +537,8 @@ class _VehicleProfitBarCardState extends State<VehicleProfitBarCard> {
     );
   }
 }
-
-// ==================== INDIVIDUAL / MONTHLY LEDGER ====================
 class IndividualLedgerScreen extends StatefulWidget {
   final Map<String, dynamic> vehicle;
-
   const IndividualLedgerScreen({super.key, required this.vehicle});
 
   @override
@@ -583,11 +550,11 @@ class _IndividualLedgerScreenState extends State<IndividualLedgerScreen> {
   String selectedMonth = '';
 
   final Map<String, List<String>> categoriesWithSub = {
-    'Fuel': ['Diesel filling', 'AdBlue/Def', 'Generator Diesel'],
-    'Maintenance': ['Mobil Oil / Oil Change', 'Filter Replacement', 'Greasing & Washing', 'Brake / Clutch Repair'],
-    'Spare Parts & Tyres': ['New Tyre Purchase', 'Tyre Re-treading / Resole', 'Puncture Repair', 'Engine / Gear Parts'],
-    'Driver & Staff': ['Driver Advance', 'Driver Food / Bhatta', 'Cleaner Salary', 'Trip Bonus'],
-    'Toll & Legal': ['Motorway Toll Tax', 'Challan / Penalty', 'Token Tax / Fitness', 'Document Renewal'],
+    'Fuel': ['Diesel filling', 'AdBlue', 'Generator Diesel'],
+    'Maintenance': ['Mobil Oil', 'Filter', 'Washing', 'Brake Repair'],
+    'Spare Parts': ['Tyre', 'Puncture', 'Engine Parts'],
+    'Driver Staff': ['Advance', 'Food Bhatta', 'Bonus'],
+    'Toll Legal': ['Toll Tax', 'Challan', 'Token Tax'],
   };
 
   @override
@@ -615,7 +582,7 @@ class _IndividualLedgerScreenState extends State<IndividualLedgerScreen> {
       context: context,
       builder: (_) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('New Sub-Category Entry'),
+          title: const Text('New Entry'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -643,10 +610,10 @@ class _IndividualLedgerScreenState extends State<IndividualLedgerScreen> {
                   items: categoriesWithSub[mainCat]!.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
                   onChanged: (v) => setDialogState(() => subCat = v!),
                 ),
-                TextField(controller: title, decoration: const InputDecoration(labelText: 'Title / Party Name')),
+                TextField(controller: title, decoration: const InputDecoration(labelText: 'Title / Party')),
                 TextField(controller: amount, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Amount (PKR)')),
                 TextField(controller: meter, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Meter Reading (KM)')),
-                TextField(controller: details, decoration: const InputDecoration(labelText: 'Vendor / Notes')),
+                TextField(controller: details, decoration: const InputDecoration(labelText: 'Notes')),
               ],
             ),
           ),
@@ -671,7 +638,7 @@ class _IndividualLedgerScreenState extends State<IndividualLedgerScreen> {
                   if (mounted) Navigator.pop(context);
                 }
               },
-              child: const Text('Save Record'),
+              child: const Text('Save'),
             ),
           ],
         ),
@@ -691,19 +658,12 @@ class _IndividualLedgerScreenState extends State<IndividualLedgerScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.all(8.0),
-            child: Row(
-              children: [
-                const Text('Monthly Filter: ', style: TextStyle(fontWeight: FontWeight.bold)),
-                Expanded(
-                  child: TextField(
-                    decoration: const InputDecoration(hintText: 'e.g. 2026-08'),
-                    onChanged: (v) {
-                      selectedMonth = v.trim();
-                      _loadLedger();
-                    },
-                  ),
-                ),
-              ],
+            child: TextField(
+              decoration: const InputDecoration(hintText: 'Filter Month (e.g. 2026-08)'),
+              onChanged: (v) {
+                selectedMonth = v.trim();
+                _loadLedger();
+              },
             ),
           ),
           Expanded(
@@ -714,14 +674,11 @@ class _IndividualLedgerScreenState extends State<IndividualLedgerScreen> {
                     itemBuilder: (context, index) {
                       final r = records[index];
                       final isInc = r['type'] == 'Income';
-                      return Card(
-                        margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        child: ListTile(
-                          leading: Icon(isInc ? Icons.arrow_circle_down : Icons.arrow_circle_up, color: isInc ? Colors.green : Colors.red),
-                          title: Text('${r['title']} [${r['sub_category']}]'),
-                          subtitle: Text('${r['date']} | ${r['main_category']} | Meter: ${r['meter_reading']} KM'),
-                          trailing: Text('Rs. ${r['amount']}', style: TextStyle(color: isInc ? Colors.green : Colors.red, fontWeight: FontWeight.bold)),
-                        ),
+                      return ListTile(
+                        leading: Icon(isInc ? Icons.arrow_downward : Icons.arrow_upward, color: isInc ? Colors.green : Colors.red),
+                        title: Text('${r['title']} [${r['sub_category']}]'),
+                        subtitle: Text('${r['date']} | Meter: ${r['meter_reading']} KM'),
+                        trailing: Text('Rs. ${r['amount']}', style: TextStyle(color: isInc ? Colors.green : Colors.red, fontWeight: FontWeight.bold)),
                       );
                     },
                   ),
@@ -737,7 +694,6 @@ class _IndividualLedgerScreenState extends State<IndividualLedgerScreen> {
   }
 }
 
-// ==================== PHONE DIRECTORY & VENDORS KHATA ====================
 class DirectoryAndVendorsTab extends StatefulWidget {
   const DirectoryAndVendorsTab({super.key});
 
@@ -770,17 +726,17 @@ class _DirectoryAndVendorsTabState extends State<DirectoryAndVendorsTab> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Add Phone / Vendor Record'),
+        title: const Text('Add Contact'),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(controller: name, decoration: const InputDecoration(labelText: 'Name (e.g. Mechanic)')),
-              TextField(controller: shop, decoration: const InputDecoration(labelText: 'Shop / Company Name')),
-              TextField(controller: phone, decoration: const InputDecoration(labelText: 'Phone Number')),
+              TextField(controller: name, decoration: const InputDecoration(labelText: 'Name')),
+              TextField(controller: shop, decoration: const InputDecoration(labelText: 'Shop Name')),
+              TextField(controller: phone, decoration: const InputDecoration(labelText: 'Phone')),
               TextField(controller: address, decoration: const InputDecoration(labelText: 'Address')),
               TextField(controller: city, decoration: const InputDecoration(labelText: 'City')),
-              TextField(controller: balance, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Udhar Balance (PKR)')),
+              TextField(controller: balance, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Udhar Balance')),
             ],
           ),
         ),
@@ -795,7 +751,7 @@ class _DirectoryAndVendorsTabState extends State<DirectoryAndVendorsTab> {
                 if (mounted) Navigator.pop(context);
               }
             },
-            child: const Text('Save Contact'),
+            child: const Text('Save'),
           )
         ],
       ),
@@ -805,21 +761,18 @@ class _DirectoryAndVendorsTabState extends State<DirectoryAndVendorsTab> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Phone Directory & Vendors Khata'), backgroundColor: Colors.indigo, foregroundColor: Colors.white),
+      appBar: AppBar(title: const Text('Directory & Udhar Khata'), backgroundColor: Colors.indigo, foregroundColor: Colors.white),
       body: vendors.isEmpty
-          ? const Center(child: Text('No contacts/vendors added yet.'))
+          ? const Center(child: Text('No contacts found.'))
           : ListView.builder(
               itemCount: vendors.length,
               itemBuilder: (context, index) {
                 final v = vendors[index];
-                return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  child: ListTile(
-                    leading: const CircleAvatar(child: Icon(Icons.person)),
-                    title: Text('${v['name']} (${v['shop_name']})'),
-                    subtitle: Text('${v['phone']} | ${v['address']}, ${v['city']}'),
-                    trailing: Text('Bal: Rs. ${v['udhar_balance']}', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-                  ),
+                return ListTile(
+                  leading: const CircleAvatar(child: Icon(Icons.person)),
+                  title: Text('${v['name']} (${v['shop_name']})'),
+                  subtitle: Text('${v['phone']} | ${v['city']}'),
+                  trailing: Text('Rs. ${v['udhar_balance']}', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
                 );
               },
             ),
@@ -832,7 +785,6 @@ class _DirectoryAndVendorsTabState extends State<DirectoryAndVendorsTab> {
   }
 }
 
-// ==================== REMINDERS TAB ====================
 class RemindersTab extends StatefulWidget {
   const RemindersTab({super.key});
 
@@ -871,12 +823,12 @@ class _RemindersTabState extends State<RemindersTab> {
               DropdownButton<String>(
                 value: type,
                 isExpanded: true,
-                items: ['Oil Change', 'Token Tax', 'Fitness Certificate', 'Insurance Renewal', 'Tyre Change']
+                items: ['Oil Change', 'Token Tax', 'Fitness Cert', 'Tyre Change']
                     .map((t) => DropdownMenuItem(value: t, child: Text(t)))
                     .toList(),
                 onChanged: (v) => setDialogState(() => type = v!),
               ),
-              TextField(controller: title, decoration: const InputDecoration(labelText: 'Vehicle Number / Title')),
+              TextField(controller: title, decoration: const InputDecoration(labelText: 'Vehicle / Title')),
               TextField(controller: date, decoration: const InputDecoration(labelText: 'Due Date (YYYY-MM-DD)')),
               TextField(controller: details, decoration: const InputDecoration(labelText: 'Details')),
             ],
@@ -891,7 +843,7 @@ class _RemindersTabState extends State<RemindersTab> {
                   if (mounted) Navigator.pop(context);
                 }
               },
-              child: const Text('Save Reminder'),
+              child: const Text('Save'),
             )
           ],
         ),
@@ -902,4 +854,66 @@ class _RemindersTabState extends State<RemindersTab> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Maintenance Reminders'), backgroundColor: Colors.indigo, fo
+      appBar: AppBar(
+        title: const Text('Maintenance Reminders'),
+        backgroundColor: Colors.indigo,
+        foregroundColor: Colors.white,
+      ),
+      body: reminders.isEmpty
+          ? const Center(child: Text('No reminders set.'))
+          : ListView.builder(
+              itemCount: reminders.length,
+              itemBuilder: (context, index) {
+                final r = reminders[index];
+                return ListTile(
+                  leading: const Icon(Icons.notifications_active, color: Colors.orange),
+                  title: Text('${r['title']} [${r['type']}]'),
+                  subtitle: Text('Due: ${r['due_date']} | Notes: ${r['details']}'),
+                );
+              },
+            ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _addReminderDialog,
+        backgroundColor: Colors.indigo,
+        child: const Icon(Icons.add_alert, color: Colors.white),
+      ),
+    );
+  }
+}
+
+class UserManualHelpTab extends StatelessWidget {
+  const UserManualHelpTab({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('User Manual'),
+          backgroundColor: Colors.indigo,
+          foregroundColor: Colors.white,
+          bottom: const TabBar(
+            tabs: [
+              Tab(text: 'اردو رہنمائی'),
+              Tab(text: 'English Guide'),
+            ],
+          ),
+        ),
+        body: const TabBarView(
+          children: [
+            Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Text('ٹرانسپورٹ حساب پرو میں خوش آمدید۔ یہاں آپ گاڑیوں کا کرایہ، ڈیزل، اور آئل چینج کا مکمل ریکارڈ رکھ سکتے ہیں۔', textAlign: TextAlign.right),
+            ),
+            Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Text('Welcome to Transport Hisab Pro. Easily track vehicle freight, fuel, maintenance, and driver advances.'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
