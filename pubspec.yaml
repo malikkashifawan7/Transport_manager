@@ -1,5 +1,5 @@
 name: transport_manager
-description: Transport Fleet Enterprise App
+description: Transport Fleet Enterprise ERP
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -12,6 +12,9 @@ dependencies:
   sqflite: ^2.3.0
   path: ^1.8.3
   cupertino_icons: ^1.0.6
+  pdf: ^3.10.8
+  printing: ^5.13.1
+  share_plus: ^9.0.0
 
 dev_dependencies:
   flutter_test:
