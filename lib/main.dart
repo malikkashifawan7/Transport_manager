@@ -99,9 +99,9 @@ class _FleetHomeScreenState extends State<FleetHomeScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (_) => Padding(
+      builder: (dialogCtx) => Padding(
         padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+          bottom: MediaQuery.of(dialogCtx).viewInsets.bottom + 16,
           left: 16,
           right: 16,
           top: 16,
@@ -143,13 +143,17 @@ class _FleetHomeScreenState extends State<FleetHomeScreen> {
                         'driver_cnic': cnicCtrl.text,
                         'location': locCtrl.text,
                       };
-                      if (v == null) {
-                        await DatabaseHelper.instance.addVehicle(payload);
-                      } else {
-                        await DatabaseHelper.instance.updateVehicle(v['id'], payload);
+                      try {
+                        if (v == null) {
+                          await DatabaseHelper.instance.addVehicle(payload);
+                        } else {
+                          await DatabaseHelper.instance.updateVehicle(v['id'], payload);
+                        }
+                        _refreshFleet();
+                        if (mounted) Navigator.pop(dialogCtx);
+                      } catch (e) {
+                        debugPrint('Error saving vehicle: $e');
                       }
-                      _refreshFleet();
-                      if (mounted) Navigator.pop(context);
                     }
                   },
                   child: const Text('Save Vehicle'),
@@ -239,6 +243,7 @@ class _FleetHomeScreenState extends State<FleetHomeScreen> {
     );
   }
 }
+
 class BookingsScreen extends StatefulWidget {
   const BookingsScreen({super.key});
 
@@ -260,6 +265,48 @@ class _BookingsScreenState extends State<BookingsScreen> {
     setState(() => bookings = b);
   }
 
+  void _openAddBookingDialog() {
+    final vehicleCtrl = TextEditingController();
+    final clientCtrl = TextEditingController();
+    final routeCtrl = TextEditingController();
+    final amountCtrl = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: const Text('Add New Trip Booking'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: vehicleCtrl, decoration: const InputDecoration(labelText: 'Vehicle Number')),
+            TextField(controller: clientCtrl, decoration: const InputDecoration(labelText: 'Client Name')),
+            TextField(controller: routeCtrl, decoration: const InputDecoration(labelText: 'Route (e.g. LHR to KHI)')),
+            TextField(controller: amountCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Amount (PKR)')),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogCtx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              if (clientCtrl.text.isNotEmpty) {
+                await DatabaseHelper.instance.addBooking({
+                  'vehicle_number': vehicleCtrl.text,
+                  'client': clientCtrl.text,
+                  'route': routeCtrl.text,
+                  'amount': double.tryParse(amountCtrl.text) ?? 0.0,
+                  'date': DateTime.now().toString().split(' ')[0],
+                });
+                _loadBookings();
+                if (mounted) Navigator.pop(dialogCtx);
+              }
+            },
+            child: const Text('Save Booking'),
+          )
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -267,13 +314,36 @@ class _BookingsScreenState extends State<BookingsScreen> {
       body: bookings.isEmpty
           ? const Center(child: Text('No Active Bookings'))
           : ListView.builder(
+              padding: const EdgeInsets.all(12),
               itemCount: bookings.length,
-              itemBuilder: (context, i) => ListTile(
-                title: Text('${bookings[i]['vehicle_number']} - ${bookings[i]['client']}'),
-                subtitle: Text('Route: ${bookings[i]['route']}'),
-                trailing: Text('PKR ${bookings[i]['amount']}'),
-              ),
+              itemBuilder: (context, i) {
+                final item = bookings[i];
+                return Card(
+                  child: ListTile(
+                    title: Text('${item['vehicle_number']} • ${item['client']}'),
+                    subtitle: Text('Route: ${item['route']} | Date: ${item['date']}'),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('PKR ${item['amount']}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+                        IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          onPressed: () async {
+                            await DatabaseHelper.instance.deleteBooking(item['id']);
+                            _loadBookings();
+                          },
+                        )
+                      ],
+                    ),
+                  ),
+                );
+              },
             ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: const Color(0xFF1E3A8A),
+        onPressed: _openAddBookingDialog,
+        child: const Icon(Icons.add, color: Colors.white),
+      ),
     );
   }
 }
@@ -285,7 +355,7 @@ class SettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('System Settings'), backgroundColor: const Color(0xFF1E3A8A), foregroundColor: Colors.white),
-      body: const Center(child: Text('Enterprise ERP Configuration v1.0.0')),
+      body: const Center(child: Text('Enterprise ERP Configuration v3.0')),
     );
   }
 }
