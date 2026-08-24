@@ -276,7 +276,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
       ),
       body: Column(
         children: [
-          // Enterprise Top Dashboard Summary Card
+          // Enterprise Dashboard Summary
           Container(
             padding: const EdgeInsets.all(16),
             decoration: const BoxDecoration(
@@ -290,9 +290,9 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
               children: [
                 Row(
                   children: [
-                    Expanded(child: _buildMetricTile('TOTAL FREIGHT', 'PKR ${totalIncome.toStringAsFixed(0)}', Colors.emeraldAccent, Icons.trending_up)),
+                    Expanded(child: _buildMetricTile('TOTAL FREIGHT', 'PKR ${totalIncome.toStringAsFixed(0)}', Colors.greenAccent, Icons.trending_up)),
                     Container(height: 40, width: 1, color: Colors.white24),
-                    Expanded(child: _buildMetricTile('TOTAL EXPENSES', 'PKR ${totalExpense.toStringAsFixed(0)}', Colors.roseAccent, Icons.trending_down)),
+                    Expanded(child: _buildMetricTile('TOTAL EXPENSES', 'PKR ${totalExpense.toStringAsFixed(0)}', Colors.redAccent, Icons.trending_down)),
                   ],
                 ),
                 const Divider(color: Colors.white24, height: 24),
@@ -309,13 +309,13 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                     Container(
                       padding: const EdgeInsets.horizontal(12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: netProfit >= 0 ? Colors.emerald.shade900.withOpacity(0.6) : Colors.rose.shade900.withOpacity(0.6),
+                        color: netProfit >= 0 ? Colors.green.shade900.withOpacity(0.6) : Colors.red.shade900.withOpacity(0.6),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: netProfit >= 0 ? Colors.emerald : Colors.rose),
+                        border: Border.all(color: netProfit >= 0 ? Colors.green : Colors.red),
                       ),
                       child: Text(
                         'Net Profit: PKR ${netProfit.toStringAsFixed(0)}',
-                        style: TextStyle(fontWeight: FontWeight.bold, color: netProfit >= 0 ? Colors.emeraldAccent : Colors.roseAccent),
+                        style: TextStyle(fontWeight: FontWeight.bold, color: netProfit >= 0 ? Colors.greenAccent : Colors.redAccent),
                       ),
                     ),
                   ],
@@ -324,7 +324,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
             ),
           ),
 
-          // Category Filter Chips
+          // Filters
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: SingleChildScrollView(
@@ -347,7 +347,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
             ),
           ),
 
-          // Ledger Detailed Transactions
+          // Transactions List
           Expanded(
             child: _filteredRecords.isEmpty
                 ? Center(
@@ -377,12 +377,12 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                               Container(
                                 padding: const EdgeInsets.all(10),
                                 decoration: BoxDecoration(
-                                  color: isIncome ? Colors.emerald.shade50 : Colors.rose.shade50,
+                                  color: isIncome ? Colors.green.shade50 : Colors.red.shade50,
                                   shape: BoxShape.circle,
                                 ),
                                 child: Icon(
                                   isIncome ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
-                                  color: isIncome ? Colors.emerald : Colors.rose,
+                                  color: isIncome ? Colors.green : Colors.red,
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -415,7 +415,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16,
-                                  color: isIncome ? Colors.emerald.shade700 : Colors.rose.shade700,
+                                  color: isIncome ? Colors.green.shade700 : Colors.red.shade700,
                                 ),
                               ),
                             ],
@@ -451,4 +451,4 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
           ],
         ),
         const SizedBox(height: 6),
-     
+        Text(value, style: TextStyle(fontSize: 16, fontWeigh
