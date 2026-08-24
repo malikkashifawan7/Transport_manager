@@ -9,7 +9,7 @@ class DatabaseHelper {
 
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _database = await _initDB('transport_erp_v3.db');
+    _database = await _initDB('transport_elite_erp_v4.db');
     return _database!;
   }
 
@@ -19,16 +19,8 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: _createDB,
-      onUpgrade: (db, oldVersion, newVersion) async {
-        await db.execute('DROP TABLE IF EXISTS vehicles');
-        await db.execute('DROP TABLE IF EXISTS records');
-        await db.execute('DROP TABLE IF EXISTS vendors');
-        await db.execute('DROP TABLE IF EXISTS reminders');
-        await db.execute('DROP TABLE IF EXISTS bookings');
-        await _createDB(db, newVersion);
-      },
     );
   }
 
@@ -38,11 +30,8 @@ class DatabaseHelper {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         number TEXT NOT NULL,
         type TEXT,
-        model TEXT,
         driver_name TEXT,
         driver_phone TEXT,
-        driver_cnic TEXT,
-        location TEXT,
         status TEXT DEFAULT 'Active'
       )
     ''');
@@ -57,26 +46,9 @@ class DatabaseHelper {
         title TEXT,
         amount REAL,
         litres REAL,
-        meter_reading REAL
-      )
-    ''');
-
-    await db.execute('''
-      CREATE TABLE vendors (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        phone TEXT,
-        type TEXT,
-        balance REAL DEFAULT 0.0
-      )
-    ''');
-
-    await db.execute('''
-      CREATE TABLE reminders (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT NOT NULL,
-        date TEXT,
-        status TEXT DEFAULT 'Pending'
+        meter_reading REAL,
+        party_name TEXT,
+        payment_status TEXT DEFAULT 'Paid'
       )
     ''');
 
@@ -87,8 +59,18 @@ class DatabaseHelper {
         client TEXT,
         route TEXT,
         amount REAL,
+        advance REAL,
         date TEXT,
-        status TEXT DEFAULT 'Booked'
+        status TEXT DEFAULT 'Pending'
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE notes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT,
+        content TEXT,
+        date TEXT
       )
     ''');
   }
@@ -114,7 +96,7 @@ class DatabaseHelper {
     return await db.delete('vehicles', where: 'id = ?', whereArgs: [id]);
   }
 
-  // Records (Ledger / Income / Expense)
+  // Records & Ledger
   Future<List<Map<String, dynamic>>> getRecords(int? vehicleId) async {
     final db = await instance.database;
     if (vehicleId != null) {
@@ -128,8 +110,13 @@ class DatabaseHelper {
     return await db.insert('records', row);
   }
 
+  Future<int> deleteRecord(int id) async {
+    final db = await instance.database;
+    return await db.delete('records', where: 'id = ?', whereArgs: [id]);
+  }
+
   // Bookings
-  Future<List<Map<String, dynamic>>> getBookings(dynamic filter) async {
+  Future<List<Map<String, dynamic>>> getBookings() async {
     final db = await instance.database;
     return await db.query('bookings', orderBy: 'id DESC');
   }
@@ -139,51 +126,14 @@ class DatabaseHelper {
     return await db.insert('bookings', row);
   }
 
-  Future<int> deleteBooking(int id) async {
+  // Notes & Reminders
+  Future<List<Map<String, dynamic>>> getNotes() async {
     final db = await instance.database;
-    return await db.delete('bookings', where: 'id = ?', whereArgs: [id]);
+    return await db.query('notes', orderBy: 'id DESC');
   }
 
-  // Vendors
-  Future<List<Map<String, dynamic>>> getVendors() async {
+  Future<int> addNote(Map<String, dynamic> row) async {
     final db = await instance.database;
-    return await db.query('vendors', orderBy: 'id DESC');
-  }
-
-  Future<int> addVendor(Map<String, dynamic> row) async {
-    final db = await instance.database;
-    return await db.insert('vendors', row);
-  }
-
-  Future<int> updateVendor(int id, Map<String, dynamic> row) async {
-    final db = await instance.database;
-    return await db.update('vendors', row, where: 'id = ?', whereArgs: [id]);
-  }
-
-  Future<int> deleteVendor(int id) async {
-    final db = await instance.database;
-    return await db.delete('vendors', where: 'id = ?', whereArgs: [id]);
-  }
-
-  // Reminders
-  Future<List<Map<String, dynamic>>> getReminders() async {
-    final db = await instance.database;
-    return await db.query('reminders', orderBy: 'id DESC');
-  }
-
-  Future<int> addReminder(Map<String, dynamic> row) async {
-    final db = await instance.database;
-    return await db.insert('reminders', row);
-  }
-
-  Future<int> updateReminder(int id, Map<String, dynamic> row) async {
-    final db = await instance.database;
-    return await db.update('reminders', row, where: 'id = ?', whereArgs: [id]);
-  }
-
-  Future<int> deleteReminder(int id) async {
-    final db = await instance.database;
-    return await db.delete('reminders', where: 'id = ?', whereArgs: [id]);
+    return await db.insert('notes', row);
   }
 }
-
