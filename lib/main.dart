@@ -16,9 +16,13 @@ class TransportERPApp extends StatelessWidget {
       title: 'EUI Elite Pro Transport ERP',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0F172A)),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF0F172A),
+          primary: const Color(0xFF0F172A),
+          secondary: const Color(0xFF2563EB),
+        ),
         useMaterial3: true,
-        scaffoldBackgroundColor: const Color(0xFFF8FAFC),
+        scaffoldBackgroundColor: const Color(0xFFF1F5F9),
       ),
       home: const MainHomeScreen(),
     );
@@ -60,7 +64,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
   }
 }
 
-// 1. Fleet Dashboard
+// 1. Upgraded Fleet Dashboard Screen
 class FleetDashboardScreen extends StatefulWidget {
   const FleetDashboardScreen({super.key});
 
@@ -70,16 +74,39 @@ class FleetDashboardScreen extends StatefulWidget {
 
 class _FleetDashboardScreenState extends State<FleetDashboardScreen> {
   List<Map<String, dynamic>> _vehicles = [];
+  List<Map<String, dynamic>> _allRecords = [];
+  String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
-    _loadVehicles();
+    _loadDashboardData();
   }
 
-  void _loadVehicles() async {
-    final data = await DatabaseHelper.instance.getVehicles();
-    setState(() => _vehicles = data);
+  void _loadDashboardData() async {
+    final vData = await DatabaseHelper.instance.getVehicles();
+    final rData = await DatabaseHelper.instance.getRecords(null);
+    setState(() {
+      _vehicles = vData;
+      _allRecords = rData;
+    });
+  }
+
+  double get totalIncome => _allRecords
+      .where((r) => r['type'] == 'Income')
+      .fold(0.0, (s, i) => s + ((i['amount'] ?? 0) as num).toDouble());
+
+  double get totalExpense => _allRecords
+      .where((r) => r['type'] == 'Expense')
+      .fold(0.0, (s, i) => s + ((i['amount'] ?? 0) as num).toDouble());
+
+  List<Map<String, dynamic>> get _filteredVehicles {
+    if (_searchQuery.isEmpty) return _vehicles;
+    return _vehicles.where((v) {
+      final num = (v['number'] ?? '').toString().toLowerCase();
+      final driver = (v['driver_name'] ?? '').toString().toLowerCase();
+      return num.contains(_searchQuery.toLowerCase()) || driver.contains(_searchQuery.toLowerCase());
+    }).toList();
   }
 
   void _openAddVehicleDialog() {
@@ -91,33 +118,39 @@ class _FleetDashboardScreenState extends State<FleetDashboardScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) => Padding(
         padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom + 20, left: 20, right: 20, top: 20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             const Text('Add Fleet Vehicle', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             TextField(controller: numCtrl, decoration: const InputDecoration(labelText: 'Reg Number (e.g. LES-786)', border: OutlineInputBorder())),
             const SizedBox(height: 10),
             TextField(controller: driverCtrl, decoration: const InputDecoration(labelText: 'Driver Name', border: OutlineInputBorder())),
             const SizedBox(height: 10),
             TextField(controller: phoneCtrl, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Phone', border: OutlineInputBorder())),
             const SizedBox(height: 15),
-            ElevatedButton(
-              onPressed: () async {
-                if (numCtrl.text.isNotEmpty) {
-                  await DatabaseHelper.instance.addVehicle({
-                    'number': numCtrl.text,
-                    'driver_name': driverCtrl.text,
-                    'driver_phone': phoneCtrl.text,
-                    'type': type,
-                  });
-                  _loadVehicles();
-                  if (mounted) Navigator.pop(ctx);
-                }
-              },
-              child: const Text('ADD VEHICLE'),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0F172A), foregroundColor: Colors.white),
+                onPressed: () async {
+                  if (numCtrl.text.isNotEmpty) {
+                    await DatabaseHelper.instance.addVehicle({
+                      'number': numCtrl.text,
+                      'driver_name': driverCtrl.text,
+                      'driver_phone': phoneCtrl.text,
+                      'type': type,
+                    });
+                    _loadDashboardData();
+                    if (mounted) Navigator.pop(ctx);
+                  }
+                },
+                child: const Text('SAVE VEHICLE'),
+              ),
             )
           ],
         ),
@@ -127,46 +160,135 @@ class _FleetDashboardScreenState extends State<FleetDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final netProfit = totalIncome - totalExpense;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Fleet Management Hub'), backgroundColor: const Color(0xFF0F172A), foregroundColor: Colors.white),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(12),
-        itemCount: _vehicles.length,
-        itemBuilder: (context, index) {
-          final v = _vehicles[index];
-          return Card(
-            child: ListTile(
-              leading: const Icon(Icons.local_shipping, size: 32, color: Color(0xFF0F172A)),
-              title: Text(v['number'], style: const TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: Text('Driver: ${v['driver_name']} | Ph: ${v['driver_phone']}'),
-              trailing: IconButton(
-                icon: const Icon(Icons.delete, color: Colors.grey),
-                onPressed: () async {
-                  await DatabaseHelper.instance.deleteVehicle(v['id']);
-                  _loadVehicles();
-                },
-              ),
-              onTap: () async {
-                final records = await DatabaseHelper.instance.getRecords(v['id']);
-                if (context.mounted) {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => VehicleDetailsScreen(vehicle: v, records: records)));
-                }
+      appBar: AppBar(
+        title: const Text('Fleet Operations Hub', style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: const Color(0xFF0F172A),
+        foregroundColor: Colors.white,
+        elevation: 0,
+        actions: [
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _loadDashboardData),
+        ],
+      ),
+      body: Column(
+        children: [
+          // Elite Pro Analytics Header Banner
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: const BoxDecoration(
+              color: Color(0xFF0F172A),
+              borderRadius: BorderRadius.only(bottomLeft: Radius.circular(20), bottomRight: Radius.circular(20)),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(child: _buildMetricCard('ACTIVE UNITS', '${_vehicles.length}', Colors.blueAccent)),
+                    const SizedBox(width: 8),
+                    Expanded(child: _buildMetricCard('TOTAL REVENUE', 'PKR ${totalIncome.toStringAsFixed(0)}', Colors.greenAccent)),
+                    const SizedBox(width: 8),
+                    Expanded(child: _buildMetricCard('NET PROFIT', 'PKR ${netProfit.toStringAsFixed(0)}', netProfit >= 0 ? Colors.greenAccent : Colors.redAccent)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  onChanged: (val) => setState(() => _searchQuery = val),
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    hintText: 'Search by Vehicle No or Driver...',
+                    hintStyle: const TextStyle(color: Colors.white54),
+                    prefixIcon: const Icon(Icons.search, color: Colors.white70),
+                    filled: true,
+                    fillColor: Colors.white12,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Vehicle List
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.all(12),
+              itemCount: _filteredVehicles.length,
+              itemBuilder: (context, index) {
+                final v = _filteredVehicles[index];
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.all(12),
+                    leading: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(color: const Color(0xFF0F172A).withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+                      child: const Icon(Icons.local_shipping_rounded, color: Color(0xFF0F172A), size: 28),
+                    ),
+                    title: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(v['number'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(6)),
+                          child: const Text('ACTIVE', style: TextStyle(color: Colors.green, fontSize: 10, fontWeight: FontWeight.bold)),
+                        ),
+                      ],
+                    ),
+                    subtitle: Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text('Driver: ${v['driver_name']} | Contact: ${v['driver_phone']}'),
+                    ),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                      onPressed: () async {
+                        await DatabaseHelper.instance.deleteVehicle(v['id']);
+                        _loadDashboardData();
+                      },
+                    ),
+                    onTap: () async {
+                      final records = await DatabaseHelper.instance.getRecords(v['id']);
+                      if (context.mounted) {
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => VehicleDetailsScreen(vehicle: v, records: records))).then((_) => _loadDashboardData());
+                      }
+                    },
+                  ),
+                );
               },
             ),
-          );
-        },
+          ),
+        ],
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         backgroundColor: const Color(0xFF0F172A),
         foregroundColor: Colors.white,
         onPressed: _openAddVehicleDialog,
-        child: const Icon(Icons.add),
+        icon: const Icon(Icons.add),
+        label: const Text('Add Vehicle'),
+      ),
+    );
+  }
+
+  Widget _buildMetricCard(String label, String value, Color valueColor) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+      decoration: BoxDecoration(color: Colors.white.withOpacity(0.08), borderRadius: BorderRadius.circular(12)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(color: Colors.white60, fontSize: 9, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          FittedBox(fit: BoxFit.scaleDown, child: Text(value, style: TextStyle(color: valueColor, fontSize: 13, fontWeight: FontWeight.bold))),
+        ],
       ),
     );
   }
 }
-
-// 2. Global Consolidated Ledger & One-Click Profit/Loss
+// 2. Global Consolidated Ledger
 class GlobalAnalyticsAndLedgerScreen extends StatefulWidget {
   const GlobalAnalyticsAndLedgerScreen({super.key});
 
@@ -196,7 +318,7 @@ class _GlobalAnalyticsAndLedgerScreenState extends State<GlobalAnalyticsAndLedge
     final netProfit = totalFleetIncome - totalFleetExpense;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Overall Fleet Ledger & Profit/Loss'), backgroundColor: const Color(0xFF0F172A), foregroundColor: Colors.white),
+      appBar: AppBar(title: const Text('Overall Fleet Ledger'), backgroundColor: const Color(0xFF0F172A), foregroundColor: Colors.white),
       body: Column(
         children: [
           Container(
@@ -247,7 +369,7 @@ class _GlobalAnalyticsAndLedgerScreenState extends State<GlobalAnalyticsAndLedge
   }
 }
 
-// 3. Advance Booking System
+// 3. Advance Bookings System
 class AdvanceBookingsScreen extends StatefulWidget {
   const AdvanceBookingsScreen({super.key});
 
@@ -341,7 +463,7 @@ class _AdvanceBookingsScreenState extends State<AdvanceBookingsScreen> {
   }
 }
 
-// 4. Directory & Enterprise Notepad
+// 4. Directory & Notepad
 class DirectoryAndNotesScreen extends StatefulWidget {
   const DirectoryAndNotesScreen({super.key});
 
@@ -426,3 +548,4 @@ class _DirectoryAndNotesScreenState extends State<DirectoryAndNotesScreen> {
     );
   }
 }
+
