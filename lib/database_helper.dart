@@ -9,7 +9,7 @@ class DatabaseHelper {
 
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _database = await _initDB('transport_manager_erp.db');
+    _database = await _initDB('transport_erp_v3.db');
     return _database!;
   }
 
@@ -19,7 +19,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: _createDB,
       onUpgrade: (db, oldVersion, newVersion) async {
         await db.execute('DROP TABLE IF EXISTS vehicles');
@@ -114,18 +114,13 @@ class DatabaseHelper {
     return await db.delete('vehicles', where: 'id = ?', whereArgs: [id]);
   }
 
-  // Records / Ledger
+  // Records
   Future<List<Map<String, dynamic>>> getRecords(int? vehicleId) async {
     final db = await instance.database;
     if (vehicleId != null) {
       return await db.query('records', where: 'vehicle_id = ?', orderBy: 'id DESC', whereArgs: [vehicleId]);
     }
     return await db.query('records', orderBy: 'id DESC');
-  }
-
-  Future<int> addRecord(Map<String, dynamic> row) async {
-    final db = await instance.database;
-    return await db.insert('records', row);
   }
 
   // Bookings
@@ -137,6 +132,11 @@ class DatabaseHelper {
   Future<int> addBooking(Map<String, dynamic> row) async {
     final db = await instance.database;
     return await db.insert('bookings', row);
+  }
+
+  Future<int> deleteBooking(int id) async {
+    final db = await instance.database;
+    return await db.delete('bookings', where: 'id = ?', whereArgs: [id]);
   }
 
   // Vendors
