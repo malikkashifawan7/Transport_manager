@@ -781,7 +781,7 @@ class _GlobalAnalyticsAndLedgerScreenState extends State<GlobalAnalyticsAndLedge
 }
 
 // ---------------------------------------------------------
-// 5. NOTEPAD & REMINDERS (FIXED)
+// 5. NOTEPAD & REMINDERS (COMPLETE FIX)
 // ---------------------------------------------------------
 class DirectoryAndNotesScreen extends StatefulWidget {
   const DirectoryAndNotesScreen({super.key});
@@ -812,15 +812,35 @@ class _DirectoryAndNotesScreenState extends State<DirectoryAndNotesScreen> {
       context: context,
       isScrollControlled: true,
       builder: (ctx) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom + 20, left: 20, right: 20, top: 20),
+        padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+            left: 20,
+            right: 20,
+            top: 20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(note == null ? 'Add Note / Memo' : 'Edit Note', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(
+              note == null ? 'Add Note / Memo' : 'Edit Note',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 10),
-            TextField(controller: titleCtrl, decoration: const InputDecoration(labelText: 'Title', border: OutlineInputBorder())),
+            TextField(
+              controller: titleCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Title',
+                border: OutlineInputBorder(),
+              ),
+            ),
             const SizedBox(height: 10),
-            TextField(controller: contentCtrl, maxLines: 3, decoration: const InputDecoration(labelText: 'Details', border: OutlineInputBorder())),
+            TextField(
+              controller: contentCtrl,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                labelText: 'Details',
+                border: OutlineInputBorder(),
+              ),
+            ),
             const SizedBox(height: 15),
             ElevatedButton(
               onPressed: () async {
@@ -882,6 +902,16 @@ class _DirectoryAndNotesScreenState extends State<DirectoryAndNotesScreen> {
           );
         },
       ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: const Color(0xFF0F172A),
+        foregroundColor: Colors.white,
+        onPressed: () => _addNoteDialog(),
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
+}
+
       floatingActionButton: FloatingActionButton(
         backgroundColor: const Color(0xFF0F172A),
         foregroundColor: Colors.white,
