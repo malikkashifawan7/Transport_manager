@@ -1,6 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart' as p;
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+import 'package:share_plus/share_plus.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,6 +29,7 @@ class TransportHisabProApp extends StatelessWidget {
   }
 }
 
+// ==================== DATABASE HELPER ====================
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;
@@ -32,19 +38,14 @@ class DatabaseHelper {
 
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _database = await _initDB('transport_hisab_v10.db');
+    _database = await _initDB('transport_hisab_v12.db');
     return _database!;
   }
 
   Future<Database> _initDB(String filePath) async {
     final dbPath = await getDatabasesPath();
     final path = p.join(dbPath, filePath);
-
-    return await openDatabase(
-      path,
-      version: 1,
-      onCreate: _createDB,
-    );
+    return await openDatabase(path, version: 1, onCreate: _createDB);
   }
 
   Future _createDB(Database db, int version) async {
@@ -62,6 +63,22 @@ class DatabaseHelper {
     ''');
 
     await db.execute('''
+      CREATE TABLE bookings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        vehicle_id INTEGER NOT NULL,
+        party_name TEXT NOT NULL,
+        route_from TEXT NOT NULL,
+        route_to TEXT NOT NULL,
+        goods_type TEXT,
+        total_freight REAL NOT NULL,
+        advance_paid REAL DEFAULT 0,
+        commission REAL DEFAULT 0,
+        booking_date TEXT NOT NULL,
+        status TEXT DEFAULT 'Booked'
+      )
+    ''');
+
+    await db.execute('''
       CREATE TABLE records (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         vehicle_id INTEGER NOT NULL,
@@ -72,6 +89,7 @@ class DatabaseHelper {
         amount REAL NOT NULL,
         details TEXT,
         meter_reading REAL DEFAULT 0,
+        litres REAL DEFAULT 0,
         date TEXT NOT NULL
       )
     ''');
@@ -99,33 +117,57 @@ class DatabaseHelper {
     ''');
   }
 
+  // CRUD Operations
   Future<List<Map<String, dynamic>>> getVehicles() async {
     final db = await instance.database;
     return await db.query('vehicles', orderBy: 'id DESC');
   }
 
-  Future<List<Map<String, dynamic>>> getRecords(int? vehicleId, String? month) async {
+  Future<int> addVehicle(Map<String, dynamic> row) async {
     final db = await instance.database;
-    String whereClause = '';
-    List<dynamic> args = [];
+    return await db.insert('vehicles', row);
+  }
 
-    if (vehicleId != null) {
-      whereClause += 'vehicle_id = ?';
-      args.add(vehicleId);
-    }
+  Future<int> updateVehicle(int id, Map<String, dynamic> row) async {
+    final db = await instance.database;
+    return await db.update('vehicles', row, where: 'id = ?', whereArgs: [id]);
+  }
 
-    if (month != null && month.isNotEmpty) {
-      if (whereClause.isNotEmpty) whereClause += ' AND ';
-      whereClause += 'date LIKE ?';
-      args.add('$month%');
-    }
+  Future<int> deleteVehicle(int id) async {
+    final db = await instance.database;
+    return await db.delete('vehicles', where: 'id = ?', whereArgs: [id]);
+  }
 
-    return await db.query(
-      'records',
-      where: whereClause.isEmpty ? null : whereClause,
-      whereArgs: args.isEmpty ? null : args,
-      orderBy: 'id DESC',
-    );
+  Future<List<Map<String, dynamic>>> getBookings(int? vehicleId) async {
+    final db = await instance.database;
+    if (vehicleId == null) return await db.query('bookings', orderBy: 'id DESC');
+    return await db.query('bookings', where: 'vehicle_id = ?', whereArgs: [vehicleId], orderBy: 'id DESC');
+  }
+
+  Future<int> addBooking(Map<String, dynamic> row) async {
+    final db = await instance.database;
+    return await db.insert('bookings', row);
+  }
+
+  Future<int> deleteBooking(int id) async {
+    final db = await instance.database;
+    return await db.delete('bookings', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<List<Map<String, dynamic>>> getRecords(int? vehicleId) async {
+    final db = await instance.database;
+    if (vehicleId == null) return await db.query('records', orderBy: 'id DESC');
+    return await db.query('records', where: 'vehicle_id = ?', whereArgs: [vehicleId], orderBy: 'id DESC');
+  }
+
+  Future<int> addRecord(Map<String, dynamic> row) async {
+    final db = await instance.database;
+    return await db.insert('records', row);
+  }
+
+  Future<int> deleteRecord(int id) async {
+    final db = await instance.database;
+    return await db.delete('records', where: 'id = ?', whereArgs: [id]);
   }
 
   Future<List<Map<String, dynamic>>> getVendors() async {
@@ -133,62 +175,70 @@ class DatabaseHelper {
     return await db.query('vendors', orderBy: 'id DESC');
   }
 
+  Future<int> addVendor(Map<String, dynamic> row) async {
+    final db = await instance.database;
+    return await db.insert('vendors', row);
+  }
+
+  Future<int> deleteVendor(int id) async {
+    final db = await instance.database;
+    return await db.delete('vendors', where: 'id = ?', whereArgs: [id]);
+  }
+
   Future<List<Map<String, dynamic>>> getReminders() async {
     final db = await instance.database;
     return await db.query('reminders', orderBy: 'due_date ASC');
   }
 
-  Future<int> addVehicle(String number, String model, String type, String driver, String phone, String cnic, String loc) async {
+  Future<int> addReminder(Map<String, dynamic> row) async {
     final db = await instance.database;
-    return await db.insert('vehicles', {
-      'number': number,
-      'model': model,
-      'type': type,
-      'driver_name': driver,
-      'driver_phone': phone,
-      'driver_cnic': cnic,
-      'location': loc,
-    });
+    return await db.insert('reminders', row);
   }
 
-  Future<int> addRecord(int vId, String type, String mainCat, String subCat, String title, double amt, String details, double meter) async {
+  Future<int> deleteReminder(int id) async {
     final db = await instance.database;
-    return await db.insert('records', {
-      'vehicle_id': vId,
-      'type': type,
-      'main_category': mainCat,
-      'sub_category': subCat,
-      'title': title,
-      'amount': amt,
-      'details': details,
-      'meter_reading': meter,
-      'date': DateTime.now().toIso8601String().split('T')[0],
-    });
-  }
-
-  Future<int> addVendor(String name, String shop, String phone, String address, String city, double balance) async {
-    final db = await instance.database;
-    return await db.insert('vendors', {
-      'name': name,
-      'shop_name': shop,
-      'phone': phone,
-      'address': address,
-      'city': city,
-      'udhar_balance': balance,
-    });
-  }
-
-  Future<int> addReminder(String title, String dueDate, String type, String details) async {
-    final db = await instance.database;
-    return await db.insert('reminders', {
-      'title': title,
-      'due_date': dueDate,
-      'type': type,
-      'details': details,
-    });
+    return await db.delete('reminders', where: 'id = ?', whereArgs: [id]);
   }
 }
 
+// ==================== PDF REPORT ENGINE ====================
+class PdfReportService {
+  static Future<void> generateAndPrintVehicleLedger(Map<String, dynamic> vehicle, List<Map<String, dynamic>> records) async {
+    final pdf = pw.Document();
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        build: (pw.Context context) {
+          return pw.Column(
+            cross: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Header(level: 0, child: pw.Text('Transport Hisab Pro - Vehicle Statement', style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold))),
+              pw.SizedBox(height: 10),
+              pw.Text('Vehicle No: ${vehicle['number']} (${vehicle['type']})'),
+              pw.Text('Driver Name: ${vehicle['driver_name']} | Contact: ${vehicle['driver_phone']}'),
+              pw.SizedBox(height: 15),
+              pw.Table.fromTextArray(
+                headers: ['Date', 'Title', 'Category', 'Type', 'Amount (PKR)'],
+                data: records.map((r) => [
+                  r['date'].toString(),
+                  r['title'].toString(),
+                  r['sub_category'].toString(),
+                  r['type'].toString(),
+                  r['amount'].toString()
+                ]).toList(),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save());
+  }
+}
+
+// ==================== MAIN SHELL NAVIGATION ====================
 class MainEnterpriseShell extends StatefulWidget {
   const MainEnterpriseShell({super.key});
 
@@ -202,9 +252,9 @@ class _MainEnterpriseShellState extends State<MainEnterpriseShell> {
   final List<Widget> _pages = [
     const HomeScreenTab(),
     const FleetScreenTab(),
+    const BookingsTab(),
     const DirectoryAndVendorsTab(),
     const RemindersTab(),
-    const UserManualHelpTab(),
   ];
 
   @override
@@ -220,9 +270,9 @@ class _MainEnterpriseShellState extends State<MainEnterpriseShell> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'Dashboard'),
           BottomNavigationBarItem(icon: Icon(Icons.directions_bus), label: 'Fleet'),
+          BottomNavigationBarItem(icon: Icon(Icons.bookmark_add), label: 'Bookings'),
           BottomNavigationBarItem(icon: Icon(Icons.contacts), label: 'Directory'),
-          BottomNavigationBarItem(icon: Icon(Icons.alarm), label: 'Reminders'),
-          BottomNavigationBarItem(icon: Icon(Icons.help), label: 'Manual'),
+          BottomNavigationBarItem(icon: Icon(Icons.notifications), label: 'Alerts'),
         ],
       ),
     );
@@ -249,7 +299,7 @@ class _HomeScreenTabState extends State<HomeScreenTab> {
 
   void _refreshData() async {
     final v = await DatabaseHelper.instance.getVehicles();
-    final r = await DatabaseHelper.instance.getRecords(null, null);
+    final r = await DatabaseHelper.instance.getRecords(null);
 
     double inc = 0;
     double exp = 0;
@@ -283,9 +333,7 @@ class _HomeScreenTabState extends State<HomeScreenTab> {
         title: const Text('Enterprise Hisab Pro'),
         backgroundColor: Colors.indigo,
         foregroundColor: Colors.white,
-        actions: [
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _refreshData)
-        ],
+        actions: [IconButton(icon: const Icon(Icons.refresh), onPressed: _refreshData)],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -309,22 +357,22 @@ class _HomeScreenTabState extends State<HomeScreenTab> {
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   children: [
-                    const Text('Total Enterprise Overview', style: TextStyle(color: Colors.white70)),
+                    const Text('Total Enterprise Overview (Auto Calculated)', style: TextStyle(color: Colors.white70)),
                     const SizedBox(height: 12),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
                         Column(children: [
                           const Text('Income', style: TextStyle(color: Colors.greenAccent)),
-                          Text('Rs. ${totalIncome.toStringAsFixed(0)}', style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold)),
+                          Text('Rs. ${totalIncome.toStringAsFixed(0)}', style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold, fontSize: 16)),
                         ]),
                         Column(children: [
                           const Text('Expense', style: TextStyle(color: Colors.redAccent)),
-                          Text('Rs. ${totalExpense.toStringAsFixed(0)}', style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+                          Text('Rs. ${totalExpense.toStringAsFixed(0)}', style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 16)),
                         ]),
                         Column(children: [
-                          const Text('Balance', style: TextStyle(color: Colors.white)),
-                          Text('Rs. ${(totalIncome - totalExpense).toStringAsFixed(0)}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                          const Text('Net Profit', style: TextStyle(color: Colors.white)),
+                          Text('Rs. ${(totalIncome - totalExpense).toStringAsFixed(0)}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
                         ]),
                       ],
                     ),
@@ -336,7 +384,7 @@ class _HomeScreenTabState extends State<HomeScreenTab> {
             const Text('Fleet Quick View', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             filteredVehicles.isEmpty
-                ? const Center(child: Padding(padding: EdgeInsets.all(20), child: Text('No vehicles found.')))
+                ? const Center(child: Padding(padding: EdgeInsets.all(20), child: Text('No vehicles registered.')))
                 : ListView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
@@ -380,20 +428,20 @@ class _FleetScreenTabState extends State<FleetScreenTab> {
     setState(() => vehicles = v);
   }
 
-  void _addVehicleDialog() {
-    final number = TextEditingController();
-    final model = TextEditingController();
-    final driver = TextEditingController();
-    final phone = TextEditingController();
-    final cnic = TextEditingController();
-    final location = TextEditingController();
-    String selectedType = '10-Wheeler';
+  void _showAddEditVehicleDialog([Map<String, dynamic>? existing]) {
+    final number = TextEditingController(text: existing?['number'] ?? '');
+    final model = TextEditingController(text: existing?['model'] ?? '');
+    final driver = TextEditingController(text: existing?['driver_name'] ?? '');
+    final phone = TextEditingController(text: existing?['driver_phone'] ?? '');
+    final cnic = TextEditingController(text: existing?['driver_cnic'] ?? '');
+    final location = TextEditingController(text: existing?['location'] ?? '');
+    String selectedType = existing?['type'] ?? '10-Wheeler';
 
     showDialog(
       context: context,
       builder: (_) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Add Fleet Vehicle'),
+          title: Text(existing == null ? 'Add Vehicle' : 'Edit Vehicle'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -420,12 +468,25 @@ class _FleetScreenTabState extends State<FleetScreenTab> {
             ElevatedButton(
               onPressed: () async {
                 if (number.text.isNotEmpty) {
-                  await DatabaseHelper.instance.addVehicle(number.text, model.text, selectedType, driver.text, phone.text, cnic.text, location.text);
+                  final data = {
+                    'number': number.text,
+                    'model': model.text,
+                    'type': selectedType,
+                    'driver_name': driver.text,
+                    'driver_phone': phone.text,
+                    'driver_cnic': cnic.text,
+                    'location': location.text,
+                  };
+                  if (existing == null) {
+                    await DatabaseHelper.instance.addVehicle(data);
+                  } else {
+                    await DatabaseHelper.instance.updateVehicle(existing['id'], data);
+                  }
                   _loadVehicles();
                   if (mounted) Navigator.pop(context);
                 }
               },
-              child: const Text('Add'),
+              child: const Text('Save'),
             )
           ],
         ),
@@ -436,15 +497,25 @@ class _FleetScreenTabState extends State<FleetScreenTab> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Fleet Profit Performance'), backgroundColor: Colors.indigo, foregroundColor: Colors.white),
+      appBar: AppBar(title: const Text('Fleet Management'), backgroundColor: Colors.indigo, foregroundColor: Colors.white),
       body: vehicles.isEmpty
           ? const Center(child: Text('No vehicles added.'))
           : ListView.builder(
               itemCount: vehicles.length,
-              itemBuilder: (context, index) => VehicleProfitBarCard(vehicle: vehicles[index]),
+              itemBuilder: (context, index) {
+                final v = vehicles[index];
+                return VehicleProfitCard(
+                  vehicle: v,
+                  onEdit: () => _showAddEditVehicleDialog(v),
+                  onDelete: () async {
+                    await DatabaseHelper.instance.deleteVehicle(v['id']);
+                    _loadVehicles();
+                  },
+                );
+              },
             ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _addVehicleDialog,
+        onPressed: () => _showAddEditVehicleDialog(),
         backgroundColor: Colors.indigo,
         child: const Icon(Icons.add, color: Colors.white),
       ),
@@ -452,17 +523,21 @@ class _FleetScreenTabState extends State<FleetScreenTab> {
   }
 }
 
-class VehicleProfitBarCard extends StatefulWidget {
+class VehicleProfitCard extends StatefulWidget {
   final Map<String, dynamic> vehicle;
-  const VehicleProfitBarCard({super.key, required this.vehicle});
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  const VehicleProfitCard({super.key, required this.vehicle, required this.onEdit, required this.onDelete});
 
   @override
-  State<VehicleProfitBarCard> createState() => _VehicleProfitBarCardState();
+  State<VehicleProfitCard> createState() => _VehicleProfitCardState();
 }
 
-class _VehicleProfitBarCardState extends State<VehicleProfitBarCard> {
+class _VehicleProfitCardState extends State<VehicleProfitCard> {
   double income = 0;
   double expense = 0;
+  double kmPerLitre = 0;
 
   @override
   void initState() {
@@ -471,9 +546,12 @@ class _VehicleProfitBarCardState extends State<VehicleProfitBarCard> {
   }
 
   void _loadStats() async {
-    final recs = await DatabaseHelper.instance.getRecords(widget.vehicle['id'], null);
+    final recs = await DatabaseHelper.instance.getRecords(widget.vehicle['id']);
     double inc = 0;
     double exp = 0;
+    double totalKm = 0;
+    double totalLitres = 0;
+
     for (var r in recs) {
       double amt = (r['amount'] as num).toDouble();
       if (r['type'] == 'Income') {
@@ -481,18 +559,23 @@ class _VehicleProfitBarCardState extends State<VehicleProfitBarCard> {
       } else {
         exp += amt;
       }
+
+      if (r['sub_category'] == 'Diesel filling') {
+        totalKm += (r['meter_reading'] as num).toDouble();
+        totalLitres += (r['litres'] as num).toDouble();
+      }
     }
+
     setState(() {
       income = inc;
       expense = exp;
+      kmPerLitre = totalLitres > 0 ? (totalKm / totalLitres) : 0;
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final net = income - expense;
-    final total = income + expense;
-    final incomeRatio = total == 0 ? 0.5 : (income / total);
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -504,32 +587,44 @@ class _VehicleProfitBarCardState extends State<VehicleProfitBarCard> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(widget.vehicle['number'], style: const TextStyle(fontWeight: FontWeight.bold)),
-                Text(
-                  net >= 0 ? '+ Rs. ${net.toStringAsFixed(0)}' : '- Rs. ${net.abs().toStringAsFixed(0)}',
-                  style: TextStyle(color: net >= 0 ? Colors.green : Colors.red, fontWeight: FontWeight.bold),
-                ),
+                Text(widget.vehicle['number'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                Row(
+                  children: [
+                    IconButton(icon: const Icon(Icons.edit, color: Colors.blue), onPressed: widget.onEdit),
+                    IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: widget.onDelete),
+                  ],
+                )
               ],
             ),
+            Text('Driver: ${widget.vehicle['driver_name']} (${widget.vehicle['driver_phone']})'),
             const SizedBox(height: 6),
-            Text('Driver: ${widget.vehicle['driver_name']}'),
-            const SizedBox(height: 10),
-            LinearProgressIndicator(
-              value: incomeRatio,
-              minHeight: 10,
-              backgroundColor: Colors.red.shade300,
-              color: Colors.green,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Net Profit: Rs. ${net.toStringAsFixed(0)}', style: TextStyle(color: net >= 0 ? Colors.green : Colors.red, fontWeight: FontWeight.bold)),
+                Text('Avg: ${kmPerLitre.toStringAsFixed(2)} KM/L', style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
+              ],
             ),
             const Divider(),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton.icon(
-                icon: const Icon(Icons.receipt_long),
-                label: const Text('Open Ledger'),
-                onPressed: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => IndividualLedgerScreen(vehicle: widget.vehicle)));
-                },
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.print),
+                  label: const Text('PDF Report'),
+                  onPressed: () async {
+                    final recs = await DatabaseHelper.instance.getRecords(widget.vehicle['id']);
+                    PdfReportService.generateAndPrintVehicleLedger(widget.vehicle, recs);
+                  },
+                ),
+                TextButton.icon(
+                  icon: const Icon(Icons.receipt_long),
+                  label: const Text('Open Ledger'),
+                  onPressed: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => IndividualLedgerScreen(vehicle: widget.vehicle)));
+                  },
+                ),
+              ],
             )
           ],
         ),
@@ -547,14 +642,11 @@ class IndividualLedgerScreen extends StatefulWidget {
 
 class _IndividualLedgerScreenState extends State<IndividualLedgerScreen> {
   List<Map<String, dynamic>> records = [];
-  String selectedMonth = '';
 
-  final Map<String, List<String>> categoriesWithSub = {
-    'Fuel': ['Diesel filling', 'AdBlue', 'Generator Diesel'],
-    'Maintenance': ['Mobil Oil', 'Filter', 'Washing', 'Brake Repair'],
-    'Spare Parts': ['Tyre', 'Puncture', 'Engine Parts'],
-    'Driver Staff': ['Advance', 'Food Bhatta', 'Bonus'],
-    'Toll Legal': ['Toll Tax', 'Challan', 'Token Tax'],
+  final Map<String, List<String>> categories = {
+    'Fuel': ['Diesel filling', 'AdBlue'],
+    'Maintenance': ['Mobil Oil', 'Filter', 'Tyre/Puncture', 'Mechanical'],
+    'Trip Charges': ['Freight Income', 'Toll Tax', 'Challan', 'Driver Advance'],
   };
 
   @override
@@ -564,84 +656,97 @@ class _IndividualLedgerScreenState extends State<IndividualLedgerScreen> {
   }
 
   void _loadLedger() async {
-    final data = await DatabaseHelper.instance.getRecords(widget.vehicle['id'], selectedMonth);
+    final data = await DatabaseHelper.instance.getRecords(widget.vehicle['id']);
     setState(() => records = data);
   }
 
-  void _addEntryDialog() {
+  void _addRecordDialog() {
     final title = TextEditingController();
     final amount = TextEditingController();
-    final details = TextEditingController();
+    final litres = TextEditingController();
     final meter = TextEditingController();
+    final details = TextEditingController();
 
     String type = 'Expense';
     String mainCat = 'Fuel';
-    String subCat = categoriesWithSub['Fuel']![0];
+    String subCat = 'Diesel filling';
 
     showDialog(
       context: context,
       builder: (_) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('New Entry'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                DropdownButton<String>(
-                  value: type,
-                  isExpanded: true,
-                  items: ['Income', 'Expense'].map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
-                  onChanged: (v) => setDialogState(() => type = v!),
-                ),
-                DropdownButton<String>(
-                  value: mainCat,
-                  isExpanded: true,
-                  items: categoriesWithSub.keys.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-                  onChanged: (v) {
-                    setDialogState(() {
-                      mainCat = v!;
-                      subCat = categoriesWithSub[mainCat]![0];
+        builder: (context, setDialogState) {
+          double l = double.tryParse(litres.text) ?? 0;
+          double m = double.tryParse(meter.text) ?? 0;
+          double avg = l > 0 ? (m / l) : 0;
+
+          return AlertDialog(
+            title: const Text('Add Transaction'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  DropdownButton<String>(
+                    value: type,
+                    isExpanded: true,
+                    items: ['Income', 'Expense'].map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
+                    onChanged: (v) => setDialogState(() => type = v!),
+                  ),
+                  DropdownButton<String>(
+                    value: mainCat,
+                    isExpanded: true,
+                    items: categories.keys.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                    onChanged: (v) {
+                      setDialogState(() {
+                        mainCat = v!;
+                        subCat = categories[mainCat]![0];
+                      });
+                    },
+                  ),
+                  DropdownButton<String>(
+                    value: subCat,
+                    isExpanded: true,
+                    items: categories[mainCat]!.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                    onChanged: (v) => setDialogState(() => subCat = v!),
+                  ),
+                  TextField(controller: title, decoration: const InputDecoration(labelText: 'Party / Vendor / Title')),
+                  TextField(controller: amount, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Amount (PKR)')),
+                  if (subCat == 'Diesel filling') ...[
+                    TextField(controller: litres, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Litres Filled'), onChanged: (_) => setDialogState(() {})),
+                    TextField(controller: meter, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Odometer (KM Cover)'), onChanged: (_) => setDialogState(() {})),
+                    const SizedBox(height: 8),
+                    Text('Auto Calculated Average: ${avg.toStringAsFixed(2)} KM/L', style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
+                  ],
+                  TextField(controller: details, decoration: const InputDecoration(labelText: 'Notes')),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+              ElevatedButton(
+                onPressed: () async {
+                  final amt = double.tryParse(amount.text) ?? 0;
+                  if (title.text.isNotEmpty && amt > 0) {
+                    await DatabaseHelper.instance.addRecord({
+                      'vehicle_id': widget.vehicle['id'],
+                      'type': type,
+                      'main_category': mainCat,
+                      'sub_category': subCat,
+                      'title': title.text,
+                      'amount': amt,
+                      'details': details.text,
+                      'meter_reading': double.tryParse(meter.text) ?? 0,
+                      'litres': double.tryParse(litres.text) ?? 0,
+                      'date': DateTime.now().toIso8601String().split('T')[0],
                     });
-                  },
-                ),
-                DropdownButton<String>(
-                  value: subCat,
-                  isExpanded: true,
-                  items: categoriesWithSub[mainCat]!.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
-                  onChanged: (v) => setDialogState(() => subCat = v!),
-                ),
-                TextField(controller: title, decoration: const InputDecoration(labelText: 'Title / Party')),
-                TextField(controller: amount, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Amount (PKR)')),
-                TextField(controller: meter, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Meter Reading (KM)')),
-                TextField(controller: details, decoration: const InputDecoration(labelText: 'Notes')),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-            ElevatedButton(
-              onPressed: () async {
-                final amt = double.tryParse(amount.text) ?? 0;
-                final met = double.tryParse(meter.text) ?? 0;
-                if (title.text.isNotEmpty && amt > 0) {
-                  await DatabaseHelper.instance.addRecord(
-                    widget.vehicle['id'],
-                    type,
-                    mainCat,
-                    subCat,
-                    title.text,
-                    amt,
-                    details.text,
-                    met,
-                  );
-                  _loadLedger();
-                  if (mounted) Navigator.pop(context);
-                }
-              },
-              child: const Text('Save'),
-            ),
-          ],
-        ),
+                    _loadLedger();
+                    if (mounted) Navigator.pop(context);
+                  }
+                },
+                child: const Text('Save'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -649,44 +754,162 @@ class _IndividualLedgerScreenState extends State<IndividualLedgerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('${widget.vehicle['number']} Ledger'),
-        backgroundColor: Colors.indigo,
-        foregroundColor: Colors.white,
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: TextField(
-              decoration: const InputDecoration(hintText: 'Filter Month (e.g. 2026-08)'),
-              onChanged: (v) {
-                selectedMonth = v.trim();
-                _loadLedger();
+      appBar: AppBar(title: Text('${widget.vehicle['number']} Ledger'), backgroundColor: Colors.indigo, foregroundColor: Colors.white),
+      body: records.isEmpty
+          ? const Center(child: Text('No transactions registered.'))
+          : ListView.builder(
+              itemCount: records.length,
+              itemBuilder: (context, index) {
+                final r = records[index];
+                final isInc = r['type'] == 'Income';
+                return ListTile(
+                  leading: Icon(isInc ? Icons.arrow_downward : Icons.arrow_upward, color: isInc ? Colors.green : Colors.red),
+                  title: Text('${r['title']} [${r['sub_category']}]'),
+                  subtitle: Text('${r['date']} ${r['litres'] > 0 ? '| ${r['litres']}L' : ''}'),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('Rs. ${r['amount']}', style: TextStyle(color: isInc ? Colors.green : Colors.red, fontWeight: FontWeight.bold)),
+                      IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.grey),
+                        onPressed: () async {
+                          await DatabaseHelper.instance.deleteRecord(r['id']);
+                          _loadLedger();
+                        },
+                      ),
+                    ],
+                  ),
+                );
               },
             ),
-          ),
-          Expanded(
-            child: records.isEmpty
-                ? const Center(child: Text('No entries found.'))
-                : ListView.builder(
-                    itemCount: records.length,
-                    itemBuilder: (context, index) {
-                      final r = records[index];
-                      final isInc = r['type'] == 'Income';
-                      return ListTile(
-                        leading: Icon(isInc ? Icons.arrow_downward : Icons.arrow_upward, color: isInc ? Colors.green : Colors.red),
-                        title: Text('${r['title']} [${r['sub_category']}]'),
-                        subtitle: Text('${r['date']} | Meter: ${r['meter_reading']} KM'),
-                        trailing: Text('Rs. ${r['amount']}', style: TextStyle(color: isInc ? Colors.green : Colors.red, fontWeight: FontWeight.bold)),
-                      );
-                    },
-                  ),
-          )
-        ],
-      ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _addEntryDialog,
+        onPressed: _addRecordDialog,
+        backgroundColor: Colors.indigo,
+        child: const Icon(Icons.add, color: Colors.white),
+      ),
+    );
+  }
+}
+
+class BookingsTab extends StatefulWidget {
+  const BookingsTab({super.key});
+
+  @override
+  State<BookingsTab> createState() => _BookingsTabState();
+}
+
+class _BookingsTabState extends State<BookingsTab> {
+  List<Map<String, dynamic>> bookings = [];
+  List<Map<String, dynamic>> vehicles = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  void _loadData() async {
+    final b = await DatabaseHelper.instance.getBookings(null);
+    final v = await DatabaseHelper.instance.getVehicles();
+    setState(() {
+      bookings = b;
+      vehicles = v;
+    });
+  }
+
+  void _addBookingDialog() {
+    final party = TextEditingController();
+    final from = TextEditingController();
+    final to = TextEditingController();
+    final freight = TextEditingController();
+    final advance = TextEditingController();
+    final comm = TextEditingController();
+
+    int? selectedVehicleId = vehicles.isNotEmpty ? vehicles[0]['id'] : null;
+
+    showDialog(
+      context: context,
+      builder: (_) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          double f = double.tryParse(freight.text) ?? 0;
+          double a = double.tryParse(advance.text) ?? 0;
+          double remaining = f - a;
+
+          return AlertDialog(
+            title: const Text('New Advance Trip Booking'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  DropdownButton<int>(
+                    value: selectedVehicleId,
+                    isExpanded: true,
+                    items: vehicles.map((v) => DropdownMenuItem<int>(value: v['id'], child: Text('${v['number']} (${v['driver_name']})'))).toList(),
+                    onChanged: (v) => setDialogState(() => selectedVehicleId = v),
+                  ),
+                  TextField(controller: party, decoration: const InputDecoration(labelText: 'Party / Client Name')),
+                  TextField(controller: from, decoration: const InputDecoration(labelText: 'Route From')),
+                  TextField(controller: to, decoration: const InputDecoration(labelText: 'Route To')),
+                  TextField(controller: freight, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Total Freight (PKR)'), onChanged: (_) => setDialogState(() {})),
+                  TextField(controller: advance, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Advance Paid (PKR)'), onChanged: (_) => setDialogState(() {})),
+                  TextField(controller: comm, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Commission (PKR)')),
+                  const SizedBox(height: 8),
+                  Text('Auto Calculated Remaining: Rs. ${remaining.toStringAsFixed(0)}', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+              ElevatedButton(
+                onPressed: () async {
+                  if (party.text.isNotEmpty && selectedVehicleId != null) {
+                    await DatabaseHelper.instance.addBooking({
+                      'vehicle_id': selectedVehicleId,
+                      'party_name': party.text,
+                      'route_from': from.text,
+                      'route_to': to.text,
+                      'total_freight': double.tryParse(freight.text) ?? 0,
+                      'advance_paid': double.tryParse(advance.text) ?? 0,
+                      'commission': double.tryParse(comm.text) ?? 0,
+                      'booking_date': DateTime.now().toIso8601String().split('T')[0],
+                      'status': 'Booked',
+                    });
+                    _loadData();
+                    if (mounted) Navigator.pop(context);
+                  }
+                },
+                child: const Text('Save Booking'),
+              )
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Advance Trip Bookings'), backgroundColor: Colors.indigo, foregroundColor: Colors.white),
+      body: bookings.isEmpty
+          ? const Center(child: Text('No active bookings.'))
+          : ListView.builder(
+              itemCount: bookings.length,
+              itemBuilder: (context, index) {
+                final b = bookings[index];
+                double rem = (b['total_freight'] as num).toDouble() - (b['advance_paid'] as num).toDouble();
+                return Card(
+                  margin: const EdgeInsets.all(8),
+                  child: ListTile(
+                    title: Text('${b['party_name']} (${b['route_from']} ➔ ${b['route_to']})'),
+                    subtitle: Text('Total: Rs. ${b['total_freight']} | Advance: Rs. ${b['advance_paid']}'),
+                    trailing: Text('Balance:\nRs. ${rem.toStringAsFixed(0)}', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                  ),
+                );
+              },
+            ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _addBookingDialog,
         backgroundColor: Colors.indigo,
         child: const Icon(Icons.add, color: Colors.white),
       ),
@@ -719,34 +942,34 @@ class _DirectoryAndVendorsTabState extends State<DirectoryAndVendorsTab> {
     final name = TextEditingController();
     final shop = TextEditingController();
     final phone = TextEditingController();
-    final address = TextEditingController();
-    final city = TextEditingController();
     final balance = TextEditingController();
 
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Add Contact'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(controller: name, decoration: const InputDecoration(labelText: 'Name')),
-              TextField(controller: shop, decoration: const InputDecoration(labelText: 'Shop Name')),
-              TextField(controller: phone, decoration: const InputDecoration(labelText: 'Phone')),
-              TextField(controller: address, decoration: const InputDecoration(labelText: 'Address')),
-              TextField(controller: city, decoration: const InputDecoration(labelText: 'City')),
-              TextField(controller: balance, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Udhar Balance')),
-            ],
-          ),
+        title: const Text('Add Contact / Pump'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: name, decoration: const InputDecoration(labelText: 'Name')),
+            TextField(controller: shop, decoration: const InputDecoration(labelText: 'Shop / Pump Name')),
+            TextField(controller: phone, decoration: const InputDecoration(labelText: 'Phone')),
+            TextField(controller: balance, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Udhar Balance (PKR)')),
+          ],
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () async {
               if (name.text.isNotEmpty) {
-                final b = double.tryParse(balance.text) ?? 0;
-                await DatabaseHelper.instance.addVendor(name.text, shop.text, phone.text, address.text, city.text, b);
+                await DatabaseHelper.instance.addVendor({
+                  'name': name.text,
+                  'shop_name': shop.text,
+                  'phone': phone.text,
+                  'address': '',
+                  'city': '',
+                  'udhar_balance': double.tryParse(balance.text) ?? 0,
+                });
                 _loadVendors();
                 if (mounted) Navigator.pop(context);
               }
@@ -761,9 +984,9 @@ class _DirectoryAndVendorsTabState extends State<DirectoryAndVendorsTab> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Directory & Udhar Khata'), backgroundColor: Colors.indigo, foregroundColor: Colors.white),
+      appBar: AppBar(title: const Text('Vendors & Udhar Khata'), backgroundColor: Colors.indigo, foregroundColor: Colors.white),
       body: vendors.isEmpty
-          ? const Center(child: Text('No contacts found.'))
+          ? const Center(child: Text('No contacts added.'))
           : ListView.builder(
               itemCount: vendors.length,
               itemBuilder: (context, index) {
@@ -771,8 +994,8 @@ class _DirectoryAndVendorsTabState extends State<DirectoryAndVendorsTab> {
                 return ListTile(
                   leading: const CircleAvatar(child: Icon(Icons.person)),
                   title: Text('${v['name']} (${v['shop_name']})'),
-                  subtitle: Text('${v['phone']} | ${v['city']}'),
-                  trailing: Text('Rs. ${v['udhar_balance']}', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                  subtitle: Text(v['phone']),
+                  trailing: Text('Udhar: Rs. ${v['udhar_balance']}', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
                 );
               },
             ),
@@ -810,43 +1033,37 @@ class _RemindersTabState extends State<RemindersTab> {
     final title = TextEditingController();
     final date = TextEditingController();
     final details = TextEditingController();
-    String type = 'Oil Change';
 
     showDialog(
       context: context,
-      builder: (_) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Set Maintenance Reminder'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButton<String>(
-                value: type,
-                isExpanded: true,
-                items: ['Oil Change', 'Token Tax', 'Fitness Cert', 'Tyre Change']
-                    .map((t) => DropdownMenuItem(value: t, child: Text(t)))
-                    .toList(),
-                onChanged: (v) => setDialogState(() => type = v!),
-              ),
-              TextField(controller: title, decoration: const InputDecoration(labelText: 'Vehicle / Title')),
-              TextField(controller: date, decoration: const InputDecoration(labelText: 'Due Date (YYYY-MM-DD)')),
-              TextField(controller: details, decoration: const InputDecoration(labelText: 'Details')),
-            ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-            ElevatedButton(
-              onPressed: () async {
-                if (title.text.isNotEmpty) {
-                  await DatabaseHelper.instance.addReminder(title.text, date.text, type, details.text);
-                  _loadReminders();
-                  if (mounted) Navigator.pop(context);
-                }
-              },
-              child: const Text('Save'),
-            )
+      builder: (_) => AlertDialog(
+        title: const Text('New Reminder'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: title, decoration: const InputDecoration(labelText: 'Title / Vehicle')),
+            TextField(controller: date, decoration: const InputDecoration(labelText: 'Due Date (YYYY-MM-DD)')),
+            TextField(controller: details, decoration: const InputDecoration(labelText: 'Details')),
           ],
         ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              if (title.text.isNotEmpty) {
+                await DatabaseHelper.instance.addReminder({
+                  'title': title.text,
+                  'due_date': date.text,
+                  'type': 'General',
+                  'details': details.text,
+                });
+                _loadReminders();
+                if (mounted) Navigator.pop(context);
+              }
+            },
+            child: const Text('Save'),
+          )
+        ],
       ),
     );
   }
@@ -854,21 +1071,17 @@ class _RemindersTabState extends State<RemindersTab> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Maintenance Reminders'),
-        backgroundColor: Colors.indigo,
-        foregroundColor: Colors.white,
-      ),
+      appBar: AppBar(title: const Text('Maintenance & Alerts'), backgroundColor: Colors.indigo, foregroundColor: Colors.white),
       body: reminders.isEmpty
-          ? const Center(child: Text('No reminders set.'))
+          ? const Center(child: Text('No active alerts.'))
           : ListView.builder(
               itemCount: reminders.length,
               itemBuilder: (context, index) {
                 final r = reminders[index];
                 return ListTile(
                   leading: const Icon(Icons.notifications_active, color: Colors.orange),
-                  title: Text('${r['title']} [${r['type']}]'),
-                  subtitle: Text('Due: ${r['due_date']} | Notes: ${r['details']}'),
+                  title: Text(r['title']),
+                  subtitle: Text('Due Date: ${r['due_date']} | Notes: ${r['details']}'),
                 );
               },
             ),
@@ -880,40 +1093,3 @@ class _RemindersTabState extends State<RemindersTab> {
     );
   }
 }
-
-class UserManualHelpTab extends StatelessWidget {
-  const UserManualHelpTab({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('User Manual'),
-          backgroundColor: Colors.indigo,
-          foregroundColor: Colors.white,
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: 'اردو رہنمائی'),
-              Tab(text: 'English Guide'),
-            ],
-          ),
-        ),
-        body: const TabBarView(
-          children: [
-            Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Text('ٹرانسپورٹ حساب پرو میں خوش آمدید۔ یہاں آپ گاڑیوں کا کرایہ، ڈیزل، اور آئل چینج کا مکمل ریکارڈ رکھ سکتے ہیں۔', textAlign: TextAlign.right),
-            ),
-            Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Text('Welcome to Transport Hisab Pro. Easily track vehicle freight, fuel, maintenance, and driver advances.'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
