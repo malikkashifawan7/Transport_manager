@@ -211,7 +211,7 @@ class PdfReportService {
         pageFormat: PdfPageFormat.a4,
         build: (pw.Context context) {
           return pw.Column(
-            cross: pw.CrossAxisAlignment.start,
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
               pw.Header(level: 0, child: pw.Text('Transport Hisab Pro - Vehicle Statement', style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold))),
               pw.SizedBox(height: 10),
@@ -233,6 +233,10 @@ class PdfReportService {
         },
       ),
     );
+
+    await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save());
+  }
+}
 
     await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save());
   }
