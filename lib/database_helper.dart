@@ -114,13 +114,18 @@ class DatabaseHelper {
     return await db.delete('vehicles', where: 'id = ?', whereArgs: [id]);
   }
 
-  // Records
+  // Records (Ledger / Income / Expense)
   Future<List<Map<String, dynamic>>> getRecords(int? vehicleId) async {
     final db = await instance.database;
     if (vehicleId != null) {
       return await db.query('records', where: 'vehicle_id = ?', orderBy: 'id DESC', whereArgs: [vehicleId]);
     }
     return await db.query('records', orderBy: 'id DESC');
+  }
+
+  Future<int> addRecord(Map<String, dynamic> row) async {
+    final db = await instance.database;
+    return await db.insert('records', row);
   }
 
   // Bookings
@@ -181,3 +186,4 @@ class DatabaseHelper {
     return await db.delete('reminders', where: 'id = ?', whereArgs: [id]);
   }
 }
+
