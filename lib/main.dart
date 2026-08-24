@@ -183,7 +183,7 @@ class DatabaseHelper {
   }
 }
 
-// ==================== PDF REPORT ENGINE ====================
+// ==================== PDF REPORT SERVICE ====================
 class PdfReportService {
   static Future<void> generateAndPrintVehicleLedger(
       Map<String, dynamic> vehicle, List<Map<String, dynamic>> records) async {
@@ -242,12 +242,12 @@ class MainEnterpriseShell extends StatefulWidget {
 class _MainEnterpriseShellState extends State<MainEnterpriseShell> {
   int _currentIndex = 0;
 
-  final List<Widget> _pages = [
-    const HomeScreenTab(),
-    const FleetScreenTab(),
-    const BookingsTab(),
-    const DirectoryAndVendorsTab(),
-    const RemindersTab(),
+  final List<Widget> _pages = const [
+    HomeScreenTab(),
+    FleetScreenTab(),
+    BookingsTab(),
+    DirectoryAndVendorsTab(),
+    RemindersTab(),
   ];
 
   @override
@@ -272,6 +272,7 @@ class _MainEnterpriseShellState extends State<MainEnterpriseShell> {
   }
 }
 
+// ==================== HOME TAB ====================
 class HomeScreenTab extends StatefulWidget {
   const HomeScreenTab({super.key});
 
@@ -401,6 +402,7 @@ class _HomeScreenTabState extends State<HomeScreenTab> {
   }
 }
 
+// ==================== FLEET TAB ====================
 class FleetScreenTab extends StatefulWidget {
   const FleetScreenTab({super.key});
 
@@ -581,6 +583,4 @@ class _VehicleProfitCardState extends State<VehicleProfitCard> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(widget.vehicle['number'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                Row(
-      
+                Text(widget.vehicle['number'], style: co
