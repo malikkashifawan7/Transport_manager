@@ -25,7 +25,6 @@ class DatabaseHelper {
   }
 
   Future _createDB(Database db, int version) async {
-    // Vehicles Table
     await db.execute('''
       CREATE TABLE vehicles (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -35,7 +34,6 @@ class DatabaseHelper {
       )
     ''');
 
-    // Records / Ledger Table
     await db.execute('''
       CREATE TABLE records (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -50,7 +48,6 @@ class DatabaseHelper {
       )
     ''');
 
-    // Vendors Table
     await db.execute('''
       CREATE TABLE vendors (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -61,7 +58,6 @@ class DatabaseHelper {
       )
     ''');
 
-    // Reminders Table
     await db.execute('''
       CREATE TABLE reminders (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -70,6 +66,52 @@ class DatabaseHelper {
         status TEXT
       )
     ''');
+
+    await db.execute('''
+      CREATE TABLE bookings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        client TEXT,
+        amount REAL,
+        date TEXT
+      )
+    ''');
+  }
+
+  // --- VEHICLES METHODS ---
+  Future<List<Map<String, dynamic>>> getVehicles() async {
+    final db = await instance.database;
+    return await db.query('vehicles');
+  }
+
+  Future<int> addVehicle(Map<String, dynamic> row) async {
+    final db = await instance.database;
+    return await db.insert('vehicles', row);
+  }
+
+  Future<int> updateVehicle(int id, Map<String, dynamic> row) async {
+    final db = await instance.database;
+    return await db.update('vehicles', row, where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<int> deleteVehicle(int id) async {
+    final db = await instance.database;
+    return await db.delete('vehicles', where: 'id = ?', whereArgs: [id]);
+  }
+
+  // --- RECORDS METHODS ---
+  Future<List<Map<String, dynamic>>> getRecords(int? vehicleId) async {
+    final db = await instance.database;
+    if (vehicleId != null) {
+      return await db.query('records', where: 'vehicle_id = ?', whereArgs: [vehicleId]);
+    }
+    return await db.query('records');
+  }
+
+  // --- BOOKINGS METHODS ---
+  Future<List<Map<String, dynamic>>> getBookings(dynamic filter) async {
+    final db = await instance.database;
+    return await db.query('bookings');
   }
 
   // --- VENDORS METHODS ---
