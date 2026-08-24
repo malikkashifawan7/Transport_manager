@@ -1,348 +1,252 @@
 import 'package:flutter/material.dart';
 import 'database_helper.dart';
-import 'pdf_export_service.dart';
-import 'excel_export_service.dart';
 import 'vehicle_details_screen.dart';
 import 'vendors_reminders_screen.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const TransportManagerApp());
 }
 
-class TransportManagerApp extends StatefulWidget {
+class TransportManagerApp extends StatelessWidget {
   const TransportManagerApp({super.key});
-
-  @override
-  State<TransportManagerApp> createState() => _TransportManagerAppState();
-}
-
-class _TransportManagerAppState extends State<TransportManagerApp> {
-  ThemeMode _themeMode = ThemeMode.light;
-
-  void _toggleTheme(bool isDark) {
-    setState(() {
-      _themeMode = isDark ? ThemeMode.dark : ThemeMode.light;
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      title: 'Transport Hisab ERP',
       debugShowCheckedModeBanner: false,
-      title: 'Transport Manager',
       theme: ThemeData(
-        brightness: Brightness.light,
-        primarySwatch: Colors.indigo,
         useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF1E3A8A),
+          primary: const Color(0xFF1E3A8A),
+        ),
       ),
-      darkTheme: ThemeData(
-        brightness: Brightness.dark,
-        primarySwatch: Colors.indigo,
-        useMaterial3: true,
-      ),
-      themeMode: _themeMode,
-      home: MainTabNavigation(onThemeChanged: _toggleTheme),
+      home: const MainNavigationScreen(),
     );
   }
 }
 
-class MainTabNavigation extends StatefulWidget {
-  final Function(bool) onThemeChanged;
-  const MainTabNavigation({super.key, required this.onThemeChanged});
+class MainNavigationScreen extends StatefulWidget {
+  const MainNavigationScreen({super.key});
 
   @override
-  State<MainTabNavigation> createState() => _MainTabNavigationState();
+  State<MainNavigationScreen> createState() => _MainNavigationScreenState();
 }
 
-class _MainTabNavigationState extends State<MainTabNavigation> {
+class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
-  bool isDarkMode = false;
+
+  final List<Widget> _screens = const [
+    FleetHomeScreen(),
+    BookingsScreen(),
+    VendorsRemindersScreen(),
+    SettingsScreen(),
+  ];
 
   @override
   Widget build(BuildContext context) {
-    final List<Widget> tabs = [
-      const FleetScreenTab(),
-      const BookingsTab(),
-      const VendorsRemindersScreen(),
-      SettingsTab(
-        isDarkMode: isDarkMode,
-        onThemeChanged: (val) {
-          setState(() => isDarkMode = val);
-          widget.onThemeChanged(val);
-        },
-      ),
-    ];
-
     return Scaffold(
-      body: tabs[_currentIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        selectedItemColor: Colors.indigo,
-        unselectedItemColor: Colors.grey,
-        type: BottomNavigationBarType.fixed,
-        onTap: (index) => setState(() => _currentIndex = index),
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.local_shipping), label: 'Fleet'),
-          BottomNavigationBarItem(icon: Icon(Icons.book_online), label: 'Bookings'),
-          BottomNavigationBarItem(icon: Icon(Icons.contacts), label: 'Vendors & Alerts'),
-          BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _screens,
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _currentIndex,
+        onDestinationSelected: (idx) => setState(() => _currentIndex = idx),
+        destinations: const [
+          NavigationDestination(icon: Icon(Icons.directions_bus), label: 'Fleet'),
+          NavigationDestination(icon: Icon(Icons.assignment), label: 'Bookings'),
+          NavigationDestination(icon: Icon(Icons.store), label: 'Vendors & Alerts'),
+          NavigationDestination(icon: Icon(Icons.settings), label: 'Settings'),
         ],
       ),
     );
   }
 }
-// ==================== FLEET TAB ====================
-class FleetScreenTab extends StatefulWidget {
-  const FleetScreenTab({super.key});
+
+class FleetHomeScreen extends StatefulWidget {
+  const FleetHomeScreen({super.key});
 
   @override
-  State<FleetScreenTab> createState() => _FleetScreenTabState();
+  State<FleetHomeScreen> createState() => _FleetHomeScreenState();
 }
 
-class _FleetScreenTabState extends State<FleetScreenTab> {
+class _FleetHomeScreenState extends State<FleetHomeScreen> {
   List<Map<String, dynamic>> vehicles = [];
 
   @override
   void initState() {
     super.initState();
-    _loadVehicles();
+    _refreshFleet();
   }
 
-  void _loadVehicles() async {
-    final v = await DatabaseHelper.instance.getVehicles();
-    setState(() => vehicles = v);
+  void _refreshFleet() async {
+    final data = await DatabaseHelper.instance.getVehicles();
+    setState(() => vehicles = data);
   }
 
-  void _showAddEditVehicleDialog([Map<String, dynamic>? existing]) {
-    final number = TextEditingController(text: existing?['number'] ?? '');
-    final model = TextEditingController(text: existing?['model'] ?? '');
-    final driver = TextEditingController(text: existing?['driver_name'] ?? '');
-    final phone = TextEditingController(text: existing?['driver_phone'] ?? '');
-    final cnic = TextEditingController(text: existing?['driver_cnic'] ?? '');
-    final location = TextEditingController(text: existing?['location'] ?? '');
-    String selectedType = existing?['type'] ?? '10-Wheeler';
+  void _openAddVehicleDialog([Map<String, dynamic>? v]) {
+    final numberCtrl = TextEditingController(text: v?['number'] ?? '');
+    final typeCtrl = TextEditingController(text: v?['type'] ?? '10-Wheeler');
+    final modelCtrl = TextEditingController(text: v?['model'] ?? '');
+    final driverCtrl = TextEditingController(text: v?['driver_name'] ?? '');
+    final phoneCtrl = TextEditingController(text: v?['driver_phone'] ?? '');
+    final cnicCtrl = TextEditingController(text: v?['driver_cnic'] ?? '');
+    final locCtrl = TextEditingController(text: v?['location'] ?? '');
 
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (_) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: Text(existing == null ? 'Add Vehicle' : 'Edit Vehicle'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                DropdownButton<String>(
-                  value: selectedType,
-                  isExpanded: true,
-                  items: ['6-Wheeler', '10-Wheeler', 'Trailer', 'Container', 'Oil Tanker', 'Flatbed']
-                      .map((t) => DropdownMenuItem(value: t, child: Text(t)))
-                      .toList(),
-                  onChanged: (val) => setDialogState(() => selectedType = val!),
-                ),
-                TextField(controller: number, decoration: const InputDecoration(labelText: 'Vehicle Number')),
-                TextField(controller: model, decoration: const InputDecoration(labelText: 'Model')),
-                TextField(controller: driver, decoration: const InputDecoration(labelText: 'Driver Name')),
-                TextField(controller: phone, decoration: const InputDecoration(labelText: 'Driver Phone')),
-                TextField(controller: cnic, decoration: const InputDecoration(labelText: 'Driver CNIC')),
-                TextField(controller: location, decoration: const InputDecoration(labelText: 'Location')),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-            ElevatedButton(
-              onPressed: () async {
-                if (number.text.isNotEmpty) {
-                  final data = {
-                    'number': number.text,
-                    'model': model.text,
-                    'type': selectedType,
-                    'driver_name': driver.text,
-                    'driver_phone': phone.text,
-                    'driver_cnic': cnic.text,
-                    'location': location.text,
-                  };
-                  if (existing == null) {
-                    await DatabaseHelper.instance.addVehicle(data);
-                  } else {
-                    await DatabaseHelper.instance.updateVehicle(existing['id'], data);
-                  }
-                  _loadVehicles();
-                  if (mounted) Navigator.pop(context);
-                }
-              },
-              child: const Text('Save'),
-            )
-          ],
+      isScrollControlled: true,
+      builder: (_) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+          left: 16,
+          right: 16,
+          top: 16,
         ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Fleet Management'), backgroundColor: Colors.indigo, foregroundColor: Colors.white),
-      body: vehicles.isEmpty
-          ? const Center(child: Text('No vehicles added.'))
-          : ListView.builder(
-              itemCount: vehicles.length,
-              itemBuilder: (context, index) {
-                final v = vehicles[index];
-                return VehicleCard(
-                  vehicle: v,
-                  onEdit: () => _showAddEditVehicleDialog(v),
-                  onDelete: () async {
-                    await DatabaseHelper.instance.deleteVehicle(v['id']);
-                    _loadVehicles();
-                  },
-                );
-              },
-            ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddEditVehicleDialog(),
-        backgroundColor: Colors.indigo,
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
-    );
-  }
-}
-
-class VehicleCard extends StatelessWidget {
-  final Map<String, dynamic> vehicle;
-  final VoidCallback onEdit;
-  final VoidCallback onDelete;
-
-  const VehicleCard({super.key, required this.vehicle, required this.onEdit, required this.onDelete});
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('${vehicle['number']}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                Row(
-                  children: [
-                    IconButton(icon: const Icon(Icons.edit, color: Colors.blue), onPressed: onEdit),
-                    IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: onDelete),
-                  ],
-                )
-              ],
-            ),
-            Text('Driver: ${vehicle['driver_name'] ?? 'N/A'} (${vehicle['driver_phone'] ?? ''})'),
-            const Divider(),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.map),
-                  label: const Text('Map & Status'),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(v == null ? 'Add Enterprise Vehicle' : 'Edit Vehicle',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
+              TextField(controller: numberCtrl, decoration: const InputDecoration(labelText: 'Vehicle Number (e.g. LES-1234)', border: OutlineInputBorder())),
+              const SizedBox(height: 8),
+              TextField(controller: typeCtrl, decoration: const InputDecoration(labelText: 'Vehicle Type', border: OutlineInputBorder())),
+              const SizedBox(height: 8),
+              TextField(controller: modelCtrl, decoration: const InputDecoration(labelText: 'Model / Year', border: OutlineInputBorder())),
+              const SizedBox(height: 8),
+              TextField(controller: driverCtrl, decoration: const InputDecoration(labelText: 'Driver Name', border: OutlineInputBorder())),
+              const SizedBox(height: 8),
+              TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'Driver Phone', border: OutlineInputBorder())),
+              const SizedBox(height: 8),
+              TextField(controller: cnicCtrl, decoration: const InputDecoration(labelText: 'Driver CNIC', border: OutlineInputBorder())),
+              const SizedBox(height: 8),
+              TextField(controller: locCtrl, decoration: const InputDecoration(labelText: 'Base Location', border: OutlineInputBorder())),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E3A8A), foregroundColor: Colors.white),
                   onPressed: () async {
-                    final recs = await DatabaseHelper.instance.getRecords(vehicle['id']);
-                    if (context.mounted) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => VehicleDetailsScreen(vehicle: vehicle, records: recs),
-                        ),
-                      );
+                    if (numberCtrl.text.isNotEmpty) {
+                      final payload = {
+                        'number': numberCtrl.text,
+                        'type': typeCtrl.text,
+                        'model': modelCtrl.text,
+                        'driver_name': driverCtrl.text,
+                        'driver_phone': phoneCtrl.text,
+                        'driver_cnic': cnicCtrl.text,
+                        'location': locCtrl.text,
+                      };
+                      if (v == null) {
+                        await DatabaseHelper.instance.addVehicle(payload);
+                      } else {
+                        await DatabaseHelper.instance.updateVehicle(v['id'], payload);
+                      }
+                      _refreshFleet();
+                      if (mounted) Navigator.pop(context);
                     }
                   },
+                  child: const Text('Save Vehicle'),
                 ),
-                TextButton.icon(
-                  icon: const Icon(Icons.receipt_long),
-                  label: const Text('Ledger'),
-                  onPressed: () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => IndividualLedgerScreen(vehicle: vehicle)));
-                  },
-                ),
-              ],
-            )
-          ],
+              )
+            ],
+          ),
         ),
       ),
     );
-  }
-}
-// ==================== LEDGER SCREEN ====================
-class IndividualLedgerScreen extends StatefulWidget {
-  final Map<String, dynamic> vehicle;
-  const IndividualLedgerScreen({super.key, required this.vehicle});
-
-  @override
-  State<IndividualLedgerScreen> createState() => _IndividualLedgerScreenState();
-}
-
-class _IndividualLedgerScreenState extends State<IndividualLedgerScreen> {
-  List<Map<String, dynamic>> records = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _loadLedger();
-  }
-
-  void _loadLedger() async {
-    final data = await DatabaseHelper.instance.getRecords(widget.vehicle['id']);
-    setState(() => records = data);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('${widget.vehicle['number']} Ledger'),
-        backgroundColor: Colors.indigo,
+        title: const Text('Fleet Management ERP'),
+        backgroundColor: const Color(0xFF1E3A8A),
         foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.table_chart),
-            tooltip: 'Export Excel',
-            onPressed: () => ExcelExportService.exportLedgerToExcel(widget.vehicle['number'], records),
-          ),
-          IconButton(
-            icon: const Icon(Icons.print),
-            tooltip: 'Print PDF',
-            onPressed: () => PdfReportService.generateAndPrintVehicleLedger(widget.vehicle, records),
-          ),
-        ],
       ),
-      body: records.isEmpty
-          ? const Center(child: Text('No transactions.'))
+      body: vehicles.isEmpty
+          ? const Center(child: Text('No Vehicles in Fleet. Tap + to add.'))
           : ListView.builder(
-              itemCount: records.length,
-              itemBuilder: (context, index) {
-                final r = records[index];
-                final isInc = r['type'] == 'Income';
-                return ListTile(
-                  leading: Icon(isInc ? Icons.arrow_downward : Icons.arrow_upward, color: isInc ? Colors.green : Colors.red),
-                  title: Text('${r['title']} [${r['sub_category']}]'),
-                  subtitle: Text('${r['date']}'),
-                  trailing: Text('Rs. ${r['amount']}', style: TextStyle(color: isInc ? Colors.green : Colors.red, fontWeight: FontWeight.bold)),
+              padding: const EdgeInsets.all(12),
+              itemCount: vehicles.length,
+              itemBuilder: (context, idx) {
+                final item = vehicles[idx];
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(item['number'], style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                            Chip(label: Text(item['type'] ?? 'Truck'), backgroundColor: Colors.blue.shade50),
+                          ],
+                        ),
+                        Text('Driver: ${item['driver_name']} (${item['driver_phone']})'),
+                        Text('Location: ${item['location']} | CNIC: ${item['driver_cnic']}'),
+                        const Divider(),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.edit, color: Colors.blue),
+                              onPressed: () => _openAddVehicleDialog(item),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              onPressed: () async {
+                                await DatabaseHelper.instance.deleteVehicle(item['id']);
+                                _refreshFleet();
+                              },
+                            ),
+                            ElevatedButton.icon(
+                              icon: const Icon(Icons.analytics),
+                              label: const Text('Details & Ledger'),
+                              onPressed: () async {
+                                final recs = await DatabaseHelper.instance.getRecords(item['id']);
+                                if (context.mounted) {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => VehicleDetailsScreen(vehicle: item, records: recs),
+                                    ),
+                                  );
+                                }
+                              },
+                            )
+                          ],
+                        )
+                      ],
+                    ),
+                  ),
                 );
               },
             ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: const Color(0xFF1E3A8A),
+        onPressed: () => _openAddVehicleDialog(),
+        child: const Icon(Icons.add, color: Colors.white),
+      ),
     );
   }
 }
-
-// ==================== BOOKINGS TAB ====================
-class BookingsTab extends StatefulWidget {
-  const BookingsTab({super.key});
+class BookingsScreen extends StatefulWidget {
+  const BookingsScreen({super.key});
 
   @override
-  State<BookingsTab> createState() => _BookingsTabState();
+  State<BookingsScreen> createState() => _BookingsScreenState();
 }
 
-class _BookingsTabState extends State<BookingsTab> {
+class _BookingsScreenState extends State<BookingsScreen> {
   List<Map<String, dynamic>> bookings = [];
 
   @override
@@ -359,50 +263,29 @@ class _BookingsTabState extends State<BookingsTab> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Bookings'), backgroundColor: Colors.indigo, foregroundColor: Colors.white),
+      appBar: AppBar(title: const Text('Trip Bookings'), backgroundColor: const Color(0xFF1E3A8A), foregroundColor: Colors.white),
       body: bookings.isEmpty
           ? const Center(child: Text('No Active Bookings'))
           : ListView.builder(
               itemCount: bookings.length,
-              itemBuilder: (context, index) {
-                final b = bookings[index];
-                return ListTile(
-                  title: Text(b['party_name'] ?? 'Booking'),
-                  subtitle: Text('${b['route_from']} ➔ ${b['route_to']}'),
-                );
-              },
+              itemBuilder: (context, i) => ListTile(
+                title: Text('${bookings[i]['vehicle_number']} - ${bookings[i]['client']}'),
+                subtitle: Text('Route: ${bookings[i]['route']}'),
+                trailing: Text('PKR ${bookings[i]['amount']}'),
+              ),
             ),
     );
   }
 }
 
-// ==================== SETTINGS TAB ====================
-class SettingsTab extends StatelessWidget {
-  final bool isDarkMode;
-  final ValueChanged<bool> onThemeChanged;
-
-  const SettingsTab({super.key, required this.isDarkMode, required this.onThemeChanged});
+class SettingsScreen extends StatelessWidget {
+  const SettingsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('App Settings'), backgroundColor: Colors.indigo, foregroundColor: Colors.white),
-      body: ListView(
-        children: [
-          SwitchListTile(
-            title: const Text('Dark Theme'),
-            subtitle: const Text('Enable dark mode UI'),
-            value: isDarkMode,
-            onChanged: onThemeChanged,
-          ),
-          const Divider(),
-          const ListTile(
-            leading: Icon(Icons.system_update),
-            title: Text('Auto Update Check'),
-            subtitle: Text('App is up to date (Version 1.0.0)'),
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('System Settings'), backgroundColor: const Color(0xFF1E3A8A), foregroundColor: Colors.white),
+      body: const Center(child: Text('Enterprise ERP Configuration v1.0.0')),
     );
   }
 }
