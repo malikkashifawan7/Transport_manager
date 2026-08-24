@@ -178,7 +178,6 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
       ),
       body: Column(
         children: [
-          // Enterprise Summary Banner
           Container(
             padding: const EdgeInsets.all(16),
             color: Colors.blue.shade50,
@@ -192,7 +191,6 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
             ),
           ),
           const Divider(height: 1),
-          // Record List
           Expanded(
             child: _recordsList.isEmpty
                 ? const Center(child: Text('No Ledger entries found. Tap + to add.'))
@@ -202,7 +200,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                       final item = _recordsList[index];
                       final isIncome = item['type'] == 'Income';
                       return Card(
-                        margin: const EdgeInsets.horizontal(12, vertical: 4),
+                        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                         child: ListTile(
                           leading: CircleAvatar(
                             backgroundColor: isIncome ? Colors.green.shade100 : Colors.red.shade100,
@@ -248,4 +246,3 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
     );
   }
 }
-
