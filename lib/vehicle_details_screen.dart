@@ -102,7 +102,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                         child: GestureDetector(
                           onTap: () => setModalState(() => selectedType = 'Expense'),
                           child: Container(
-                            padding: const EdgeInsets.vertical(10),
+                            padding: const EdgeInsets.symmetric(vertical: 10),
                             decoration: BoxDecoration(
                               color: selectedType == 'Expense' ? Colors.red.shade600 : Colors.transparent,
                               borderRadius: BorderRadius.circular(10),
@@ -123,7 +123,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                         child: GestureDetector(
                           onTap: () => setModalState(() => selectedType = 'Income'),
                           child: Container(
-                            padding: const EdgeInsets.vertical(10),
+                            padding: const EdgeInsets.symmetric(vertical: 10),
                             decoration: BoxDecoration(
                               color: selectedType == 'Income' ? Colors.green.shade600 : Colors.transparent,
                               borderRadius: BorderRadius.circular(10),
@@ -268,7 +268,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
             icon: const Icon(Icons.share),
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Generating Ledger Report (PDF / Excel)...')),
+                const SnackBar(content: Text('Generating Ledger Report...')),
               );
             },
           )
@@ -276,7 +276,6 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
       ),
       body: Column(
         children: [
-          // Enterprise Dashboard Summary
           Container(
             padding: const EdgeInsets.all(16),
             decoration: const BoxDecoration(
@@ -307,7 +306,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                       ],
                     ),
                     Container(
-                      padding: const EdgeInsets.horizontal(12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
                         color: netProfit >= 0 ? Colors.green.shade900.withOpacity(0.6) : Colors.red.shade900.withOpacity(0.6),
                         borderRadius: BorderRadius.circular(20),
@@ -323,8 +322,6 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
               ],
             ),
           ),
-
-          // Filters
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: SingleChildScrollView(
@@ -346,8 +343,6 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
               ),
             ),
           ),
-
-          // Transactions List
           Expanded(
             child: _filteredRecords.isEmpty
                 ? Center(
@@ -451,4 +446,8 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
           ],
         ),
         const SizedBox(height: 6),
-        Text(value, style: TextStyle(fontSize: 16, fontWeigh
+        Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color)),
+      ],
+    );
+  }
+}
