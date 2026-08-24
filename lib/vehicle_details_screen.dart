@@ -17,6 +17,7 @@ class VehicleDetailsScreen extends StatefulWidget {
 
 class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
   late List<Map<String, dynamic>> _recordsList;
+  String _selectedFilter = 'All';
 
   @override
   void initState() {
@@ -31,6 +32,17 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
     });
   }
 
+  List<Map<String, dynamic>> get _filteredRecords {
+    if (_selectedFilter == 'Income') {
+      return _recordsList.where((r) => r['type'] == 'Income').toList();
+    } else if (_selectedFilter == 'Expense') {
+      return _recordsList.where((r) => r['type'] == 'Expense').toList();
+    } else if (_selectedFilter == 'Fuel') {
+      return _recordsList.where((r) => r['sub_category'] == 'Fuel / Diesel').toList();
+    }
+    return _recordsList;
+  }
+
   double get totalIncome => _recordsList
       .where((r) => r['type'] == 'Income')
       .fold(0.0, (sum, item) => sum + ((item['amount'] ?? 0) as num).toDouble());
@@ -38,6 +50,10 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
   double get totalExpense => _recordsList
       .where((r) => r['type'] == 'Expense')
       .fold(0.0, (sum, item) => sum + ((item['amount'] ?? 0) as num).toDouble());
+
+  double get totalLitres => _recordsList
+      .where((r) => r['sub_category'] == 'Fuel / Diesel')
+      .fold(0.0, (sum, item) => sum + ((item['litres'] ?? 0) as num).toDouble());
 
   void _openAddRecordDialog() {
     String selectedType = 'Expense';
@@ -50,90 +66,160 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (ctx) => StatefulBuilder(
         builder: (context, setModalState) => Padding(
           padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-            left: 16,
-            right: 16,
-            top: 16,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+            left: 20,
+            right: 20,
+            top: 20,
           ),
           child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Add Entry - ${widget.vehicle['number']}',
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 12),
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Expanded(
-                      child: ChoiceChip(
-                        label: const Center(child: Text('Expense')),
-                        selected: selectedType == 'Expense',
-                        selectedColor: Colors.red.shade100,
-                        onSelected: (val) {
-                          if (val) setModalState(() => selectedType = 'Expense');
-                        },
-                      ),
+                    Text(
+                      'Add Ledger Entry - ${widget.vehicle['number']}',
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: ChoiceChip(
-                        label: const Center(child: Text('Income / Freight')),
-                        selected: selectedType == 'Income',
-                        selectedColor: Colors.green.shade100,
-                        onSelected: (val) {
-                          if (val) setModalState(() => selectedType = 'Income');
-                        },
-                      ),
-                    ),
+                    IconButton(onPressed: () => Navigator.pop(ctx), icon: const Icon(Icons.close)),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(12)),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setModalState(() => selectedType = 'Expense'),
+                          child: Container(
+                            padding: const EdgeInsets.vertical(10),
+                            decoration: BoxDecoration(
+                              color: selectedType == 'Expense' ? Colors.red.shade600 : Colors.transparent,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Center(
+                              child: Text(
+                                'EXPENSE',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: selectedType == 'Expense' ? Colors.white : Colors.black87,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setModalState(() => selectedType = 'Income'),
+                          child: Container(
+                            padding: const EdgeInsets.vertical(10),
+                            decoration: BoxDecoration(
+                              color: selectedType == 'Income' ? Colors.green.shade600 : Colors.transparent,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Center(
+                              child: Text(
+                                'INCOME / FREIGHT',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: selectedType == 'Income' ? Colors.white : Colors.black87,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
                   value: category,
-                  decoration: const InputDecoration(labelText: 'Category', border: OutlineInputBorder()),
+                  decoration: InputDecoration(
+                    labelText: 'Category',
+                    filled: true,
+                    fillColor: Colors.grey.shade50,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
                   items: ['Fuel / Diesel', 'Maintenance & Repair', 'Driver Salary / Bhatta', 'Toll & Taxes', 'Freight Income', 'Other']
                       .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                       .toList(),
                   onChanged: (val) => setModalState(() => category = val ?? category),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
                 TextField(
                   controller: titleCtrl,
-                  decoration: const InputDecoration(labelText: 'Description / Details', border: OutlineInputBorder()),
+                  decoration: InputDecoration(
+                    labelText: 'Description / Narration',
+                    filled: true,
+                    fillColor: Colors.grey.shade50,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
                 TextField(
                   controller: amountCtrl,
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Amount (PKR)', border: OutlineInputBorder()),
+                  decoration: InputDecoration(
+                    labelText: 'Amount (PKR)',
+                    prefixText: 'PKR ',
+                    filled: true,
+                    fillColor: Colors.grey.shade50,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
                 ),
-                const SizedBox(height: 8),
                 if (category == 'Fuel / Diesel') ...[
-                  TextField(
-                    controller: litresCtrl,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'Fuel Litres', border: OutlineInputBorder()),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: litresCtrl,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            labelText: 'Fuel (Litres)',
+                            filled: true,
+                            fillColor: Colors.grey.shade50,
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: TextField(
+                          controller: meterCtrl,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            labelText: 'Odometer (KM)',
+                            filled: true,
+                            fillColor: Colors.grey.shade50,
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: meterCtrl,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'Odometer Reading (KM)', border: OutlineInputBorder()),
-                  ),
-                  const SizedBox(height: 8),
                 ],
+                const SizedBox(height: 20),
                 SizedBox(
                   width: double.infinity,
+                  height: 50,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF1E3A8A),
                       foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     onPressed: () async {
                       if (amountCtrl.text.isNotEmpty) {
@@ -155,7 +241,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                         }
                       }
                     },
-                    child: const Text('Save Entry'),
+                    child: const Text('SAVE ENTERPRISE RECORD', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                   ),
                 )
               ],
@@ -171,53 +257,168 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
     final netProfit = totalIncome - totalExpense;
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: Text('${widget.vehicle['number']} Ledger'),
-        backgroundColor: const Color(0xFF1E3A8A),
+        title: Text('${widget.vehicle['number']} Financial Dashboard', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        backgroundColor: const Color(0xFF0F172A),
         foregroundColor: Colors.white,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.share),
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Generating Ledger Report (PDF / Excel)...')),
+              );
+            },
+          )
+        ],
       ),
       body: Column(
         children: [
+          // Enterprise Top Dashboard Summary Card
           Container(
             padding: const EdgeInsets.all(16),
-            color: Colors.blue.shade50,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
+            decoration: const BoxDecoration(
+              color: Color(0xFF0F172A),
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(24),
+                bottomRight: Radius.circular(24),
+              ),
+            ),
+            child: Column(
               children: [
-                _buildStatCard('Income', 'PKR ${totalIncome.toStringAsFixed(0)}', Colors.green),
-                _buildStatCard('Expense', 'PKR ${totalExpense.toStringAsFixed(0)}', Colors.red),
-                _buildStatCard('Net Profit', 'PKR ${netProfit.toStringAsFixed(0)}', netProfit >= 0 ? Colors.green.shade800 : Colors.red.shade800),
+                Row(
+                  children: [
+                    Expanded(child: _buildMetricTile('TOTAL FREIGHT', 'PKR ${totalIncome.toStringAsFixed(0)}', Colors.emeraldAccent, Icons.trending_up)),
+                    Container(height: 40, width: 1, color: Colors.white24),
+                    Expanded(child: _buildMetricTile('TOTAL EXPENSES', 'PKR ${totalExpense.toStringAsFixed(0)}', Colors.roseAccent, Icons.trending_down)),
+                  ],
+                ),
+                const Divider(color: Colors.white24, height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.local_gas_station, color: Colors.amber, size: 18),
+                        const SizedBox(width: 6),
+                        Text('Total Diesel: ${totalLitres.toStringAsFixed(0)} Ltrs', style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.horizontal(12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: netProfit >= 0 ? Colors.emerald.shade900.withOpacity(0.6) : Colors.rose.shade900.withOpacity(0.6),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: netProfit >= 0 ? Colors.emerald : Colors.rose),
+                      ),
+                      child: Text(
+                        'Net Profit: PKR ${netProfit.toStringAsFixed(0)}',
+                        style: TextStyle(fontWeight: FontWeight.bold, color: netProfit >= 0 ? Colors.emeraldAccent : Colors.roseAccent),
+                      ),
+                    ),
+                  ],
+                )
               ],
             ),
           ),
-          const Divider(height: 1),
+
+          // Category Filter Chips
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: ['All', 'Income', 'Expense', 'Fuel'].map((filter) {
+                  final isSel = _selectedFilter == filter;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: FilterChip(
+                      label: Text(filter),
+                      selected: isSel,
+                      selectedColor: const Color(0xFF1E3A8A),
+                      labelStyle: TextStyle(color: isSel ? Colors.white : Colors.black87, fontWeight: FontWeight.w600),
+                      onSelected: (val) => setState(() => _selectedFilter = filter),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+
+          // Ledger Detailed Transactions
           Expanded(
-            child: _recordsList.isEmpty
-                ? const Center(child: Text('No Ledger entries found. Tap + to add.'))
+            child: _filteredRecords.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.receipt_long_outlined, size: 64, color: Colors.grey.shade400),
+                        const SizedBox(height: 12),
+                        Text('No records found for "$_selectedFilter"', style: TextStyle(color: Colors.grey.shade600, fontSize: 16)),
+                      ],
+                    ),
+                  )
                 : ListView.builder(
-                    itemCount: _recordsList.length,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    itemCount: _filteredRecords.length,
                     itemBuilder: (context, index) {
-                      final item = _recordsList[index];
+                      final item = _filteredRecords[index];
                       final isIncome = item['type'] == 'Income';
                       return Card(
-                        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                        child: ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: isIncome ? Colors.green.shade100 : Colors.red.shade100,
-                            child: Icon(
-                              isIncome ? Icons.arrow_downward : Icons.arrow_upward,
-                              color: isIncome ? Colors.green : Colors.red,
-                            ),
-                          ),
-                          title: Text(item['title'] ?? item['sub_category'] ?? 'Entry'),
-                          subtitle: Text('${item['date']} • ${item['sub_category']}'),
-                          trailing: Text(
-                            '${isIncome ? "+" : "-"} PKR ${item['amount']}',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                              color: isIncome ? Colors.green : Colors.red,
-                            ),
+                        elevation: 1,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        margin: const EdgeInsets.only(bottom: 10),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: isIncome ? Colors.emerald.shade50 : Colors.rose.shade50,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  isIncome ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
+                                  color: isIncome ? Colors.emerald : Colors.rose,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      item['title'] ?? item['sub_category'] ?? 'Transaction',
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF1E293B)),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '${item['date']} • ${item['sub_category']}',
+                                      style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                                    ),
+                                    if ((item['litres'] ?? 0) > 0)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 4),
+                                        child: Text(
+                                          '${item['litres']} Ltrs | Meter: ${item['meter_reading']} KM',
+                                          style: const TextStyle(color: Colors.blueAccent, fontSize: 11, fontWeight: FontWeight.w500),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              Text(
+                                '${isIncome ? "+" : "-"} PKR ${item['amount']}',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: isIncome ? Colors.emerald.shade700 : Colors.rose.shade700,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       );
@@ -229,20 +430,25 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: const Color(0xFF1E3A8A),
         foregroundColor: Colors.white,
+        elevation: 4,
         onPressed: _openAddRecordDialog,
         icon: const Icon(Icons.add),
-        label: const Text('Add Entry'),
+        label: const Text('New Entry', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
     );
   }
 
-  Widget _buildStatCard(String title, String value, Color color) {
+  Widget _buildMetricTile(String title, String value, Color color, IconData icon) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Text(title, style: const TextStyle(fontSize: 12, color: Colors.black54)),
-        const SizedBox(height: 4),
-        Text(value, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: color)),
-      ],
-    );
-  }
-}
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: color, size: 16),
+            const SizedBox(width: 4),
+            Text(title, style: const TextStyle(fontSize: 11, color: Colors.white70, fontWeight: FontWeight.w600)),
+          ],
+        ),
+        const SizedBox(height: 6),
+     
