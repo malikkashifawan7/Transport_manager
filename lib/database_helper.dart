@@ -25,143 +25,93 @@ class DatabaseHelper {
   }
 
   Future _createDB(Database db, int version) async {
+    // Vehicles Table
     await db.execute('''
       CREATE TABLE vehicles (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         number TEXT NOT NULL,
-        model TEXT,
-        type TEXT,
         driver_name TEXT,
-        driver_phone TEXT,
-        driver_cnic TEXT,
-        location TEXT
+        model TEXT
       )
     ''');
 
+    // Records / Ledger Table
     await db.execute('''
       CREATE TABLE records (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         vehicle_id INTEGER,
+        date TEXT,
         type TEXT,
-        main_category TEXT,
         sub_category TEXT,
         title TEXT,
         amount REAL,
-        details TEXT,
-        meter_reading REAL,
         litres REAL,
-        date TEXT
+        meter_reading REAL
       )
     ''');
 
-    await db.execute('''
-      CREATE TABLE bookings (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        vehicle_id INTEGER,
-        party_name TEXT,
-        route_from TEXT,
-        route_to TEXT,
-        total_freight REAL,
-        advance_paid REAL,
-        commission REAL,
-        booking_date TEXT,
-        status TEXT
-      )
-    ''');
-
+    // Vendors Table
     await db.execute('''
       CREATE TABLE vendors (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
-        shop_name TEXT,
         phone TEXT,
-        address TEXT,
-        city TEXT,
-        udhar_balance REAL
+        type TEXT,
+        balance REAL
       )
     ''');
 
+    // Reminders Table
     await db.execute('''
       CREATE TABLE reminders (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT NOT NULL,
-        due_date TEXT,
-        type TEXT,
-        details TEXT
+        date TEXT,
+        status TEXT
       )
     ''');
   }
 
-  // Vehicles CRUD
-  Future<int> addVehicle(Map<String, dynamic> data) async {
-    final db = await instance.database;
-    return await db.insert('vehicles', data);
-  }
-
-  Future<List<Map<String, dynamic>>> getVehicles() async {
-    final db = await instance.database;
-    return await db.query('vehicles');
-  }
-
-  Future<int> updateVehicle(int id, Map<String, dynamic> data) async {
-    final db = await instance.database;
-    return await db.update('vehicles', data, where: 'id = ?', whereArgs: [id]);
-  }
-
-  Future<int> deleteVehicle(int id) async {
-    final db = await instance.database;
-    return await db.delete('vehicles', where: 'id = ?', whereArgs: [id]);
-  }
-
-  // Records CRUD
-  Future<int> addRecord(Map<String, dynamic> data) async {
-    final db = await instance.database;
-    return await db.insert('records', data);
-  }
-
-  Future<List<Map<String, dynamic>>> getRecords(int vehicleId) async {
-    final db = await instance.database;
-    return await db.query('records', where: 'vehicle_id = ?', whereArgs: [vehicleId]);
-  }
-
-  Future<int> deleteRecord(int id) async {
-    final db = await instance.database;
-    return await db.delete('records', where: 'id = ?', whereArgs: [id]);
-  }
-
-  // Bookings CRUD
-  Future<int> addBooking(Map<String, dynamic> data) async {
-    final db = await instance.database;
-    return await db.insert('bookings', data);
-  }
-
-  Future<List<Map<String, dynamic>>> getBookings(int? vehicleId) async {
-    final db = await instance.database;
-    if (vehicleId != null) {
-      return await db.query('bookings', where: 'vehicle_id = ?', whereArgs: [vehicleId]);
-    }
-    return await db.query('bookings');
-  }
-
-  // Vendors CRUD
-  Future<int> addVendor(Map<String, dynamic> data) async {
-    final db = await instance.database;
-    return await db.insert('vendors', data);
-  }
-
+  // --- VENDORS METHODS ---
   Future<List<Map<String, dynamic>>> getVendors() async {
     final db = await instance.database;
     return await db.query('vendors');
   }
 
-  // Reminders CRUD
-  Future<int> addReminder(Map<String, dynamic> data) async {
+  Future<int> addVendor(Map<String, dynamic> row) async {
     final db = await instance.database;
-    return await db.insert('reminders', data);
+    return await db.insert('vendors', row);
   }
 
+  Future<int> updateVendor(int id, Map<String, dynamic> row) async {
+    final db = await instance.database;
+    return await db.update('vendors', row, where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<int> deleteVendor(int id) async {
+    final db = await instance.database;
+    return await db.delete('vendors', where: 'id = ?', whereArgs: [id]);
+  }
+
+  // --- REMINDERS METHODS ---
   Future<List<Map<String, dynamic>>> getReminders() async {
     final db = await instance.database;
     return await db.query('reminders');
   }
+
+  Future<int> addReminder(Map<String, dynamic> row) async {
+    final db = await instance.database;
+    return await db.insert('reminders', row);
+  }
+
+  Future<int> updateReminder(int id, Map<String, dynamic> row) async {
+    final db = await instance.database;
+    return await db.update('reminders', row, where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<int> deleteReminder(int id) async {
+    final db = await instance.database;
+    return await db.delete('reminders', where: 'id = ?', whereArgs: [id]);
+  }
 }
+
