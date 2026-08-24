@@ -96,7 +96,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
             ),
             const SizedBox(height: 15),
 
-            // Google Map View Placeholder/Widget
+            // Google Map View Widget
             const Text('Vehicle Location Map',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
@@ -108,9 +108,9 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: const GoogleMap(
+                child: GoogleMap(
                   initialCameraPosition: CameraPosition(
-                    target: LatLng(31.5204, 74.3587), // Lahore Default
+                    target: LatLng(31.5204, 74.3587),
                     zoom: 12,
                   ),
                 ),
@@ -122,3 +122,4 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
     );
   }
 }
+
