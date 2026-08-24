@@ -26,29 +26,33 @@ class PdfReportService {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              pw.Text('Vehicle Report: ${vehicle['number']}',
-                  style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold)),
+              pw.Text(
+                'Vehicle Report: ${vehicle['number']}',
+                style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold),
+              ),
               pw.SizedBox(height: 10),
               pw.Text('Driver: ${vehicle['driver_name']} | Phone: ${vehicle['driver_phone']}'),
               pw.Text('Type: ${vehicle['type']} | Model: ${vehicle['model']}'),
               pw.Divider(),
               pw.SizedBox(height: 10),
-              pw.TableHelper.fromTextArray(
+              pw.Table.fromTextArray(
                 headers: ['Date', 'Type', 'Category', 'Title', 'Amount (PKR)'],
                 data: records.map((r) => [
-                  r['date'] ?? '',
-                  r['type'] ?? '',
-                  r['sub_category'] ?? '',
-                  r['title'] ?? '',
-                  r['amount'].toString(),
+                  r['date']?.toString() ?? '',
+                  r['type']?.toString() ?? '',
+                  r['sub_category']?.toString() ?? '',
+                  r['title']?.toString() ?? '',
+                  r['amount']?.toString() ?? '0',
                 ]).toList(),
               ),
               pw.SizedBox(height: 15),
               pw.Divider(),
               pw.Text('Total Income: Rs. ${totalIncome.toStringAsFixed(0)}'),
               pw.Text('Total Expense: Rs. ${totalExpense.toStringAsFixed(0)}'),
-              pw.Text('Net Balance: Rs. ${(totalIncome - totalExpense).toStringAsFixed(0)}',
-                  style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+              pw.Text(
+                'Net Balance: Rs. ${(totalIncome - totalExpense).toStringAsFixed(0)}',
+                style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+              ),
             ],
           );
         },
@@ -60,3 +64,4 @@ class PdfReportService {
     );
   }
 }
+
