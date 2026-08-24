@@ -1,5 +1,5 @@
 import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets' as pw;
+import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
 class PdfReportService {
@@ -35,9 +35,9 @@ class PdfReportService {
               pw.Text('Type: ${vehicle['type']} | Model: ${vehicle['model']}'),
               pw.Divider(),
               pw.SizedBox(height: 10),
-              pw.Table.fromTextArray(
-                headers: ['Date', 'Type', 'Category', 'Title', 'Amount (PKR)'],
-                data: records.map((r) => [
+              pw.TableHelper.fromTextArray(
+                headers: <String>['Date', 'Type', 'Category', 'Title', 'Amount (PKR)'],
+                data: records.map((r) => <String>[
                   r['date']?.toString() ?? '',
                   r['type']?.toString() ?? '',
                   r['sub_category']?.toString() ?? '',
@@ -64,4 +64,3 @@ class PdfReportService {
     );
   }
 }
-
