@@ -137,7 +137,7 @@ class _FleetDashboardScreenState extends State<FleetDashboardScreen> {
             right: 20,
             top: 20),
         child: Column(
-          mainAxisSize: minAxisSize,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Text(
                 vehicle == null
@@ -197,8 +197,6 @@ class _FleetDashboardScreenState extends State<FleetDashboardScreen> {
       ),
     );
   }
-
-  MainAxisSize get minAxisSize => MainAxisSize.min;
 
   @override
   Widget build(BuildContext context) {
@@ -387,7 +385,6 @@ class _FleetDashboardScreenState extends State<FleetDashboardScreen> {
     );
   }
 }
-
 // ---------------------------------------------------------
 // 2. VEHICLE DETAILS WITH PDF PRINTING
 // ---------------------------------------------------------
@@ -509,4 +506,361 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
               const SizedBox(height: 10),
               TextField(controller: partyCtrl, decoration: const InputDecoration(labelText: 'Party / Client Name', border: OutlineInputBorder())),
               const SizedBox(height: 15),
-         
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0F172A), foregroundColor: Colors.white),
+                  onPressed: () async {
+                    if (amountCtrl.text.isNotEmpty) {
+                      await DatabaseHelper.instance.addRecord({
+                        'vehicle_id': widget.vehicle['id'],
+                        'type': type,
+                        'sub_category': subCategory,
+                        'title': titleCtrl.text.isEmpty ? subCategory : titleCtrl.text,
+                        'amount': double.tryParse(amountCtrl.text) ?? 0.0,
+                        'party_name': partyCtrl.text,
+                        'date': DateTime.now().toString().split(' ')[0],
+                      });
+                      _loadVehicleRecords();
+                      if (mounted) Navigator.pop(ctx);
+                    }
+                  },
+                  child: const Text('SAVE RECORD'),
+                ),
+              )
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final balance = vehicleIncome - vehicleExpense;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.vehicle['number']),
+        backgroundColor: const Color(0xFF0F172A),
+        foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.print_rounded),
+            tooltip: 'Print / Share PDF',
+            onPressed: _generateAndSharePdf,
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            color: const Color(0xFF0F172A),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildStat('Income', 'PKR ${vehicleIncome.toStringAsFixed(0)}', Colors.greenAccent),
+                _buildStat('Expense', 'PKR ${vehicleExpense.toStringAsFixed(0)}', Colors.redAccent),
+                _buildStat('Balance', 'PKR ${balance.toStringAsFixed(0)}', balance >= 0 ? Colors.greenAccent : Colors.redAccent),
+              ],
+            ),
+          ),
+          Expanded(
+            child: _records.isEmpty
+                ? const Center(child: Text('No transaction records found.'))
+                : ListView.builder(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: _records.length,
+                    itemBuilder: (context, index) {
+                      final item = _records[index];
+                      final isIncome = item['type'] == 'Income';
+                      return Card(
+                        child: ListTile(
+                          leading: Icon(isIncome ? Icons.arrow_downward : Icons.arrow_upward, color: isIncome ? Colors.green : Colors.red),
+                          title: Text(item['title'] ?? item['sub_category']),
+                          subtitle: Text('${item['date']} • Party: ${item['party_name'] ?? "Direct"}'),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text('${isIncome ? "+" : "-"} PKR ${item['amount']}', style: TextStyle(fontWeight: FontWeight.bold, color: isIncome ? Colors.green : Colors.red)),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline, size: 20, color: Colors.grey),
+                                onPressed: () async {
+                                  await DatabaseHelper.instance.deleteRecord(item['id']);
+                                  _loadVehicleRecords();
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          )
+        ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: const Color(0xFF0F172A),
+        foregroundColor: Colors.white,
+        onPressed: _addTransactionDialog,
+        icon: const Icon(Icons.add),
+        label: const Text('New Entry'),
+      ),
+    );
+  }
+
+  Widget _buildStat(String label, String val, Color color) {
+    return Column(
+      children: [
+        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 11)),
+        const SizedBox(height: 4),
+        Text(val, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13)),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------
+// 3. FUEL AVERAGE CALCULATOR
+// ---------------------------------------------------------
+class FuelAverageCalculatorScreen extends StatefulWidget {
+  const FuelAverageCalculatorScreen({super.key});
+
+  @override
+  State<FuelAverageCalculatorScreen> createState() => _FuelAverageCalculatorScreenState();
+}
+
+class _FuelAverageCalculatorScreenState extends State<FuelAverageCalculatorScreen> {
+  final _kmsCtrl = TextEditingController();
+  final _litersCtrl = TextEditingController();
+  final _fuelPriceCtrl = TextEditingController();
+
+  double _avgKmPerLiter = 0.0;
+  double _costPerKm = 0.0;
+
+  void _calculate() {
+    final kms = double.tryParse(_kmsCtrl.text) ?? 0.0;
+    final liters = double.tryParse(_litersCtrl.text) ?? 0.0;
+    final price = double.tryParse(_fuelPriceCtrl.text) ?? 0.0;
+
+    if (kms > 0 && liters > 0) {
+      setState(() {
+        _avgKmPerLiter = kms / liters;
+        _costPerKm = (liters * price) / kms;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Fuel Mileage Calculator'), backgroundColor: const Color(0xFF0F172A), foregroundColor: Colors.white),
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            TextField(controller: _kmsCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Total Distance Driven (KM)', border: OutlineInputBorder())),
+            const SizedBox(height: 12),
+            TextField(controller: _litersCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Total Fuel Consumed (Liters)', border: OutlineInputBorder())),
+            const SizedBox(height: 12),
+            TextField(controller: _fuelPriceCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Fuel Price per Liter (PKR)', border: OutlineInputBorder())),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0F172A), foregroundColor: Colors.white),
+                onPressed: _calculate,
+                child: const Text('CALCULATE AVERAGE'),
+              ),
+            ),
+            const SizedBox(height: 30),
+            Card(
+              elevation: 4,
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    Text('Average Mileage: ${_avgKmPerLiter.toStringAsFixed(2)} KM / Liter', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.green)),
+                    const SizedBox(height: 10),
+                    Text('Fuel Cost per KM: PKR ${_costPerKm.toStringAsFixed(2)}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.blueAccent)),
+                  ],
+                ),
+              ),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------
+// 4. GLOBAL LEDGER
+// ---------------------------------------------------------
+class GlobalAnalyticsAndLedgerScreen extends StatefulWidget {
+  const GlobalAnalyticsAndLedgerScreen({super.key});
+
+  @override
+  State<GlobalAnalyticsAndLedgerScreen> createState() => _GlobalAnalyticsAndLedgerScreenState();
+}
+
+class _GlobalAnalyticsAndLedgerScreenState extends State<GlobalAnalyticsAndLedgerScreen> {
+  List<Map<String, dynamic>> _allRecords = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAllData();
+  }
+
+  void _loadAllData() async {
+    final data = await DatabaseHelper.instance.getRecords(null);
+    setState(() => _allRecords = data);
+  }
+
+  double get totalFleetIncome => _allRecords.where((r) => r['type'] == 'Income').fold(0.0, (s, i) => s + ((i['amount'] ?? 0) as num).toDouble());
+  double get totalFleetExpense => _allRecords.where((r) => r['type'] == 'Expense').fold(0.0, (s, i) => s + ((i['amount'] ?? 0) as num).toDouble());
+
+  @override
+  Widget build(BuildContext context) {
+    final netProfit = totalFleetIncome - totalFleetExpense;
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Overall Fleet Ledger'), backgroundColor: const Color(0xFF0F172A), foregroundColor: Colors.white),
+      body: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            color: const Color(0xFF0F172A),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildCard('Total Revenue', 'PKR ${totalFleetIncome.toStringAsFixed(0)}', Colors.greenAccent),
+                _buildCard('Total Expense', 'PKR ${totalFleetExpense.toStringAsFixed(0)}', Colors.redAccent),
+                _buildCard('Net Profit/Loss', 'PKR ${netProfit.toStringAsFixed(0)}', netProfit >= 0 ? Colors.greenAccent : Colors.redAccent),
+              ],
+            ),
+          ),
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.all(12),
+              itemCount: _allRecords.length,
+              itemBuilder: (context, index) {
+                final item = _allRecords[index];
+                final isIncome = item['type'] == 'Income';
+                return Card(
+                  child: ListTile(
+                    title: Text(item['title'] ?? item['sub_category']),
+                    subtitle: Text('${item['date']} • Party: ${item['party_name'] ?? "Direct"}'),
+                    trailing: Text(
+                      '${isIncome ? "+" : "-"} PKR ${item['amount']}',
+                      style: TextStyle(fontWeight: FontWeight.bold, color: isIncome ? Colors.green : Colors.red),
+                    ),
+                  ),
+                );
+              },
+            ),
+          )
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCard(String title, String value, Color color) {
+    return Column(
+      children: [
+        Text(title, style: const TextStyle(color: Colors.white70, fontSize: 11)),
+        const SizedBox(height: 4),
+        Text(value, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13)),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------
+// 5. NOTEPAD & REMINDERS
+// ---------------------------------------------------------
+class DirectoryAndNotesScreen extends StatefulWidget {
+  const DirectoryAndNotesScreen({super.key});
+
+  @override
+  State<DirectoryAndNotesScreen> createState() => _DirectoryAndNotesScreenState();
+}
+
+class _DirectoryAndNotesScreenState extends State<DirectoryAndNotesScreen> {
+  List<Map<String, dynamic>> _notes = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNotes();
+  }
+
+  void _loadNotes() async {
+    final data = await DatabaseHelper.instance.getNotes();
+    setState(() => _notes = data);
+  }
+
+  void _addNoteDialog({Map<String, dynamic>? note}) {
+    final titleCtrl = TextEditingController(text: note?['title'] ?? '');
+    final contentCtrl = TextEditingController(text: note?['content'] ?? '');
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom + 20, left: 20, right: 20, top: 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(note == null ? 'Add Note / Memo' : 'Edit Note', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 10),
+            TextField(controller: titleCtrl, decoration: const InputDecoration(labelText: 'Title', border: OutlineInputBorder())),
+            const SizedBox(height: 10),
+            TextField(controller: contentCtrl, maxLines: 3, decoration: const InputDecoration(labelText: 'Details', border: OutlineInputBorder())),
+            const SizedBox(height: 15),
+            ElevatedButton(
+              onPressed: () async {
+                final data = {
+                  'title': titleCtrl.text,
+                  'content': contentCtrl.text,
+                  'date': DateTime.now().toString().split(' ')[0],
+                };
+                if (note == null) {
+                  await DatabaseHelper.instance.addNote(data);
+                } else {
+                  await DatabaseHelper.instance.updateNote(note['id'], data);
+                }
+                _loadNotes();
+                if (mounted) Navigator.pop(ctx);
+              },
+              child: Text(note == null ? 'SAVE NOTE' : 'UPDATE NOTE'),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Notepad & Reminders'), backgroundColor: const Color(0xFF0F172A), foregroundColor: Colors.white),
+      body: ListView.builder(
+        padding: const EdgeInsets.all(12),
+        itemCount: _notes.length,
+        itemBuilder: (context, index) {
+          final n = _notes[index];
+          return Card(
+            child: ListTile(
+              title: Text(n['title'] ?? 'Note'),
+              subtitle: Text(n['content'] ?? ''),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(icon: const Icon(Icons.edit, color: Colors.blue), onPressed: () => _addNoteDialog(note: n)),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline
