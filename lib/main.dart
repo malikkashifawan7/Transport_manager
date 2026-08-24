@@ -781,7 +781,7 @@ class _GlobalAnalyticsAndLedgerScreenState extends State<GlobalAnalyticsAndLedge
 }
 
 // ---------------------------------------------------------
-// 5. NOTEPAD & REMINDERS
+// 5. NOTEPAD & REMINDERS (FIXED)
 // ---------------------------------------------------------
 class DirectoryAndNotesScreen extends StatefulWidget {
   const DirectoryAndNotesScreen({super.key});
@@ -844,6 +844,53 @@ class _DirectoryAndNotesScreenState extends State<DirectoryAndNotesScreen> {
       ),
     );
   }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Notepad & Reminders'),
+        backgroundColor: const Color(0xFF0F172A),
+        foregroundColor: Colors.white,
+      ),
+      body: ListView.builder(
+        padding: const EdgeInsets.all(12),
+        itemCount: _notes.length,
+        itemBuilder: (context, index) {
+          final n = _notes[index];
+          return Card(
+            child: ListTile(
+              title: Text(n['title'] ?? 'Note'),
+              subtitle: Text(n['content'] ?? ''),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.edit, color: Colors.blue),
+                    onPressed: () => _addNoteDialog(note: n),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline, color: Colors.red),
+                    onPressed: () async {
+                      await DatabaseHelper.instance.deleteNote(n['id']);
+                      _loadNotes();
+                    },
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: const Color(0xFF0F172A),
+        foregroundColor: Colors.white,
+        onPressed: () => _addNoteDialog(),
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
+}
 
   @override
   Widget build(BuildContext context) {
