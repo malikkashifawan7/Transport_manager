@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'database_helper.dart';
-import 'vehicle_details_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -13,7 +12,7 @@ class TransportERPApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'EUI Elite Pro Transport ERP',
+      title: 'Transport Hisab ERP',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
@@ -64,7 +63,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
   }
 }
 
-// 1. Upgraded Fleet Dashboard Screen
+// 1. Fleet Dashboard Screen
 class FleetDashboardScreen extends StatefulWidget {
   const FleetDashboardScreen({super.key});
 
@@ -113,7 +112,6 @@ class _FleetDashboardScreenState extends State<FleetDashboardScreen> {
     final numCtrl = TextEditingController();
     final driverCtrl = TextEditingController();
     final phoneCtrl = TextEditingController();
-    String type = 'Truck / Trailer';
 
     showModalBottomSheet(
       context: context,
@@ -143,7 +141,7 @@ class _FleetDashboardScreenState extends State<FleetDashboardScreen> {
                       'number': numCtrl.text,
                       'driver_name': driverCtrl.text,
                       'driver_phone': phoneCtrl.text,
-                      'type': type,
+                      'type': 'Truck / Trailer',
                     });
                     _loadDashboardData();
                     if (mounted) Navigator.pop(ctx);
@@ -174,7 +172,6 @@ class _FleetDashboardScreenState extends State<FleetDashboardScreen> {
       ),
       body: Column(
         children: [
-          // Elite Pro Analytics Header Banner
           Container(
             padding: const EdgeInsets.all(16),
             decoration: const BoxDecoration(
@@ -209,8 +206,6 @@ class _FleetDashboardScreenState extends State<FleetDashboardScreen> {
               ],
             ),
           ),
-
-          // Vehicle List
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.all(12),
@@ -250,11 +245,13 @@ class _FleetDashboardScreenState extends State<FleetDashboardScreen> {
                         _loadDashboardData();
                       },
                     ),
-                    onTap: () async {
-                      final records = await DatabaseHelper.instance.getRecords(v['id']);
-                      if (context.mounted) {
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => VehicleDetailsScreen(vehicle: v, records: records))).then((_) => _loadDashboardData());
-                      }
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => VehicleDetailsScreen(vehicle: v),
+                        ),
+                      ).then((_) => _loadDashboardData());
                     },
                   ),
                 );
@@ -288,7 +285,205 @@ class _FleetDashboardScreenState extends State<FleetDashboardScreen> {
     );
   }
 }
-// 2. Global Consolidated Ledger
+// 2. Dynamic Vehicle Details & Transactions Screen
+class VehicleDetailsScreen extends StatefulWidget {
+  final Map<String, dynamic> vehicle;
+  const VehicleDetailsScreen({super.key, required this.vehicle});
+
+  @override
+  State<VehicleDetailsScreen> createState() => _VehicleDetailsScreenState();
+}
+
+class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
+  List<Map<String, dynamic>> _records = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadVehicleRecords();
+  }
+
+  void _loadVehicleRecords() async {
+    final data = await DatabaseHelper.instance.getRecords(widget.vehicle['id']);
+    setState(() => _records = data);
+  }
+
+  double get vehicleIncome => _records
+      .where((r) => r['type'] == 'Income')
+      .fold(0.0, (s, i) => s + ((i['amount'] ?? 0) as num).toDouble());
+
+  double get vehicleExpense => _records
+      .where((r) => r['type'] == 'Expense')
+      .fold(0.0, (s, i) => s + ((i['amount'] ?? 0) as num).toDouble());
+
+  void _addTransactionDialog() {
+    final titleCtrl = TextEditingController();
+    final amountCtrl = TextEditingController();
+    final partyCtrl = TextEditingController();
+    String type = 'Income';
+    String subCategory = 'Freight Payment';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) => Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom + 20, left: 20, right: 20, top: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Add Entry for ${widget.vehicle['number']}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: ChoiceChip(
+                      label: const Center(child: Text('Income')),
+                      selected: type == 'Income',
+                      selectedColor: Colors.green.shade100,
+                      onSelected: (val) => setModalState(() {
+                        type = 'Income';
+                        subCategory = 'Freight Payment';
+                      }),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ChoiceChip(
+                      label: const Center(child: Text('Expense')),
+                      selected: type == 'Expense',
+                      selectedColor: Colors.red.shade100,
+                      onSelected: (val) => setModalState(() {
+                        type = 'Expense';
+                        subCategory = 'Diesel';
+                      }),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                value: subCategory,
+                decoration: const InputDecoration(labelText: 'Category', border: OutlineInputBorder()),
+                items: (type == 'Income'
+                        ? ['Freight Payment', 'Advance Freight', 'Other Income']
+                        : ['Diesel', 'Maintenance', 'Driver Salary', 'Challan / Toll', 'Other Expense'])
+                    .map((cat) => DropdownMenuItem(value: cat, child: Text(cat)))
+                    .toList(),
+                onChanged: (val) => setModalState(() => subCategory = val!),
+              ),
+              const SizedBox(height: 10),
+              TextField(controller: titleCtrl, decoration: const InputDecoration(labelText: 'Description / Route Details', border: OutlineInputBorder())),
+              const SizedBox(height: 10),
+              TextField(controller: amountCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Amount (PKR)', border: OutlineInputBorder())),
+              const SizedBox(height: 10),
+              TextField(controller: partyCtrl, decoration: const InputDecoration(labelText: 'Party / Client Name', border: OutlineInputBorder())),
+              const SizedBox(height: 15),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0F172A), foregroundColor: Colors.white),
+                  onPressed: () async {
+                    if (amountCtrl.text.isNotEmpty) {
+                      await DatabaseHelper.instance.addRecord({
+                        'vehicle_id': widget.vehicle['id'],
+                        'type': type,
+                        'sub_category': subCategory,
+                        'title': titleCtrl.text.isEmpty ? subCategory : titleCtrl.text,
+                        'amount': double.tryParse(amountCtrl.text) ?? 0.0,
+                        'party_name': partyCtrl.text,
+                        'date': DateTime.now().toString().split(' ')[0],
+                      });
+                      _loadVehicleRecords();
+                      if (mounted) Navigator.pop(ctx);
+                    }
+                  },
+                  child: const Text('SAVE RECORD'),
+                ),
+              )
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final balance = vehicleIncome - vehicleExpense;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.vehicle['number']),
+        backgroundColor: const Color(0xFF0F172A),
+        foregroundColor: Colors.white,
+      ),
+      body: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            color: const Color(0xFF0F172A),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildStat('Income', 'PKR ${vehicleIncome.toStringAsFixed(0)}', Colors.greenAccent),
+                _buildStat('Expense', 'PKR ${vehicleExpense.toStringAsFixed(0)}', Colors.redAccent),
+                _buildStat('Balance', 'PKR ${balance.toStringAsFixed(0)}', balance >= 0 ? Colors.greenAccent : Colors.redAccent),
+              ],
+            ),
+          ),
+          Expanded(
+            child: _records.isEmpty
+                ? const Center(child: Text('No transaction records found for this vehicle.'))
+                : ListView.builder(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: _records.length,
+                    itemBuilder: (context, index) {
+                      final item = _records[index];
+                      final isIncome = item['type'] == 'Income';
+                      return Card(
+                        child: ListTile(
+                          leading: Icon(
+                            isIncome ? Icons.arrow_downward : Icons.arrow_upward,
+                            color: isIncome ? Colors.green : Colors.red,
+                          ),
+                          title: Text(item['title'] ?? item['sub_category']),
+                          subtitle: Text('${item['date']} • Party: ${item['party_name'] ?? "Direct"}'),
+                          trailing: Text(
+                            '${isIncome ? "+" : "-"} PKR ${item['amount']}',
+                            style: TextStyle(fontWeight: FontWeight.bold, color: isIncome ? Colors.green : Colors.red),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          )
+        ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: const Color(0xFF0F172A),
+        foregroundColor: Colors.white,
+        onPressed: _addTransactionDialog,
+        icon: const Icon(Icons.add),
+        label: const Text('New Entry'),
+      ),
+    );
+  }
+
+  Widget _buildStat(String label, String val, Color color) {
+    return Column(
+      children: [
+        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 11)),
+        const SizedBox(height: 4),
+        Text(val, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13)),
+      ],
+    );
+  }
+}
+
+// 3. Global Consolidated Ledger
 class GlobalAnalyticsAndLedgerScreen extends StatefulWidget {
   const GlobalAnalyticsAndLedgerScreen({super.key});
 
@@ -369,7 +564,7 @@ class _GlobalAnalyticsAndLedgerScreenState extends State<GlobalAnalyticsAndLedge
   }
 }
 
-// 3. Advance Bookings System
+// 4. Advance Bookings System
 class AdvanceBookingsScreen extends StatefulWidget {
   const AdvanceBookingsScreen({super.key});
 
@@ -463,7 +658,7 @@ class _AdvanceBookingsScreenState extends State<AdvanceBookingsScreen> {
   }
 }
 
-// 4. Directory & Notepad
+// 5. Directory & Notepad
 class DirectoryAndNotesScreen extends StatefulWidget {
   const DirectoryAndNotesScreen({super.key});
 
