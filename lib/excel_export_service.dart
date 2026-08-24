@@ -10,27 +10,27 @@ class ExcelExportService {
     Sheet sheetObject = excel['Ledger Report'];
     excel.setDefaultSheet('Ledger Report');
 
-    // Headers
+    // Headers (Wrapped in TextCellValue)
     sheetObject.appendRow([
-      'Date',
-      'Type',
-      'Category',
-      'Title',
-      'Amount (PKR)',
-      'Litres',
-      'Odometer (KM)'
+      TextCellValue('Date'),
+      TextCellValue('Type'),
+      TextCellValue('Category'),
+      TextCellValue('Title'),
+      TextCellValue('Amount (PKR)'),
+      TextCellValue('Litres'),
+      TextCellValue('Odometer (KM)')
     ]);
 
     // Data Rows
     for (var r in records) {
       sheetObject.appendRow([
-        r['date']?.toString() ?? '',
-        r['type']?.toString() ?? '',
-        r['sub_category']?.toString() ?? '',
-        r['title']?.toString() ?? '',
-        r['amount'] ?? 0,
-        r['litres'] ?? 0,
-        r['meter_reading'] ?? 0,
+        TextCellValue(r['date']?.toString() ?? ''),
+        TextCellValue(r['type']?.toString() ?? ''),
+        TextCellValue(r['sub_category']?.toString() ?? ''),
+        TextCellValue(r['title']?.toString() ?? ''),
+        IntCellValue(int.tryParse(r['amount']?.toString() ?? '0') ?? 0),
+        IntCellValue(int.tryParse(r['litres']?.toString() ?? '0') ?? 0),
+        IntCellValue(int.tryParse(r['meter_reading']?.toString() ?? '0') ?? 0),
       ]);
     }
 
@@ -43,3 +43,4 @@ class ExcelExportService {
     await Share.shareXFiles([XFile(path)], text: 'Vehicle $vehicleNumber Ledger Report');
   }
 }
+
