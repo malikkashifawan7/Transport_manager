@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as path;
-
 import 'package:sqflite/sqflite.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+import 'package:share_plus/share_plus.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -10,7 +13,7 @@ void main() async {
 }
 
 // ----------------------------------------------------
-// DATABASE HELPER
+// DATABASE HELPER (With Soft Delete & Update Support)
 // ----------------------------------------------------
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -20,11 +23,11 @@ class DatabaseHelper {
 
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _database = await _initDB('transport_manager.db');
+    _database = await _initDB('transport_manager_v2.db');
     return _database!;
   }
 
-    Future<Database> _initDB(String filePath) async {
+  Future<Database> _initDB(String filePath) async {
     final dbPath = await getDatabasesPath();
     final dbPathWithFile = path.join(dbPath, filePath);
 
@@ -35,7 +38,6 @@ class DatabaseHelper {
     );
   }
 
-
   Future _createDB(Database db, int version) async {
     await db.execute('''
       CREATE TABLE vehicles (
@@ -43,7 +45,8 @@ class DatabaseHelper {
         number TEXT NOT NULL,
         driver_name TEXT,
         driver_phone TEXT,
-        type TEXT
+        type TEXT,
+        is_deleted INTEGER DEFAULT 0
       )
     ''');
 
@@ -55,42 +58,72 @@ class DatabaseHelper {
         category TEXT,
         amount REAL,
         note TEXT,
-        date TEXT
+        date TEXT,
+        is_deleted INTEGER DEFAULT 0
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE khata (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        person TEXT,
+        amount REAL,
+        type TEXT,
+        date TEXT,
+        is_deleted INTEGER DEFAULT 0
       )
     ''');
   }
 
+  // Vehicles CRUD
   Future<int> insertVehicle(Map<String, dynamic> row) async {
     final db = await instance.database;
     return await db.insert('vehicles', row);
   }
 
-  Future<List<Map<String, dynamic>>> getVehicles() async {
+  Future<int> updateVehicle(int id, Map<String, dynamic> row) async {
     final db = await instance.database;
-    return await db.query('vehicles');
+    return await db.update('vehicles', row, where: 'id = ?', whereArgs: [id]);
   }
 
+  Future<List<Map<String, dynamic>>> getVehicles({bool trash = false}) async {
+    final db = await instance.database;
+    return await db.query('vehicles', where: 'is_deleted = ?', whereArgs: [trash ? 1 : 0]);
+  }
+
+  // Records CRUD
   Future<int> insertRecord(Map<String, dynamic> row) async {
     final db = await instance.database;
     return await db.insert('records', row);
   }
 
-  Future<List<Map<String, dynamic>>> getRecords(int? vehicleId) async {
+  Future<int> updateRecord(int id, Map<String, dynamic> row) async {
     final db = await instance.database;
-    if (vehicleId != null) {
-      return await db.query('records', where: 'vehicle_id = ?', whereArgs: [vehicleId]);
-    }
-    return await db.query('records');
+    return await db.update('records', row, where: 'id = ?', whereArgs: [id]);
   }
 
-  Future<int> deleteRecord(int id) async {
+  Future<List<Map<String, dynamic>>> getRecords(int? vehicleId, {bool trash = false}) async {
     final db = await instance.database;
-    return await db.delete('records', where: 'id = ?', whereArgs: [id]);
+    if (vehicleId != null) {
+      return await db.query('records', where: 'vehicle_id = ? AND is_deleted = ?', whereArgs: [vehicleId, trash ? 1 : 0]);
+    }
+    return await db.query('records', where: 'is_deleted = ?', whereArgs: [trash ? 1 : 0]);
+  }
+
+  // Soft Delete & Restore
+  Future<int> setSoftDelete(String table, int id, bool delete) async {
+    final db = await instance.database;
+    return await db.update(table, {'is_deleted': delete ? 1 : 0}, where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<int> permanentDelete(String table, int id) async {
+    final db = await instance.database;
+    return await db.delete(table, where: 'id = ?', whereArgs: [id]);
   }
 }
 
 // ----------------------------------------------------
-// MAIN APP & HOME NAVIGATION
+// MAIN APP & NAVIGATION
 // ----------------------------------------------------
 class TransportApp extends StatelessWidget {
   const TransportApp({super.key});
@@ -102,8 +135,8 @@ class TransportApp extends StatelessWidget {
       title: 'Transport Manager',
       theme: ThemeData(
         useMaterial3: true,
-        primaryColor: Colors.blue,
-        scaffoldBackgroundColor: const Color(0xFFF1F5F9),
+        primarySwatch: Colors.blue,
+        scaffoldBackgroundColor: const Color(0xFFF8FAFC),
       ),
       home: const MainHomeScreen(),
     );
@@ -124,8 +157,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
     const FleetDashboardScreen(),
     const TotalLedgerScreen(),
     const ServicesAndKhataScreen(),
-    FuelAverageCalculatorScreen(),
-    const DirectoryNotesScreen(),
+    const RecycleBinScreen(),
   ];
 
   @override
@@ -137,18 +169,16 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
         onDestinationSelected: (idx) => setState(() => _selectedIndex = idx),
         destinations: const [
           NavigationDestination(icon: Icon(Icons.directions_bus_rounded), label: 'Fleet Hub'),
-          NavigationDestination(icon: Icon(Icons.analytics_rounded), label: 'Total Ledger'),
-          NavigationDestination(icon: Icon(Icons.handshake_rounded), label: 'Khata & Service'),
-          NavigationDestination(icon: Icon(Icons.calculate_rounded), label: 'Avg Calculator'),
-          NavigationDestination(icon: Icon(Icons.folder_shared_rounded), label: 'Notepad'),
+          NavigationDestination(icon: Icon(Icons.analytics_rounded), label: 'Ledger'),
+          NavigationDestination(icon: Icon(Icons.handshake_rounded), label: 'Services & Khata'),
+          NavigationDestination(icon: Icon(Icons.delete_sweep_rounded), label: 'Recycle Bin'),
         ],
       ),
     );
   }
 }
-
 // ----------------------------------------------------
-// 1. FLEET DASHBOARD SCREEN
+// 1. FLEET DASHBOARD (WITH FULL EDITING & TRASH)
 // ----------------------------------------------------
 class FleetDashboardScreen extends StatefulWidget {
   const FleetDashboardScreen({super.key});
@@ -169,31 +199,40 @@ class _FleetDashboardScreenState extends State<FleetDashboardScreen> {
 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
-    final vData = await DatabaseHelper.instance.getVehicles();
+    final data = await DatabaseHelper.instance.getVehicles();
     setState(() {
-      _vehicles = vData;
+      _vehicles = data;
       _isLoading = false;
     });
   }
 
-  void _addVehicleDialog() {
-    final numCtrl = TextEditingController();
-    final driverCtrl = TextEditingController();
-    final phoneCtrl = TextEditingController();
-    String type = 'Truck';
+  void _showVehicleDialog([Map<String, dynamic>? existing]) {
+    final numCtrl = TextEditingController(text: existing?['number']);
+    final driverCtrl = TextEditingController(text: existing?['driver_name']);
+    final phoneCtrl = TextEditingController(text: existing?['driver_phone']);
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Add Vehicle'),
+        title: Text(existing == null ? 'Add Vehicle' : 'Edit Vehicle'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(controller: numCtrl, decoration: const InputDecoration(labelText: 'Vehicle Number', border: OutlineInputBorder())),
+            TextField(
+              controller: numCtrl,
+              decoration: const InputDecoration(labelText: 'Vehicle Number', border: OutlineInputBorder()),
+            ),
             const SizedBox(height: 10),
-            TextField(controller: driverCtrl, decoration: const InputDecoration(labelText: 'Driver Name', border: OutlineInputBorder())),
+            TextField(
+              controller: driverCtrl,
+              decoration: const InputDecoration(labelText: 'Driver Name', border: OutlineInputBorder()),
+            ),
             const SizedBox(height: 10),
-            TextField(controller: phoneCtrl, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Driver Phone', border: OutlineInputBorder())),
+            TextField(
+              controller: phoneCtrl,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(labelText: 'Driver Phone', border: OutlineInputBorder()),
+            ),
           ],
         ),
         actions: [
@@ -201,12 +240,17 @@ class _FleetDashboardScreenState extends State<FleetDashboardScreen> {
           ElevatedButton(
             onPressed: () async {
               if (numCtrl.text.isNotEmpty) {
-                await DatabaseHelper.instance.insertVehicle({
+                final payload = {
                   'number': numCtrl.text,
                   'driver_name': driverCtrl.text,
                   'driver_phone': phoneCtrl.text,
-                  'type': type,
-                });
+                  'type': 'Truck',
+                };
+                if (existing == null) {
+                  await DatabaseHelper.instance.insertVehicle(payload);
+                } else {
+                  await DatabaseHelper.instance.updateVehicle(existing['id'], payload);
+                }
                 if (mounted) Navigator.pop(ctx);
                 _loadData();
               }
@@ -225,7 +269,7 @@ class _FleetDashboardScreenState extends State<FleetDashboardScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _vehicles.isEmpty
-              ? const Center(child: Text('No vehicles added yet.'))
+              ? const Center(child: Text('No active vehicles found. Add one!'))
               : ListView.builder(
                   padding: const EdgeInsets.all(12),
                   itemCount: _vehicles.length,
@@ -233,29 +277,44 @@ class _FleetDashboardScreenState extends State<FleetDashboardScreen> {
                     final v = _vehicles[i];
                     return Card(
                       child: ListTile(
-                        leading: const Icon(Icons.directions_bus, size: 35),
-                        title: Text(v['number'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Text('Driver: ${v['driver_name']} • ${v['driver_phone']}'),
-                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (c) => VehicleDetailScreen(vehicle: v)),
-                          ).then((_) => _loadData());
-                        },
+                        leading: const Icon(Icons.directions_bus, size: 32, color: Colors.blue),
+                        title: Text(v['number'], style: const TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: Text('Driver: ${v['driver_name'] ?? 'N/A'} • ${v['driver_phone'] ?? ''}'),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.edit, color: Colors.blue),
+                              onPressed: () => _showVehicleDialog(v),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline, color: Colors.red),
+                              onPressed: () async {
+                                await DatabaseHelper.instance.setSoftDelete('vehicles', v['id'], true);
+                                _loadData();
+                              },
+                            ),
+                            const Icon(Icons.arrow_forward_ios, size: 16),
+                          ],
+                        ),
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => VehicleDetailScreen(vehicle: v)),
+                        ),
                       ),
                     );
                   },
                 ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _addVehicleDialog,
-        child: const Icon(Icons.add),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _showVehicleDialog(),
+        label: const Text('Add Vehicle'),
+        icon: const Icon(Icons.add),
       ),
     );
   }
 }
 // ----------------------------------------------------
-// 2. VEHICLE DETAIL SCREEN (SAVING & LINKED)
+// 2. VEHICLE DETAIL SCREEN (PDF PRINT & SHARE INCLUDED)
 // ----------------------------------------------------
 class VehicleDetailScreen extends StatefulWidget {
   final Map<String, dynamic> vehicle;
@@ -266,37 +325,76 @@ class VehicleDetailScreen extends StatefulWidget {
 }
 
 class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
-  List<Map<String, dynamic>> _vehicleRecords = [];
+  List<Map<String, dynamic>> _records = [];
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadVehicleRecords();
+    _loadRecords();
   }
 
-  Future<void> _loadVehicleRecords() async {
+  Future<void> _loadRecords() async {
     setState(() => _isLoading = true);
     final data = await DatabaseHelper.instance.getRecords(widget.vehicle['id']);
     setState(() {
-      _vehicleRecords = data;
+      _records = data;
       _isLoading = false;
     });
   }
 
-  double get _totalIncome => _vehicleRecords
-      .where((r) => r['type'] == 'Income')
-      .fold(0.0, (s, i) => s + ((i['amount'] ?? 0) as num).toDouble());
+  void _generatePdfAndPrint() async {
+    final pdf = pw.Document();
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        build: (pw.Context context) {
+          return pw.Padding(
+            padding: const pw.EdgeInsets.all(24),
+            child: pw.Column(
+              cross: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Header(
+                  level: 0,
+                  child: pw.Row(
+                    main: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Text('TRANSPORT INVOICE / REPORT', style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
+                      pw.Text(DateTime.now().toString().split(' ')[0]),
+                    ],
+                  ),
+                ),
+                pw.SizedBox(height: 10),
+                pw.Text('Vehicle Number: ${widget.vehicle['number']}', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+                pw.Text('Driver Name: ${widget.vehicle['driver_name'] ?? 'N/A'}'),
+                pw.Text('Phone: ${widget.vehicle['driver_phone'] ?? 'N/A'}'),
+                pw.SizedBox(height: 20),
+                pw.Table.fromTextArray(
+                  headers: ['Date', 'Type', 'Category', 'Description / Note', 'Amount (Rs)'],
+                  data: _records.map((r) => [
+                    r['date'] ?? '',
+                    r['type'] ?? '',
+                    r['category'] ?? '',
+                    r['note'] ?? '',
+                    r['amount'].toString(),
+                  ]).toList(),
+                  headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                  cellAlignment: pw.Alignment.centerLeft,
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+    await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save());
+  }
 
-  double get _totalExpense => _vehicleRecords
-      .where((r) => r['type'] == 'Expense')
-      .fold(0.0, (s, i) => s + ((i['amount'] ?? 0) as num).toDouble());
-
-  void _showAddTransactionBottomSheet() {
-    String type = 'Expense';
-    String category = 'Challan / Toll';
-    final amountController = TextEditingController();
-    final noteController = TextEditingController();
+  void _showTransactionDialog([Map<String, dynamic>? existing]) {
+    String type = existing?['type'] ?? 'Expense';
+    String category = existing?['category'] ?? 'Challan / Toll';
+    final amountController = TextEditingController(text: existing != null ? existing['amount'].toString() : '');
+    final noteController = TextEditingController(text: existing?['note'] ?? '');
 
     showModalBottomSheet(
       context: context,
@@ -323,7 +421,7 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text('Add Transaction', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text(existing == null ? 'Add Transaction' : 'Edit Transaction', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 15),
                   Row(
                     children: [
@@ -375,19 +473,26 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
                       onPressed: () async {
                         final amt = double.tryParse(amountController.text) ?? 0.0;
                         if (amt > 0) {
-                          await DatabaseHelper.instance.insertRecord({
+                          final payload = {
                             'vehicle_id': widget.vehicle['id'],
                             'type': type,
                             'category': category,
                             'amount': amt,
                             'note': noteController.text,
-                            'date': DateTime.now().toString().split(' ')[0],
-                          });
+                            'date': existing?['date'] ?? DateTime.now().toString().split(' ')[0],
+                          };
+
+                          if (existing == null) {
+                            await DatabaseHelper.instance.insertRecord(payload);
+                          } else {
+                            await DatabaseHelper.instance.updateRecord(existing['id'], payload);
+                          }
+
                           if (mounted) Navigator.pop(ctx);
-                          _loadVehicleRecords();
+                          _loadRecords();
                         }
                       },
-                      child: const Text('Save Transaction'),
+                      child: const Text('Save Entry'),
                     ),
                   ),
                 ],
@@ -401,94 +506,57 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final v = widget.vehicle;
     return Scaffold(
-      appBar: AppBar(title: Text('${v['number']} Details')),
+      appBar: AppBar(
+        title: Text('${widget.vehicle['number']} Ledger'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.print_rounded),
+            onPressed: _generatePdfAndPrint,
+            tooltip: 'Print Invoice PDF',
+          ),
+        ],
+      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Card(
-                    child: ListTile(
-                      title: Text('Driver: ${v['driver_name'] ?? 'N/A'}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                      subtitle: Text('Phone: ${v['driver_phone'] ?? 'N/A'}'),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Card(
-                          color: Colors.green.shade50,
-                          child: Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: Column(
-                              children: [
-                                const Text('Income', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-                                Text('Rs $_totalIncome', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                              ],
+          : _records.isEmpty
+              ? const Center(child: Text('No transactions for this vehicle yet.'))
+              : ListView.builder(
+                  padding: const EdgeInsets.all(12),
+                  itemCount: _records.length,
+                  itemBuilder: (ctx, i) {
+                    final r = _records[i];
+                    final isInc = r['type'] == 'Income';
+                    return Card(
+                      child: ListTile(
+                        leading: Icon(
+                          isInc ? Icons.arrow_downward : Icons.arrow_upward,
+                          color: isInc ? Colors.green : Colors.red,
+                        ),
+                        title: Text('${r['category']} - Rs ${r['amount']}'),
+                        subtitle: Text('${r['note'] ?? ''} • ${r['date']}'),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.edit, color: Colors.blue),
+                              onPressed: () => _showTransactionDialog(r),
                             ),
-                          ),
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline, color: Colors.red),
+                              onPressed: () async {
+                                await DatabaseHelper.instance.setSoftDelete('records', r['id'], true);
+                                _loadRecords();
+                              },
+                            ),
+                          ],
                         ),
                       ),
-                      Expanded(
-                        child: Card(
-                          color: Colors.red.shade50,
-                          child: Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: Column(
-                              children: [
-                                const Text('Expense', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-                                Text('Rs $_totalExpense', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 15),
-                  const Text('Transaction History', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  _vehicleRecords.isEmpty
-                      ? const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 20),
-                          child: Center(child: Text('No transactions for this vehicle yet.')),
-                        )
-                      : ListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: _vehicleRecords.length,
-                          itemBuilder: (context, index) {
-                            final r = _vehicleRecords[index];
-                            final isInc = r['type'] == 'Income';
-                            return Card(
-                              child: ListTile(
-                                leading: Icon(
-                                  isInc ? Icons.add_circle : Icons.remove_circle,
-                                  color: isInc ? Colors.green : Colors.red,
-                                ),
-                                title: Text('${r['category']} (Rs ${r['amount']})'),
-                                subtitle: Text('${r['note'] ?? ''} • ${r['date']}'),
-                                trailing: IconButton(
-                                  icon: const Icon(Icons.delete_outline, color: Colors.grey),
-                                  onPressed: () async {
-                                    await DatabaseHelper.instance.deleteRecord(r['id']);
-                                    _loadVehicleRecords();
-                                  },
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                ],
-              ),
-            ),
+                    );
+                  },
+                ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showAddTransactionBottomSheet,
+        onPressed: () => _showTransactionDialog(),
         label: const Text('Add Entry'),
         icon: const Icon(Icons.add),
       ),
@@ -615,15 +683,9 @@ class ServicesAndKhataScreen extends StatefulWidget {
 
 class _ServicesAndKhataScreenState extends State<ServicesAndKhataScreen> {
   final List<Map<String, String>> _khataEntries = [];
-  final List<Map<String, String>> _maintenanceLogs = [];
-
   final _personController = TextEditingController();
   final _amountController = TextEditingController();
   String _transactionType = 'Udhar (Gave)';
-
-  final _vehicleController = TextEditingController();
-  final _serviceTypeController = TextEditingController();
-  final _costController = TextEditingController();
 
   void _addKhataDialog() {
     showDialog(
@@ -670,242 +732,109 @@ class _ServicesAndKhataScreenState extends State<ServicesAndKhataScreen> {
     );
   }
 
-  void _addMaintenanceDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Log Maintenance / Oil Change'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: _vehicleController, decoration: const InputDecoration(labelText: 'Vehicle No / Model', border: OutlineInputBorder())),
-            const SizedBox(height: 10),
-            TextField(controller: _serviceTypeController, decoration: const InputDecoration(labelText: 'Work Done (e.g. Oil Change)', border: OutlineInputBorder())),
-            const SizedBox(height: 10),
-            TextField(controller: _costController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Cost (Rs)', border: OutlineInputBorder())),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () {
-              if (_vehicleController.text.isNotEmpty) {
-                setState(() {
-                  _maintenanceLogs.add({
-                    'vehicle': _vehicleController.text,
-                    'service': _serviceTypeController.text,
-                    'cost': _costController.text,
-                    'date': DateTime.now().toString().split(' ')[0],
-                  });
-                });
-                _vehicleController.clear();
-                _serviceTypeController.clear();
-                _costController.clear();
-                Navigator.pop(context);
-              }
-            },
-            child: const Text('Save Log'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Services & Khata'),
-          bottom: const TabBar(
-            tabs: [
-              Tab(icon: Icon(Icons.menu_book), text: 'Udhar Khata'),
-              Tab(icon: Icon(Icons.build), text: 'Maintenance'),
-            ],
-          ),
-        ),
-        body: TabBarView(
-          children: [
-            Scaffold(
-              body: _khataEntries.isEmpty
-                  ? const Center(child: Text('No Khata records added yet.'))
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(12),
-                      itemCount: _khataEntries.length,
-                      itemBuilder: (context, index) {
-                        final item = _khataEntries[index];
-                        final isUdhar = item['type'] == 'Udhar (Gave)';
-                        return Card(
-                          child: ListTile(
-                            leading: Icon(isUdhar ? Icons.arrow_upward : Icons.arrow_downward, color: isUdhar ? Colors.red : Colors.green),
-                            title: Text(item['person'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
-                            subtitle: Text('${item['type']} • ${item['date']}'),
-                            trailing: Text('Rs ${item['amount']}', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isUdhar ? Colors.red : Colors.green)),
-                          ),
-                        );
-                      },
-                    ),
-              floatingActionButton: FloatingActionButton.extended(onPressed: _addKhataDialog, label: const Text('Add Khata'), icon: const Icon(Icons.add)),
-            ),
-            Scaffold(
-              body: _maintenanceLogs.isEmpty
-                  ? const Center(child: Text('No maintenance logs added yet.'))
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(12),
-                      itemCount: _maintenanceLogs.length,
-                      itemBuilder: (context, index) {
-                        final item = _maintenanceLogs[index];
-                        return Card(
-                          child: ListTile(
-                            leading: const Icon(Icons.oil_barrel_outlined, color: Colors.orange),
-                            title: Text('${item['vehicle']} - ${item['service']}'),
-                            subtitle: Text('Date: ${item['date']}'),
-                            trailing: Text('Rs ${item['cost']}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                          ),
-                        );
-                      },
-                    ),
-              floatingActionButton: FloatingActionButton.extended(onPressed: _addMaintenanceDialog, label: const Text('Log Service'), icon: const Icon(Icons.build_circle)),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ----------------------------------------------------
-// 5. AVG CALCULATOR SCREEN
-// ----------------------------------------------------
-class FuelAverageCalculatorScreen extends StatefulWidget {
-  const FuelAverageCalculatorScreen({super.key});
-
-  @override
-  State<FuelAverageCalculatorScreen> createState() => _FuelAverageCalculatorScreenState();
-}
-
-class _FuelAverageCalculatorScreenState extends State<FuelAverageCalculatorScreen> {
-  final _distanceController = TextEditingController();
-  final _fuelController = TextEditingController();
-  final _priceController = TextEditingController();
-
-  double? _average;
-  double? _costPerKm;
-
-  void _calculate() {
-    final dist = double.tryParse(_distanceController.text) ?? 0;
-    final fuel = double.tryParse(_fuelController.text) ?? 0;
-    final price = double.tryParse(_priceController.text) ?? 0;
-
-    if (dist > 0 && fuel > 0) {
-      setState(() {
-        _average = dist / fuel;
-        _costPerKm = price > 0 ? (fuel * price) / dist : null;
-      });
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Fuel Average Calculator')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            TextField(controller: _distanceController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Distance Travelled (KM)', border: OutlineInputBorder())),
-            const SizedBox(height: 10),
-            TextField(controller: _fuelController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Fuel Consumed (Liters)', border: OutlineInputBorder())),
-            const SizedBox(height: 10),
-            TextField(controller: _priceController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Fuel Price per Liter (Optional)', border: OutlineInputBorder())),
-            const SizedBox(height: 15),
-            ElevatedButton(onPressed: _calculate, child: const Text('Calculate')),
-            const SizedBox(height: 20),
-            if (_average != null) ...[
-              Text('Average: ${_average!.toStringAsFixed(2)} KM/L', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              if (_costPerKm != null) Text('Cost Per KM: Rs ${_costPerKm!.toStringAsFixed(2)}', style: const TextStyle(fontSize: 16, color: Colors.blue)),
-            ]
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ----------------------------------------------------
-// 6. DIRECTORY & NOTES SCREEN
-// ----------------------------------------------------
-class DirectoryNotesScreen extends StatefulWidget {
-  const DirectoryNotesScreen({super.key});
-
-  @override
-  State<DirectoryNotesScreen> createState() => _DirectoryNotesScreenState();
-}
-
-class _DirectoryNotesScreenState extends State<DirectoryNotesScreen> {
-  final List<Map<String, String>> _notes = [];
-  final _titleController = TextEditingController();
-  final _contentController = TextEditingController();
-
-  void _addNote() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add Contact / Note'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: _titleController, decoration: const InputDecoration(labelText: 'Title / Driver Name', border: OutlineInputBorder())),
-            const SizedBox(height: 10),
-            TextField(controller: _contentController, decoration: const InputDecoration(labelText: 'Phone / Details', border: OutlineInputBorder()), maxLines: 2),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () {
-              if (_titleController.text.isNotEmpty) {
-                setState(() {
-                  _notes.add({'title': _titleController.text, 'content': _contentController.text});
-                });
-                _titleController.clear();
-                _contentController.clear();
-                Navigator.pop(context);
-              }
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Directory & Notes')),
-      body: _notes.isEmpty
-          ? const Center(child: Text('No contacts or notes added yet.'))
+      appBar: AppBar(title: const Text('Services & Khata')),
+      body: _khataEntries.isEmpty
+          ? const Center(child: Text('No Khata records added yet.'))
           : ListView.builder(
               padding: const EdgeInsets.all(12),
-              itemCount: _notes.length,
+              itemCount: _khataEntries.length,
               itemBuilder: (context, index) {
+                final item = _khataEntries[index];
+                final isUdhar = item['type'] == 'Udhar (Gave)';
                 return Card(
                   child: ListTile(
-                    leading: const Icon(Icons.note_alt_outlined),
-                    title: Text(_notes[index]['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text(_notes[index]['content'] ?? ''),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete_outline, color: Colors.red),
-                      onPressed: () => setState(() => _notes.removeAt(index)),
-                    ),
+                    leading: Icon(isUdhar ? Icons.arrow_upward : Icons.arrow_downward, color: isUdhar ? Colors.red : Colors.green),
+                    title: Text(item['person'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text('${item['type']} • ${item['date']}'),
+                    trailing: Text('Rs ${item['amount']}', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isUdhar ? Colors.red : Colors.green)),
                   ),
                 );
               },
             ),
-      floatingActionButton: FloatingActionButton(onPressed: _addNote, child: const Icon(Icons.add)),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _addKhataDialog,
+        label: const Text('Add Khata'),
+        icon: const Icon(Icons.add),
+      ),
     );
   }
 }
 
+// ----------------------------------------------------
+// 5. RECYCLE BIN SCREEN (RESTORE & PERMANENT DELETE)
+// ----------------------------------------------------
+class RecycleBinScreen extends StatefulWidget {
+  const RecycleBinScreen({super.key});
+
+  @override
+  State<RecycleBinScreen> createState() => _RecycleBinScreenState();
+}
+
+class _RecycleBinScreenState extends State<RecycleBinScreen> {
+  List<Map<String, dynamic>> _trashedVehicles = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTrash();
+  }
+
+  Future<void> _loadTrash() async {
+    setState(() => _isLoading = true);
+    final data = await DatabaseHelper.instance.getVehicles(trash: true);
+    setState(() {
+      _trashedVehicles = data;
+      _isLoading = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Recycle Bin')),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _trashedVehicles.isEmpty
+              ? const Center(child: Text('Recycle Bin is empty.'))
+              : ListView.builder(
+                  padding: const EdgeInsets.all(12),
+                  itemCount: _trashedVehicles.length,
+                  itemBuilder: (ctx, i) {
+                    final v = _trashedVehicles[i];
+                    return Card(
+                      child: ListTile(
+                        leading: const Icon(Icons.delete_outline, color: Colors.orange),
+                        title: Text(v['number'], style: const TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: Text('Driver: ${v['driver_name'] ?? 'N/A'}'),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.restore, color: Colors.green),
+                              onPressed: () async {
+                                await DatabaseHelper.instance.setSoftDelete('vehicles', v['id'], false);
+                                _loadTrash();
+                              },
+                              tooltip: 'Restore',
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete_forever, color: Colors.red),
+                              onPressed: () async {
+                                await DatabaseHelper.instance.permanentDelete('vehicles', v['id']);
+                                _loadTrash();
+                              },
+                              tooltip: 'Delete Permanently',
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+    );
+  }
+}
