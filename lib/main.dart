@@ -546,9 +546,11 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
   if (val != null) {
     setModalState(() {
       subCategory = val;
-    });
-  }
-},
-),
+          }
+    },
+), 
+);   
+}    
+
 
 
