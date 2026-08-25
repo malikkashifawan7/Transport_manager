@@ -45,7 +45,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
     const FleetDashboardScreen(),
     const TotalLedgerScreen(),
     FuelAverageCalculatorScreen(),
-    const Center(child: Text('Directory & Notes')),
+    const DirectoryNotesScreen(),
   ];
 
 
@@ -738,6 +738,91 @@ class TotalLedgerScreen extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+class DirectoryNotesScreen extends StatefulWidget {
+  const DirectoryNotesScreen({super.key});
+
+  @override
+  State<DirectoryNotesScreen> createState() => _DirectoryNotesScreenState();
+}
+
+class _DirectoryNotesScreenState extends State<DirectoryNotesScreen> {
+  final List<Map<String, String>> _notes = [];
+  final _titleController = TextEditingController();
+  final _contentController = TextEditingController();
+
+  void _addNote() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add Contact / Note'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _titleController,
+              decoration: const InputDecoration(labelText: 'Title / Driver Name', border: OutlineInputBorder()),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _contentController,
+              decoration: const InputDecoration(labelText: 'Phone / Details', border: OutlineInputBorder()),
+              maxLines: 2,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              if (_titleController.text.isNotEmpty) {
+                setState(() {
+                  _notes.add({
+                    'title': _titleController.text,
+                    'content': _contentController.text,
+                  });
+                });
+                _titleController.clear();
+                _contentController.clear();
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Directory & Notes')),
+      body: _notes.isEmpty
+          ? const Center(child: Text('No contacts or notes added yet.'))
+          : ListView.builder(
+              padding: const EdgeInsets.all(12),
+              itemCount: _notes.length,
+              itemBuilder: (context, index) {
+                return Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.note_alt_outlined),
+                    title: Text(_notes[index]['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text(_notes[index]['content'] ?? ''),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.delete_outline, color: Colors.red),
+                      onPressed: () => setState(() => _notes.removeAt(index)),
+                    ),
+                  ),
+                );
+              },
+            ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _addNote,
+        child: const Icon(Icons.add),
       ),
     );
   }
