@@ -129,7 +129,6 @@ class _FleetDashboardState extends State<DashboardScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  // FINANCIAL SUMMARY CARDS
                   Row(
                     children: [
                       Expanded(
@@ -183,8 +182,6 @@ class _FleetDashboardState extends State<DashboardScreen> {
                     ],
                   ),
                   const SizedBox(height: 20),
-
-                  // VEHICLES SECTION
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -197,7 +194,6 @@ class _FleetDashboardState extends State<DashboardScreen> {
                     ],
                   ),
                   const SizedBox(height: 10),
-
                   _vehicles.isEmpty
                       ? const Card(
                           child: Padding(
@@ -223,7 +219,7 @@ class _FleetDashboardState extends State<DashboardScreen> {
                                 onTap: () {
                                   Navigator.push(
                                     context,
-                                    MaterialPageRoute(builder: (_) => VehicleDetailScreen(vehicle: v)),
+                                    MaterialPageRoute(builder: (_) => VehicleDetailsScreen(vehicle: v)),
                                   ).then((_) => _loadDashboardData());
                                 },
                               ),
