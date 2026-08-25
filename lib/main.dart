@@ -469,93 +469,87 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
   }
 
   void _addTransactionDialog() {
-    final titleCtrl = TextEditingController();
-    final amountCtrl = TextEditingController();
-    final partyCtrl = TextEditingController();
-    String type = 'Income';
-    String subCategory = 'Freight Payment';
+  String type = 'Expense';
+  String subCategory = 'Diesel';
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setModalState) => Padding(
-          padding: EdgeInsets.only(
-              bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
-              left: 20,
-              right: 20,
-              top: 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Add Entry for ${widget.vehicle['number']}',
-                  style: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: ChoiceChip(
-                      label: const Center(child: Text('Income')),
-                      selected: type == 'Income',
-                      selectedColor: Colors.green.shade100,
-                      onSelected: (val) => setModalState(() {
-                        type = 'Income';
-                        subCategory = 'Freight Payment';
-                      }),
-                    ),
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    builder: (ctx) => StatefulBuilder(
+      builder: (context, setModalState) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+          left: 16,
+          right: 16,
+          top: 16,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Add Transaction',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: FilterChip(
+                    label: const Center(child: Text('Income')),
+                    selected: type == 'Income',
+                    selectedColor: Colors.green.shade100,
+                    onSelected: (val) => setModalState(() {
+                      type = 'Income';
+                      subCategory = 'Freight Payment';
+                    }),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: ChoiceChip(
-                      label: const Center(child: Text('Expense')),
-                      selected: type == 'Expense',
-                      selectedColor: Colors.red.shade100,
-                      onSelected: (val) => setModalState(() {
-                        type = 'Expense';
-                        subCategory = 'Diesel';
-                      }),
-                    ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: FilterChip(
+                    label: const Center(child: Text('Expense')),
+                    selected: type == 'Expense',
+                    selectedColor: Colors.red.shade100,
+                    onSelected: (val) => setModalState(() {
+                      type = 'Expense';
+                      subCategory = 'Diesel';
+                    }),
                   ),
-                ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              value: subCategory,
+              decoration: const InputDecoration(
+                labelText: 'Category',
+                border: OutlineInputBorder(),
               ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-  value: subCategory,
-  decoration: const InputDecoration(
-    labelText: 'Category',
-    border: OutlineInputBorder(),
-  ),
-  items: (type == 'Income'
-        ? ['Freight Payment', 'Advance Freight', 'Other Income']
-        : [
-            'Diesel',
-            'Maintenance',
-            'Driver Salary',
-            'Challan / Toll',
-            'Other Expense'
-          ])
-    .map((cat) => DropdownMenuItem<String>(
-          value: cat,
-          child: Text(cat),
-        ))
-    .toList(),
-
-
-                  onChanged: (val) {
-          if (val != null) {
-            setModalState(() {
-              subCategory = val;
-            });
-          }
-        },
-      ), // DropdownButtonFormField close
-    ),   // StatefulBuilder / Padding close
-  );     // showModalBottomSheet close
-}        // _addTransactionDialog function close
-
-
-
-
+              items: (type == 'Income'
+                      ? ['Freight Payment', 'Advance Freight', 'Other Income']
+                      : [
+                          'Diesel',
+                          'Maintenance',
+                          'Driver Salary',
+                          'Challan / Toll',
+                          'Other Expense'
+                        ])
+                  .map((cat) => DropdownMenuItem<String>(
+                        value: cat,
+                        child: Text(cat),
+                      ))
+                  .toList(),
+              onChanged: (val) {
+                if (val != null) {
+                  setModalState(() {
+                    subCategory = val;
+                  });
+                }
+              },
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
