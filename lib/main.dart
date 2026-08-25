@@ -43,7 +43,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
 
         final List<Widget> _screens = [
     const FleetDashboardScreen(),
-    const Center(child: Text('Analytics & Ledger')),
+    const const TotalLedgerScreen(),
     FuelAverageCalculatorScreen(),
     const Center(child: Text('Directory & Notes')),
   ];
@@ -675,4 +675,70 @@ class _FuelAverageCalculatorScreenState extends State<FuelAverageCalculatorScree
     ),
   );
 }
+}
+class TotalLedgerScreen extends StatelessWidget {
+  const TotalLedgerScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Total Ledger & Analytics')),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Card(
+                    color: Colors.green.shade50,
+                    child: const Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Column(
+                        children: [
+                          Text('Total Income', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                          SizedBox(height: 8),
+                          Text('Rs 0', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Card(
+                    color: Colors.red.shade50,
+                    child: const Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Column(
+                        children: [
+                          Text('Total Expense', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                          SizedBox(height: 8),
+                          Text('Rs 0', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Card(
+              color: Colors.blue.shade50,
+              child: const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Net Profit / Loss:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    Text('Rs 0', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.blue)),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
