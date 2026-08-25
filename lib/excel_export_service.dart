@@ -1,14 +1,14 @@
 import 'dart:io';
-import 'package:excel/excel.dart';
+import 'package:excel/excel.dart' hide Border;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 class ExcelExportService {
   static Future<void> exportAndShare(List<Map<String, dynamic>> records, String title) async {
-    final excel = Excel.createExcel();
-    final Sheet sheet = excel['Sheet1'];
+    var excel = Excel.createExcel();
+    Sheet sheetObject = excel['Sheet1'];
 
-    sheet.appendRow([
+    sheetObject.appendRow([
       'Date',
       'Type',
       'Category',
@@ -19,7 +19,7 @@ class ExcelExportService {
     ]);
 
     for (var r in records) {
-      sheet.appendRow([
+      sheetObject.appendRow([
         r['date']?.toString() ?? '',
         r['type']?.toString() ?? '',
         r['sub_category']?.toString() ?? '',
