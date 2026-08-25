@@ -41,14 +41,13 @@ class MainHomeScreen extends StatefulWidget {
 class _MainHomeScreenState extends State<MainHomeScreen> {
   int _selectedIndex = 0;
 
-          final List<Widget> _screens = [
+  final List<Widget> _screens = [
     const FleetDashboardScreen(),
     const TotalLedgerScreen(),
     const ServicesAndKhataScreen(),
     FuelAverageCalculatorScreen(),
     const DirectoryNotesScreen(),
   ];
-
 
   @override
   Widget build(BuildContext context) {
@@ -72,6 +71,18 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
           ),
           NavigationDestination(
             icon: Icon(Icons.calculate_rounded),
+            label: 'Avg Calculator',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.folder_shared_rounded),
+            label: 'Notepad',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
             label: 'Avg Calculator',
           ),
           NavigationDestination(
