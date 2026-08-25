@@ -521,22 +521,34 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                value: subCategory,
-                decoration: const InputDecoration(
-                    labelText: 'Category', border: OutlineInputBorder()),
-                items: (type == 'Income'
-                        ? [
-                            'Freight Payment',
-                            'Advance Freight',
-                            'Other Income'
-                          ]
-                        : [
-                            'Diesel',
-                            'Maintenance',
-                            'Driver Salary',
-                            'Challan / Toll',
-                            'Other Expense'
-                          ])
-                    .map(
-                        (cat) => DropdownMenuItem(value: cat, child: Text(cat)))
-   
+  value: subCategory,
+  decoration: const InputDecoration(
+    labelText: 'Category',
+    border: OutlineInputBorder(),
+  ),
+  items: (type == 'Income'
+        ? ['Freight Payment', 'Advance Freight', 'Other Income']
+        : [
+            'Diesel',
+            'Maintenance',
+            'Driver Salary',
+            'Challan / Toll',
+            'Other Expense'
+          ])
+    .map((cat) => DropdownMenuItem<String>(
+          value: cat,
+          child: Text(cat),
+        ))
+    .toList(),
+
+
+  onChanged: (val) {
+  if (val != null) {
+    setModalState(() {
+      subCategory = val;
+    });
+  }
+},
+),
+
+
