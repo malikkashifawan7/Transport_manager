@@ -4,43 +4,42 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 class ExcelExportService {
-  static Future<void> exportLedgerToExcel(
-      String vehicleNumber, List<Map<String, dynamic>> records) async {
-    var excel = Excel.createExcel();
-    Sheet sheetObject = excel['Ledger Report'];
-    excel.setDefaultSheet('Ledger Report');
+  static Future<void> exportAndShare(List<Map<String, dynamic>> records, String title) async {
+    final excel = Excel.createExcel();
+    final Sheet sheet = excel['Sheet1'];
 
-    // Headers (Wrapped in TextCellValue)
-    sheetObject.appendRow([
+    // Header Row
+    sheet.appendRow([
       TextCellValue('Date'),
       TextCellValue('Type'),
       TextCellValue('Category'),
       TextCellValue('Title'),
       TextCellValue('Amount (PKR)'),
       TextCellValue('Litres'),
-      TextCellValue('Odometer (KM)')
+      TextCellValue('Odometer (KM)'),
     ]);
 
     // Data Rows
     for (var r in records) {
-      sheetObject.appendRow([
+      sheet.appendRow([
         TextCellValue(r['date']?.toString() ?? ''),
         TextCellValue(r['type']?.toString() ?? ''),
         TextCellValue(r['sub_category']?.toString() ?? ''),
         TextCellValue(r['title']?.toString() ?? ''),
-        IntCellValue(int.tryParse(r['amount']?.toString() ?? '0') ?? 0),
-        IntCellValue(int.tryParse(r['litres']?.toString() ?? '0') ?? 0),
-        IntCellValue(int.tryParse(r['meter_reading']?.toString() ?? '0') ?? 0),
+        DoubleCellValue(double.tryParse(r['amount']?.toString() ?? '0') ?? 0.0),
+        DoubleCellValue(double.tryParse(r['litres']?.toString() ?? '0') ?? 0.0),
+        DoubleCellValue(double.tryParse(r['meter_reading']?.toString() ?? '0') ?? 0.0),
       ]);
     }
 
-    final directory = await getApplicationDocumentsDirectory();
-    final path = "${directory.path}/${vehicleNumber}_Ledger.xlsx";
-    final file = File(path);
-    await file.writeAsBytes(excel.encode()!);
+    final fileBytes = excel.save();
+    if (fileBytes != null) {
+      final directory = await getTemporaryDirectory();
+      final filePath = '${directory.path}/${title.replaceAll(' ', '_')}_Export.xlsx';
+      final file = File(filePath);
+      await file.writeAsBytes(fileBytes);
 
-    // Share File
-    await Share.shareXFiles([XFile(path)], text: 'Vehicle $vehicleNumber Ledger Report');
+      await Share.shareXFiles([XFile(filePath)], text: 'Exported Excel Report: $title');
+    }
   }
 }
-
