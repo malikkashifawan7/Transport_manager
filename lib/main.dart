@@ -43,7 +43,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
 
         final List<Widget> _screens = [
     const FleetDashboardScreen(),
-    const const TotalLedgerScreen(),
+    const TotalLedgerScreen(),
     FuelAverageCalculatorScreen(),
     const Center(child: Text('Directory & Notes')),
   ];
