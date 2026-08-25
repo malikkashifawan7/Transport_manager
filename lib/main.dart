@@ -797,4 +797,25 @@ class _RecycleBinScreenState extends State<RecycleBinScreen> {
                             IconButton(
                               icon: const Icon(Icons.restore, color: Colors.green),
                               onPressed: () async {
-                     
+                                await DatabaseHelper.instance.setSoftDelete('vehicles', v['id'], false);
+                                _loadTrash();
+                              },
+                              tooltip: 'Restore',
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete_forever, color: Colors.red),
+                              onPressed: () async {
+                                await DatabaseHelper.instance.permanentDelete('vehicles', v['id']);
+                                _loadTrash();
+                              },
+                              tooltip: 'Delete Permanently',
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+    );
+  }
+}
