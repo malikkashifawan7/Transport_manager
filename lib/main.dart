@@ -542,15 +542,16 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
     .toList(),
 
 
-  onChanged: (val) {
-  if (val != null) {
-    setModalState(() {
-      subCategory = val;
+          onChanged: (val) {
+          if (val != null) {
+            setModalState(() {
+              subCategory = val;
+            });
           }
-    },
-), 
-);   
-}    
-
+        },
+      ),
+    ),
+  );
+}
 
 
