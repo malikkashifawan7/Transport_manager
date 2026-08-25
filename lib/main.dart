@@ -50,28 +50,39 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
   ];
 
 
-
-
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: _screens[_selectedIndex],
       bottomNavigationBar: NavigationBar(
-                  destinations: const [
-            NavigationDestination(icon: Icon(Icons.directions_bus_rounded), label: 'Fleet Hub'),
-            NavigationDestination(icon: Icon(Icons.analytics_rounded), label: 'Total Ledger'),
-            NavigationDestination(icon: Icon(Icons.handshake_rounded), label: 'Khata & Service'),
-            NavigationDestination(icon: Icon(Icons.calculate_rounded), label: 'Avg Calculator'),
-            NavigationDestination(icon: Icon(Icons.folder_shared_rounded), label: 'Notepad'),
-          ],
-
-              icon: Icon(Icons.folder_shared_rounded), label: 'Notepad'),
+        selectedIndex: _selectedIndex,
+        onDestinationSelected: (idx) => setState(() => _selectedIndex = idx),
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.directions_bus_rounded),
+            label: 'Fleet Hub',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.analytics_rounded),
+            label: 'Total Ledger',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.handshake_rounded),
+            label: 'Khata & Service',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.calculate_rounded),
+            label: 'Avg Calculator',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.folder_shared_rounded),
+            label: 'Notepad',
+          ),
         ],
       ),
     );
   }
-}
+
 
 // ---------------------------------------------------------
 // 1. FLEET DASHBOARD SCREEN
