@@ -1,5 +1,5 @@
 import 'dart:io';
-import 'package:excel/excel.dart' hide Border;
+import 'package:excel/excel.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -9,24 +9,24 @@ class ExcelExportService {
     Sheet sheetObject = excel['Sheet1'];
 
     sheetObject.appendRow([
-      'Date',
-      'Type',
-      'Category',
-      'Title',
-      'Amount (PKR)',
-      'Litres',
-      'Odometer (KM)',
+      TextCellValue('Date'),
+      TextCellValue('Type'),
+      TextCellValue('Category'),
+      TextCellValue('Title'),
+      TextCellValue('Amount (PKR)'),
+      TextCellValue('Litres'),
+      TextCellValue('Odometer (KM)'),
     ]);
 
     for (var r in records) {
       sheetObject.appendRow([
-        r['date']?.toString() ?? '',
-        r['type']?.toString() ?? '',
-        r['sub_category']?.toString() ?? '',
-        r['title']?.toString() ?? '',
-        double.tryParse(r['amount']?.toString() ?? '0') ?? 0.0,
-        double.tryParse(r['litres']?.toString() ?? '0') ?? 0.0,
-        double.tryParse(r['meter_reading']?.toString() ?? '0') ?? 0.0,
+        TextCellValue(r['date']?.toString() ?? ''),
+        TextCellValue(r['type']?.toString() ?? ''),
+        TextCellValue(r['sub_category']?.toString() ?? ''),
+        TextCellValue(r['title']?.toString() ?? ''),
+        DoubleCellValue(double.tryParse(r['amount']?.toString() ?? '0') ?? 0.0),
+        DoubleCellValue(double.tryParse(r['litres']?.toString() ?? '0') ?? 0.0),
+        DoubleCellValue(double.tryParse(r['meter_reading']?.toString() ?? '0') ?? 0.0),
       ]);
     }
 
@@ -41,3 +41,4 @@ class ExcelExportService {
     }
   }
 }
+
