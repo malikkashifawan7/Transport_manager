@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:path/path.dart';
+import 'package:path/path.dart' as path;
+
 import 'package:sqflite/sqflite.dart';
 
 void main() async {
@@ -23,16 +24,17 @@ class DatabaseHelper {
     return _database!;
   }
 
-  Future<Database> _initDB(String filePath) async {
+    Future<Database> _initDB(String filePath) async {
     final dbPath = await getDatabasesPath();
-    final path = join(dbPath, filePath);
+    final dbPathWithFile = path.join(dbPath, filePath);
 
     return await openDatabase(
-      path,
+      dbPathWithFile,
       version: 1,
       onCreate: _createDB,
     );
   }
+
 
   Future _createDB(Database db, int version) async {
     await db.execute('''
