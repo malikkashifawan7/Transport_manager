@@ -219,7 +219,12 @@ class _FleetDashboardState extends State<DashboardScreen> {
                                 onTap: () {
                                   Navigator.push(
                                     context,
-                                    MaterialPageRoute(builder: (_) => VehicleDetailsScreen(vehicle: v)),
+                                    MaterialPageRoute(
+                                      builder: (_) => VehicleDetailsScreen(
+                                        vehicle: v,
+                                        records: _recentTrips.where((r) => r['vehicle_id'] == v['id']).toList(),
+                                      ),
+                                    ),
                                   ).then((_) => _loadDashboardData());
                                 },
                               ),
