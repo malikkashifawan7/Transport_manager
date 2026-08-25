@@ -41,12 +41,14 @@ class MainHomeScreen extends StatefulWidget {
 class _MainHomeScreenState extends State<MainHomeScreen> {
   int _selectedIndex = 0;
 
-        final List<Widget> _screens = [
+          final List<Widget> _screens = [
     const FleetDashboardScreen(),
     const TotalLedgerScreen(),
+    const ServicesAndKhataScreen(),
     FuelAverageCalculatorScreen(),
     const DirectoryNotesScreen(),
   ];
+
 
 
 
@@ -56,16 +58,14 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
     return Scaffold(
       body: _screens[_selectedIndex],
       bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: (idx) => setState(() => _selectedIndex = idx),
-        destinations: const [
-          NavigationDestination(
-              icon: Icon(Icons.directions_bus_rounded), label: 'Fleet Hub'),
-          NavigationDestination(
-              icon: Icon(Icons.analytics_rounded), label: 'Total Ledger'),
-          NavigationDestination(
-              icon: Icon(Icons.calculate_rounded), label: 'Avg Calculator'),
-          NavigationDestination(
+                  destinations: const [
+            NavigationDestination(icon: Icon(Icons.directions_bus_rounded), label: 'Fleet Hub'),
+            NavigationDestination(icon: Icon(Icons.analytics_rounded), label: 'Total Ledger'),
+            NavigationDestination(icon: Icon(Icons.handshake_rounded), label: 'Khata & Service'),
+            NavigationDestination(icon: Icon(Icons.calculate_rounded), label: 'Avg Calculator'),
+            NavigationDestination(icon: Icon(Icons.folder_shared_rounded), label: 'Notepad'),
+          ],
+
               icon: Icon(Icons.folder_shared_rounded), label: 'Notepad'),
         ],
       ),
@@ -823,6 +823,218 @@ class _DirectoryNotesScreenState extends State<DirectoryNotesScreen> {
       floatingActionButton: FloatingActionButton(
         onPressed: _addNote,
         child: const Icon(Icons.add),
+      ),
+    );
+  }
+}
+class ServicesAndKhataScreen extends StatefulWidget {
+  const ServicesAndKhataScreen({super.key});
+
+  @override
+  State<ServicesAndKhataScreen> createState() => _ServicesAndKhataScreenState();
+}
+
+class _ServicesAndKhataScreenState extends State<ServicesAndKhataScreen> {
+  final List<Map<String, String>> _khataEntries = [];
+  final List<Map<String, String>> _maintenanceLogs = [];
+
+  // Controllers for Khata
+  final _personController = TextEditingController();
+  final _amountController = TextEditingController();
+  String _transactionType = 'Udhar (Gave)'; // or 'Jama (Received)'
+
+  // Controllers for Maintenance
+  final _vehicleController = TextEditingController();
+  final _serviceTypeController = TextEditingController();
+  final _costController = TextEditingController();
+
+  void _addKhataDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add Udhar Khata Entry'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _personController,
+              decoration: const InputDecoration(labelText: 'Person / Vendor Name', border: OutlineInputBorder()),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _amountController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Amount (Rs)', border: OutlineInputBorder()),
+            ),
+            const SizedBox(height: 10),
+            DropdownButtonFormField<String>(
+              value: _transactionType,
+              items: ['Udhar (Gave)', 'Jama (Received)']
+                  .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                  .toList(),
+              onChanged: (val) => setState(() => _transactionType = val!),
+              decoration: const InputDecoration(labelText: 'Type', border: OutlineInputBorder()),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              if (_personController.text.isNotEmpty && _amountController.text.isNotEmpty) {
+                setState(() {
+                  _khataEntries.add({
+                    'person': _personController.text,
+                    'amount': _amountController.text,
+                    'type': _transactionType,
+                    'date': DateTime.now().toString().split(' ')[0],
+                  });
+                });
+                _personController.clear();
+                _amountController.clear();
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _addMaintenanceDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Log Maintenance / Oil Change'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _vehicleController,
+              decoration: const InputDecoration(labelText: 'Vehicle No / Model', border: OutlineInputBorder()),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _serviceTypeController,
+              decoration: const InputDecoration(labelText: 'Work Done (e.g. Oil Change, Tuning)', border: OutlineInputBorder()),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _costController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Cost (Rs)', border: OutlineInputBorder()),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              if (_vehicleController.text.isNotEmpty) {
+                setState(() {
+                  _maintenanceLogs.add({
+                    'vehicle': _vehicleController.text,
+                    'service': _serviceTypeController.text,
+                    'cost': _costController.text,
+                    'date': DateTime.now().toString().split(' ')[0],
+                  });
+                });
+                _vehicleController.clear();
+                _serviceTypeController.clear();
+                _costController.clear();
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('Save Log'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Services & Khata'),
+          bottom: const TabBar(
+            tabs: [
+              Tab(icon: Icon(Icons.menu_book), text: 'Udhar Khata'),
+              Tab(icon: Icon(Icons.build), text: 'Maintenance'),
+            ],
+          ),
+        ),
+        body: TabBarView(
+          children: [
+            // Tab 1: Udhar Khata
+            Scaffold(
+              body: _khataEntries.isEmpty
+                  ? const Center(child: Text('No Khata records added yet.'))
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(12),
+                      itemCount: _khataEntries.length,
+                      itemBuilder: (context, index) {
+                        final item = _khataEntries[index];
+                        final isUdhar = item['type'] == 'Udhar (Gave)';
+                        return Card(
+                          child: ListTile(
+                            leading: Icon(
+                              isUdhar ? Icons.arrow_upward : Icons.arrow_downward,
+                              color: isUdhar ? Colors.red : Colors.green,
+                            ),
+                            title: Text(item['person'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
+                            subtitle: Text('${item['type']} • ${item['date']}'),
+                            trailing: Text(
+                              'Rs ${item['amount']}',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: isUdhar ? Colors.red : Colors.green,
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+              floatingActionButton: FloatingActionButton.extended(
+                onPressed: _addKhataDialog,
+                label: const Text('Add Khata'),
+                icon: const Icon(Icons.add),
+              ),
+            ),
+            // Tab 2: Maintenance & Oil Change
+            Scaffold(
+              body: _maintenanceLogs.isEmpty
+                  ? const Center(child: Text('No maintenance logs added yet.'))
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(12),
+                      itemCount: _maintenanceLogs.length,
+                      itemBuilder: (context, index) {
+                        final item = _maintenanceLogs[index];
+                        return Card(
+                          child: ListTile(
+                            leading: const Icon(Icons.oil_barrel_outlined, color: Colors.orange),
+                            title: Text('${item['vehicle']} - ${item['service']}'),
+                            subtitle: Text('Date: ${item['date']}'),
+                            trailing: Text(
+                              'Rs ${item['cost']}',
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+              floatingActionButton: FloatingActionButton.extended(
+                onPressed: _addMaintenanceDialog,
+                label: const Text('Log Service'),
+                icon: const Icon(Icons.build_circle),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
