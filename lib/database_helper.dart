@@ -9,7 +9,7 @@ class DatabaseHelper {
 
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _database = await _initDB('transport_pro_plus_v3.db');
+    _database = await _initDB('transport_pro_plus_v4.db');
     return _database!;
   }
 
@@ -90,7 +90,7 @@ class DatabaseHelper {
     return await db.query('vehicles', where: 'is_deleted = ?', whereArgs: [trash ? 1 : 0]);
   }
 
-  // RECORD / KHATA METHODS (Alias Methods Included)
+  // RECORD & TRIP ALIAS METHODS
   Future<int> insertRecord(Map<String, dynamic> row) async {
     final db = await instance.database;
     return await db.insert('records', row);
@@ -103,6 +103,10 @@ class DatabaseHelper {
   Future<int> updateRecord(int id, Map<String, dynamic> row) async {
     final db = await instance.database;
     return await db.update('records', row, where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<int> updateTrip(int id, Map<String, dynamic> row) async {
+    return await updateRecord(id, row);
   }
 
   Future<int> deleteRecord(int id) async {
