@@ -41,12 +41,13 @@ class MainHomeScreen extends StatefulWidget {
 class _MainHomeScreenState extends State<MainHomeScreen> {
   int _selectedIndex = 0;
 
-      final List<Widget> _screens = [
+        final List<Widget> _screens = [
     const FleetDashboardScreen(),
     const Center(child: Text('Analytics & Ledger')),
-    const Center(child: Text('Fuel Calculator')),
+    FuelAverageCalculatorScreen(),
     const Center(child: Text('Directory & Notes')),
   ];
+
 
 
 
@@ -567,4 +568,111 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
     );
   }
 }
+class FuelAverageCalculatorScreen extends StatefulWidget {
+  const FuelAverageCalculatorScreen({super.key});
 
+  @override
+  State<FuelAverageCalculatorScreen> createState() => _FuelAverageCalculatorScreenState();
+}
+
+class _FuelAverageCalculatorScreenState extends State<FuelAverageCalculatorScreen> {
+  final _distController = TextEditingController();
+  final _fuelController = TextEditingController();
+  final _priceController = TextEditingController();
+
+  double? _average;
+  double? _totalCost;
+  double? _costPerKm;
+
+  void _calculate() {
+    final dist = double.tryParse(_distController.text) ?? 0;
+    final fuel = double.tryParse(_fuelController.text) ?? 0;
+    final price = double.tryParse(_priceController.text) ?? 0;
+
+    if (dist > 0 && fuel > 0) {
+      setState(() {
+        _average = dist / fuel;
+        _totalCost = fuel * price;
+        _costPerKm = price > 0 ? (fuel * price) / dist : null;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Fuel Average Calculator')),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            TextField(
+              controller: _distController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Total Distance (KM)',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.add_location_alt_outlined),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _fuelController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Fuel Consumed (Liters)',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.local_gas_station_outlined),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _priceController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Fuel Price per Liter (Optional)',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.payments_outlined),
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: _calculate,
+                child: const Text('Calculate Average'),
+              ),
+            ),
+            if (_average != null) ...[
+              const SizedBox(height: 24),
+              Card(
+                color: Colors.blue.shade50,
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                                      children: [
+                    Text(
+                      '${_average!.toStringAsFixed(2)} KM/L',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue.shade900,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    if (_totalCost != null && _totalCost! > 0) ...[
+                      Text('Total Trip Fuel Cost: Rs ${_totalCost!.toStringAsFixed(0)}'),
+                      Text('Cost Per KM: Rs ${_costPerKm!.toStringAsFixed(2)}/KM'),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    ),
+  );
+}
+}
