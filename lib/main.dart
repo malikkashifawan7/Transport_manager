@@ -41,12 +41,13 @@ class MainHomeScreen extends StatefulWidget {
 class _MainHomeScreenState extends State<MainHomeScreen> {
   int _selectedIndex = 0;
 
-  final List<Widget> _screens = [
+    final List<Widget> _screens = [
     const FleetDashboardScreen(),
-    const GlobalAnalyticsAndLedgerScreen(),
-    const FuelAverageCalculatorScreen(),
-    const DirectoryAndNotesScreen(),
+    const Center(child: Text('Analytics & Ledger')),
+    const Center(child: Text('Fuel Calculator')),
+    const Center(child: Text('Directory & Notes')),
   ];
+
 
   @override
   Widget build(BuildContext context) {
@@ -549,7 +550,6 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
             });
           }
         },
-      ),
     ),
   );
 }
