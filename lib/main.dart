@@ -18,8 +18,7 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.indigo,
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
       ),
-      home: const DashboardScreen(),
+      home: DashboardScreen(),
     );
   }
 }
-
