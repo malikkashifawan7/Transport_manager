@@ -559,22 +559,243 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                         }
       },
     ), // Line 548: DropdownButtonFormField close
-  ],   // Line 549: Column children close
-),     // Line 550: Column close
-),     // Line 551: Padding close
-),     // Line 552: StatefulBuilder close
-);     // Line 553: showModalBottomSheet close
-}      // Line 554: _addTransactionDialog function close
+class VehicleDetailScreen extends StatefulWidget {
+  final Map<String, dynamic> vehicle;
 
+  const VehicleDetailScreen({super.key, required this.vehicle});
+
+  @override
+  State<VehicleDetailScreen> createState() => _VehicleDetailScreenState();
+}
+
+class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
+  List<Map<String, dynamic>> _vehicleRecords = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadVehicleRecords();
+  }
+
+  Future<void> _loadVehicleRecords() async {
+    setState(() => _isLoading = true);
+    final data = await DatabaseHelper.instance.getRecords(widget.vehicle['id']);
+    setState(() {
+      _vehicleRecords = data;
+      _isLoading = false;
+    });
+  }
+
+  double get _totalIncome => _vehicleRecords
+      .where((r) => r['type'] == 'Income')
+      .fold(0.0, (s, i) => s + ((i['amount'] ?? 0) as num).toDouble());
+
+  double get _totalExpense => _vehicleRecords
+      .where((r) => r['type'] == 'Expense')
+      .fold(0.0, (s, i) => s + ((i['amount'] ?? 0) as num).toDouble());
+
+  void _showAddTransactionBottomSheet() {
+    String type = 'Expense';
+    String category = 'Challan / Toll';
+    final amountController = TextEditingController();
+    final noteController = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            final categories = type == 'Income'
+                ? ['Freight / Trip Fare', 'Bonus / Extra']
+                : ['Challan / Toll', 'Fuel', 'Maintenance', 'Driver Allowance', 'Other Expense'];
+
+            if (!categories.contains(category)) {
+              category = categories.first;
+            }
+
+            return Padding(
+              padding: EdgeInsets.only(
+                top: 20,
+                left: 20,
+                right: 20,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('Add Transaction', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 15),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ChoiceChip(
+                          label: const Center(child: Text('Income')),
+                          selected: type == 'Income',
+                          onSelected: (selected) {
+                            if (selected) setModalState(() => type = 'Income');
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: ChoiceChip(
+                          label: const Center(child: Text('Expense')),
+                          selected: type == 'Expense',
+                          onSelected: (selected) {
+                            if (selected) setModalState(() => type = 'Expense');
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 15),
+                  DropdownButtonFormField<String>(
+                    value: category,
+                    decoration: const InputDecoration(labelText: 'Category', border: OutlineInputBorder()),
+                    items: categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                    onChanged: (val) {
+                      if (val != null) setModalState(() => category = val);
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: amountController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'Amount (Rs)', border: OutlineInputBorder()),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: noteController,
+                    decoration: const InputDecoration(labelText: 'Notes / Description', border: OutlineInputBorder()),
+                  ),
+                  const SizedBox(height: 15),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        final amt = double.tryParse(amountController.text) ?? 0.0;
+                        if (amt > 0) {
+                          await DatabaseHelper.instance.insertRecord({
+                            'vehicle_id': widget.vehicle['id'],
+                            'type': type,
+                            'category': category,
+                            'amount': amt,
+                            'note': noteController.text,
+                            'date': DateTime.now().toString().split(' ')[0],
+                          });
+                          if (mounted) Navigator.pop(ctx);
+                          _loadVehicleRecords();
+                        }
+                      },
+                      child: const Text('Save Transaction'),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final v = widget.vehicle;
     return Scaffold(
-      appBar: AppBar(title: const Text('Vehicle Details')),
-      body: const Center(child: Text('Vehicle Details Screen')),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _addTransactionDialog,
-        child: const Icon(Icons.add),
+      appBar: AppBar(title: Text('${v['number']} Details')),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Card(
+                    child: ListTile(
+                      title: Text('Driver: ${v['driver_name'] ?? 'N/A'}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: Text('Type: ${v['type'] ?? 'N/A'} | Phone: ${v['driver_phone'] ?? 'N/A'}'),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Card(
+                          color: Colors.green.shade50,
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Column(
+                              children: [
+                                const Text('Income', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                                Text('Rs $_totalIncome', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: Card(
+                          color: Colors.red.shade50,
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Column(
+                              children: [
+                                const Text('Expense', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                                Text('Rs $_totalExpense', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 15),
+                  const Text('Transaction History', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  _vehicleRecords.isEmpty
+                      ? const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 20),
+                          child: Center(child: Text('No transactions for this vehicle yet.')),
+                        )
+                      : ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: _vehicleRecords.length,
+                          itemBuilder: (context, index) {
+                            final r = _vehicleRecords[index];
+                            final isInc = r['type'] == 'Income';
+                            return Card(
+                              child: ListTile(
+                                leading: Icon(
+                                  isInc ? Icons.add_circle : Icons.remove_circle,
+                                  color: isInc ? Colors.green : Colors.red,
+                                ),
+                                title: Text('${r['category']} (${r['amount']})'),
+                                subtitle: Text('${r['note'] ?? ''} • ${r['date']}'),
+                                trailing: IconButton(
+                                  icon: const Icon(Icons.delete_outline, color: Colors.grey),
+                                  onPressed: () async {
+                                    await DatabaseHelper.instance.deleteRecord(r['id']);
+                                    _loadVehicleRecords();
+                                  },
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                ],
+              ),
+            ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _showAddTransactionBottomSheet,
+        label: const Text('Add Entry'),
+        icon: const Icon(Icons.add),
       ),
     );
   }
