@@ -9,7 +9,7 @@ class DatabaseHelper {
 
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _database = await _initDB('transport_pro_plus_v2.db');
+    _database = await _initDB('transport_pro_plus_v3.db');
     return _database!;
   }
 
@@ -74,6 +74,7 @@ class DatabaseHelper {
     ''');
   }
 
+  // VEHICLE METHODS
   Future<int> insertVehicle(Map<String, dynamic> row) async {
     final db = await instance.database;
     return await db.insert('vehicles', row);
@@ -89,14 +90,24 @@ class DatabaseHelper {
     return await db.query('vehicles', where: 'is_deleted = ?', whereArgs: [trash ? 1 : 0]);
   }
 
+  // RECORD / KHATA METHODS (Alias Methods Included)
   Future<int> insertRecord(Map<String, dynamic> row) async {
     final db = await instance.database;
     return await db.insert('records', row);
   }
 
+  Future<int> addRecord(Map<String, dynamic> row) async {
+    return await insertRecord(row);
+  }
+
   Future<int> updateRecord(int id, Map<String, dynamic> row) async {
     final db = await instance.database;
     return await db.update('records', row, where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<int> deleteRecord(int id) async {
+    final db = await instance.database;
+    return await db.delete('records', where: 'id = ?', whereArgs: [id]);
   }
 
   Future<List<Map<String, dynamic>>> getRecords(int? vehicleId, {bool trash = false}) async {
@@ -149,6 +160,7 @@ class DatabaseHelper {
     return await db.query('reminders');
   }
 
+  // SOFT & HARD DELETE
   Future<int> setSoftDelete(String table, int id, bool delete) async {
     final db = await instance.database;
     return await db.update(table, {'is_deleted': delete ? 1 : 0}, where: 'id = ?', whereArgs: [id]);
@@ -159,4 +171,3 @@ class DatabaseHelper {
     return await db.delete(table, where: 'id = ?', whereArgs: [id]);
   }
 }
-
