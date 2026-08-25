@@ -539,18 +539,32 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                         child: Text(cat),
                       ))
                   .toList(),
-              onChanged: (val) {
+                            onChanged: (val) {
                 if (val != null) {
                   setModalState(() {
                     subCategory = val;
                   });
-                }
-              },
-            ),
-          ],
-        ),
+                        }
+      },
+    ), // Line 548: DropdownButtonFormField close
+  ],   // Line 549: Column children close
+),     // Line 550: Column close
+),     // Line 551: Padding close
+),     // Line 552: StatefulBuilder close
+);     // Line 553: showModalBottomSheet close
+}      // Line 554: _addTransactionDialog function close
+
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Vehicle Details')),
+      body: const Center(child: Text('Vehicle Details Screen')),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _addTransactionDialog,
+        child: const Icon(Icons.add),
       ),
-    ),
-  );
+    );
+  }
 }
-}
+
