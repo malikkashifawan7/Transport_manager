@@ -4,7 +4,6 @@ import 'package:sqflite/sqflite.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import 'package:share_plus/share_plus.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -13,7 +12,7 @@ void main() async {
 }
 
 // ----------------------------------------------------
-// DATABASE HELPER (With Soft Delete & Update Support)
+// DATABASE HELPER
 // ----------------------------------------------------
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -75,7 +74,6 @@ class DatabaseHelper {
     ''');
   }
 
-  // Vehicles CRUD
   Future<int> insertVehicle(Map<String, dynamic> row) async {
     final db = await instance.database;
     return await db.insert('vehicles', row);
@@ -91,7 +89,6 @@ class DatabaseHelper {
     return await db.query('vehicles', where: 'is_deleted = ?', whereArgs: [trash ? 1 : 0]);
   }
 
-  // Records CRUD
   Future<int> insertRecord(Map<String, dynamic> row) async {
     final db = await instance.database;
     return await db.insert('records', row);
@@ -110,7 +107,6 @@ class DatabaseHelper {
     return await db.query('records', where: 'is_deleted = ?', whereArgs: [trash ? 1 : 0]);
   }
 
-  // Soft Delete & Restore
   Future<int> setSoftDelete(String table, int id, bool delete) async {
     final db = await instance.database;
     return await db.update(table, {'is_deleted': delete ? 1 : 0}, where: 'id = ?', whereArgs: [id]);
@@ -177,8 +173,9 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
     );
   }
 }
+
 // ----------------------------------------------------
-// 1. FLEET DASHBOARD (WITH FULL EDITING & TRASH)
+// FLEET DASHBOARD
 // ----------------------------------------------------
 class FleetDashboardScreen extends StatefulWidget {
   const FleetDashboardScreen({super.key});
@@ -218,21 +215,11 @@ class _FleetDashboardScreenState extends State<FleetDashboardScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(
-              controller: numCtrl,
-              decoration: const InputDecoration(labelText: 'Vehicle Number', border: OutlineInputBorder()),
-            ),
+            TextField(controller: numCtrl, decoration: const InputDecoration(labelText: 'Vehicle Number', border: OutlineInputBorder())),
             const SizedBox(height: 10),
-            TextField(
-              controller: driverCtrl,
-              decoration: const InputDecoration(labelText: 'Driver Name', border: OutlineInputBorder()),
-            ),
+            TextField(controller: driverCtrl, decoration: const InputDecoration(labelText: 'Driver Name', border: OutlineInputBorder())),
             const SizedBox(height: 10),
-            TextField(
-              controller: phoneCtrl,
-              keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(labelText: 'Driver Phone', border: OutlineInputBorder()),
-            ),
+            TextField(controller: phoneCtrl, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Driver Phone', border: OutlineInputBorder())),
           ],
         ),
         actions: [
@@ -269,7 +256,7 @@ class _FleetDashboardScreenState extends State<FleetDashboardScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _vehicles.isEmpty
-              ? const Center(child: Text('No active vehicles found. Add one!'))
+              ? const Center(child: Text('No active vehicles found.'))
               : ListView.builder(
                   padding: const EdgeInsets.all(12),
                   itemCount: _vehicles.length,
@@ -283,10 +270,7 @@ class _FleetDashboardScreenState extends State<FleetDashboardScreen> {
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            IconButton(
-                              icon: const Icon(Icons.edit, color: Colors.blue),
-                              onPressed: () => _showVehicleDialog(v),
-                            ),
+                            IconButton(icon: const Icon(Icons.edit, color: Colors.blue), onPressed: () => _showVehicleDialog(v)),
                             IconButton(
                               icon: const Icon(Icons.delete_outline, color: Colors.red),
                               onPressed: () async {
@@ -294,13 +278,9 @@ class _FleetDashboardScreenState extends State<FleetDashboardScreen> {
                                 _loadData();
                               },
                             ),
-                            const Icon(Icons.arrow_forward_ios, size: 16),
                           ],
                         ),
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => VehicleDetailScreen(vehicle: v)),
-                        ),
+                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => VehicleDetailScreen(vehicle: v))),
                       ),
                     );
                   },
@@ -314,7 +294,7 @@ class _FleetDashboardScreenState extends State<FleetDashboardScreen> {
   }
 }
 // ----------------------------------------------------
-// 2. VEHICLE DETAIL SCREEN (PDF PRINT & SHARE INCLUDED)
+// VEHICLE DETAIL SCREEN
 // ----------------------------------------------------
 class VehicleDetailScreen extends StatefulWidget {
   final Map<String, dynamic> vehicle;
@@ -343,7 +323,7 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
     });
   }
 
-    void _generatePdfAndPrint() async {
+  void _generatePdfAndPrint() async {
     final pdf = pw.Document();
     pdf.addPage(
       pw.Page(
@@ -390,8 +370,6 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
     await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save());
   }
 
-  }
-
   void _showTransactionDialog([Map<String, dynamic>? existing]) {
     String type = existing?['type'] ?? 'Expense';
     String category = existing?['category'] ?? 'Challan / Toll';
@@ -399,12 +377,12 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
     final noteController = TextEditingController(text: existing?['note'] ?? '');
 
     showModalBottomSheet(
-      context: ctx
+      context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) {
         return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setModalState) {
+          builder: (BuildContext dialogContext, StateSetter setModalState) {
             final categories = type == 'Income'
                 ? ['Freight / Trip Fare', 'Bonus / Extra']
                 : ['Challan / Toll', 'Fuel', 'Maintenance', 'Driver Allowance', 'Other Expense'];
@@ -418,7 +396,7 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
                 top: 20,
                 left: 20,
                 right: 20,
-                bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+                bottom: MediaQuery.of(dialogContext).viewInsets.bottom + 20,
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -490,7 +468,7 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
                             await DatabaseHelper.instance.updateRecord(existing['id'], payload);
                           }
 
-                          if (mounted) Navigator.pop(ctx);
+                          if (mounted) Navigator.pop(dialogContext);
                           _loadRecords();
                         }
                       },
@@ -565,8 +543,9 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
     );
   }
 }
+
 // ----------------------------------------------------
-// 3. TOTAL LEDGER SCREEN
+// TOTAL LEDGER SCREEN
 // ----------------------------------------------------
 class TotalLedgerScreen extends StatefulWidget {
   const TotalLedgerScreen({super.key});
@@ -674,7 +653,7 @@ class _TotalLedgerScreenState extends State<TotalLedgerScreen> {
 }
 
 // ----------------------------------------------------
-// 4. SERVICES & UDHAR KHATA SCREEN
+// SERVICES & UDHAR KHATA SCREEN
 // ----------------------------------------------------
 class ServicesAndKhataScreen extends StatefulWidget {
   const ServicesAndKhataScreen({super.key});
@@ -766,7 +745,7 @@ class _ServicesAndKhataScreenState extends State<ServicesAndKhataScreen> {
 }
 
 // ----------------------------------------------------
-// 5. RECYCLE BIN SCREEN (RESTORE & PERMANENT DELETE)
+// RECYCLE BIN SCREEN
 // ----------------------------------------------------
 class RecycleBinScreen extends StatefulWidget {
   const RecycleBinScreen({super.key});
@@ -818,25 +797,4 @@ class _RecycleBinScreenState extends State<RecycleBinScreen> {
                             IconButton(
                               icon: const Icon(Icons.restore, color: Colors.green),
                               onPressed: () async {
-                                await DatabaseHelper.instance.setSoftDelete('vehicles', v['id'], false);
-                                _loadTrash();
-                              },
-                              tooltip: 'Restore',
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete_forever, color: Colors.red),
-                              onPressed: () async {
-                                await DatabaseHelper.instance.permanentDelete('vehicles', v['id']);
-                                _loadTrash();
-                              },
-                              tooltip: 'Delete Permanently',
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-    );
-  }
-
+                     
