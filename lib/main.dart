@@ -83,17 +83,6 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
   }
 }
 
-            label: 'Avg Calculator',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.folder_shared_rounded),
-            label: 'Notepad',
-          ),
-        ],
-      ),
-    );
-  }
-
 
 // ---------------------------------------------------------
 // 1. FLEET DASHBOARD SCREEN
