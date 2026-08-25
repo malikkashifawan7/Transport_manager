@@ -399,7 +399,7 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
     final noteController = TextEditingController(text: existing?['note'] ?? '');
 
     showModalBottomSheet(
-      context: context,
+      context: ctx
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) {
@@ -839,4 +839,4 @@ class _RecycleBinScreenState extends State<RecycleBinScreen> {
                 ),
     );
   }
-}
+
