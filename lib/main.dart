@@ -41,12 +41,13 @@ class MainHomeScreen extends StatefulWidget {
 class _MainHomeScreenState extends State<MainHomeScreen> {
   int _selectedIndex = 0;
 
-    final List<Widget> _screens = [
+      final List<Widget> _screens = [
     const FleetDashboardScreen(),
     const Center(child: Text('Analytics & Ledger')),
     const Center(child: Text('Fuel Calculator')),
     const Center(child: Text('Directory & Notes')),
   ];
+
 
 
   @override
@@ -543,15 +544,18 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
     .toList(),
 
 
-          onChanged: (val) {
+                  onChanged: (val) {
           if (val != null) {
             setModalState(() {
               subCategory = val;
             });
           }
         },
-    ),
-  );
-}
+      ), // DropdownButtonFormField close
+    ),   // StatefulBuilder / Padding close
+  );     // showModalBottomSheet close
+}        // _addTransactionDialog function close
+
+
 
 
