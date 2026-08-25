@@ -343,7 +343,7 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
     });
   }
 
-  void _generatePdfAndPrint() async {
+    void _generatePdfAndPrint() async {
     final pdf = pw.Document();
     pdf.addPage(
       pw.Page(
@@ -352,12 +352,12 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
           return pw.Padding(
             padding: const pw.EdgeInsets.all(24),
             child: pw.Column(
-              cross: pw.CrossAxisAlignment.start,
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
                 pw.Header(
                   level: 0,
                   child: pw.Row(
-                    main: pw.MainAxisAlignment.spaceBetween,
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                     children: [
                       pw.Text('TRANSPORT INVOICE / REPORT', style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
                       pw.Text(DateTime.now().toString().split(' ')[0]),
@@ -388,6 +388,8 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
       ),
     );
     await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save());
+  }
+
   }
 
   void _showTransactionDialog([Map<String, dynamic>? existing]) {
