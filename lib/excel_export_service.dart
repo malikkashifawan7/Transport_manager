@@ -8,7 +8,6 @@ class ExcelExportService {
     final excel = Excel.createExcel();
     final Sheet sheet = excel['Sheet1'];
 
-    // Header Row
     sheet.appendRow([
       'Date',
       'Type',
@@ -19,7 +18,6 @@ class ExcelExportService {
       'Odometer (KM)',
     ]);
 
-    // Data Rows
     for (var r in records) {
       sheet.appendRow([
         r['date']?.toString() ?? '',
