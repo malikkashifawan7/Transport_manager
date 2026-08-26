@@ -28,9 +28,34 @@ class AwanBrothersToursApp extends StatelessWidget {
       title: 'Awan Brothers Tours & Travels',
       debugShowCheckedModeBanner: false,
       themeMode: ThemeMode.system,
-      // ... baki styling code same rahega ...
-      
-      home: const MainNavigationHub(), // <-- Yahan 'SplashScreen()' ki jagah ye likhein
+      theme: ThemeData(
+        useMaterial3: true,
+        brightness: Brightness.light,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF1A237E),
+          primary: const Color(0xFF1A237E),
+          secondary: const Color(0xFFFF6F00),
+        ),
+        textTheme: GoogleFonts.poppinsTextTheme(ThemeData.light().textTheme),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF1A237E),
+          foregroundColor: Colors.white,
+          centerTitle: true,
+          elevation: 2,
+        ),
+      ),
+      darkTheme: ThemeData(
+        useMaterial3: true,
+        brightness: Brightness.dark,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF1A237E),
+          brightness: Brightness.dark,
+          primary: const Color(0xFF3F51B5),
+          secondary: const Color(0xFFFF8F00),
+        ),
+        textTheme: GoogleFonts.poppinsTextTheme(ThemeData.dark().textTheme),
+      ),
+      home: const MainNavigationHub(),
     );
   }
 }
@@ -67,126 +92,7 @@ class ActionService {
 }
 
 // ============================================================================
-// 3. SPLASH SCREEN
-// ============================================================================
-class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
-
-  @override
-  State<SplashScreen> createState() => _SplashScreenState();
-}
-
-class _SplashScreenState extends State<SplashScreen> {
-  @override
-  void initState() {
-    super.initState();
-    _navigateToHome();
-  }
-
-  void _navigateToHome() async {
-    await Future.delayed(const Duration(seconds: 3));
-    if (!mounted) return;
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (context) => const MainNavigationHub()),
-      (route) => false,
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        width: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF0D47A1), Color(0xFF1A237E)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
-                    blurRadius: 10,
-                    spreadRadius: 2,
-                  )
-                ],
-              ),
-              child: const Icon(Icons.directions_bus_filled, size: 70, color: Color(0xFF1A237E)),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Awan Brothers',
-              style: GoogleFonts.poppins(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
-            ),
-            Text(
-              'TOURS & TRAVELS',
-              style: GoogleFonts.poppins(fontSize: 14, letterSpacing: 3, color: Colors.white70),
-            ),
-            const SizedBox(height: 40),
-            const CircularProgressIndicator(color: Colors.amber),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        width: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF0D47A1), Color(0xFF1A237E)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 10, spreadRadius: 2)
-                ],
-              ),
-              child: const Icon(Icons.directions_bus_filled, size: 70, color: Color(0xFF1A237E)),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Awan Brothers',
-              style: GoogleFonts.poppins(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
-            ),
-            Text(
-              'TOURS & TRAVELS',
-              style: GoogleFonts.poppins(fontSize: 14, letterSpacing: 3, color: Colors.white70),
-            ),
-            const SizedBox(height: 40),
-            const CircularProgressIndicator(color: Colors.amber),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ============================================================================
-// 4. MAIN NAVIGATION HUB
+// 3. MAIN NAVIGATION HUB
 // ============================================================================
 class MainNavigationHub extends StatefulWidget {
   const MainNavigationHub({super.key});
@@ -224,6 +130,7 @@ class _MainNavigationHubState extends State<MainNavigationHub> {
     );
   }
 }
+
 // ============================================================================
 // 5. CUSTOMER HOME SCREEN
 // ============================================================================
