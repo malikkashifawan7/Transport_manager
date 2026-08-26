@@ -259,3 +259,4 @@ class _FleetDashboardState extends State<DashboardScreen> {
     );
   }
 }
+
