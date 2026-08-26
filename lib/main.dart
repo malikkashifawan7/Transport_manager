@@ -9,15 +9,12 @@ import 'package:intl/intl.dart';
 // ============================================================================
 // 1. MAIN & INITIALIZATION (CRASH-PROOF)
 // ============================================================================
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  try {
-    await Firebase.initializeApp();
-  } catch (e) {
-    debugPrint("Firebase init failed: $e");
-  }
+  // await Firebase.initializeApp(); // Is line ko comment kar dein
   runApp(const AwanBrothersToursApp());
 }
+
 
 class AwanBrothersToursApp extends StatelessWidget {
   const AwanBrothersToursApp({super.key});
