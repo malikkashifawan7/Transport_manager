@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "706988395708",
+    "project_id": "awan-tours-and-tralvels",
+    "storage_bucket": "awan-tours-and-tralvels.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:706988395708:android:593a64aad1ae3177a594b9",
+        "android_client_info": {
+          "package_name": "com.example.transport_manager"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSy0Yb0sImbVLcWoR-DrHtSntZeHWrjoUqxo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
+
