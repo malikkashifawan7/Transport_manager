@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'screens/customer_home.dart';
+import 'package:awan_brothers_tours/screens/customer_home.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
