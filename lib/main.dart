@@ -496,7 +496,7 @@ class InvoiceScreen extends StatelessWidget {
       pw.Page(
         build: (pw.Context ctx) {
           return pw.Column(
-            cross: pw.CrossAxisAlignment.start,
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
               pw.Text('Awan Brothers Tours & Travels', style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold)),
               pw.SizedBox(height: 10),
