@@ -35,31 +35,76 @@ class MainNavigationHub extends StatefulWidget {
 
 class _MainNavigationHubState extends State<MainNavigationHub> {
   int _selectedIndex = 0;
+  final List<Map<String, String>> _myBookings = [];
 
-  final List<Widget> _pages = const [
-    HomeScreen(),
-    VehiclesScreen(),
-    ToursScreen(),
-    BookingsScreen(),
-    SettingsScreen(),
-  ];
+  void _addBooking(String customer, String service, String date) {
+    setState(() {
+      _myBookings.add({
+        'customer': customer,
+        'service': service,
+        'date': date,
+        'status': 'Confirmed'
+      });
+    });
+  }
+
+  void _showBookingDialog() {
+    final nameController = TextEditingController();
+    final serviceController = TextEditingController();
+    final dateController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Add New Booking'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: nameController, decoration: const InputDecoration(labelText: 'Customer Name')),
+            TextField(controller: serviceController, decoration: const InputDecoration(labelText: 'Vehicle / Tour Package')),
+            TextField(controller: dateController, decoration: const InputDecoration(labelText: 'Booking Date')),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              if (nameController.text.isNotEmpty && serviceController.text.isNotEmpty) {
+                _addBooking(nameController.text, serviceController.text, dateController.text.isEmpty ? 'Today' : dateController.text);
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Booking Added Successfully!')),
+                );
+              }
+            },
+            child: const Text('Save Booking'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final List<Widget> pages = [
+      HomeScreen(
+        onNavigate: (index) => setState(() => _selectedIndex = index),
+        onNewBooking: _showBookingDialog,
+      ),
+      const VehiclesScreen(),
+      const ToursScreen(),
+      BookingsScreen(bookings: _myBookings),
+      const SettingsScreen(),
+    ];
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Awan Brothers Tours & Travels', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Awan Brothers Tours & Travels', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
         backgroundColor: const Color(0xFF1A237E),
         foregroundColor: Colors.white,
         centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_none),
-            onPressed: () {},
-          )
-        ],
       ),
-      body: _pages[_selectedIndex],
+      body: pages[_selectedIndex],
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: (idx) => setState(() => _selectedIndex = idx),
@@ -77,7 +122,10 @@ class _MainNavigationHubState extends State<MainNavigationHub> {
 
 // ---------------- DASHBOARD HOME SCREEN ----------------
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+  final Function(int) onNavigate;
+  final VoidCallback onNewBooking;
+
+  const HomeScreen({super.key, required this.onNavigate, required this.onNewBooking});
 
   @override
   Widget build(BuildContext context) {
@@ -86,7 +134,6 @@ class HomeScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Banner
           Card(
             color: const Color(0xFF1A237E),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
@@ -103,28 +150,24 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-          
-          // Quick Action Cards
           const Text('Quick Actions', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 10),
           Row(
             children: [
-              Expanded(child: _buildActionCard(context, Icons.directions_bus, 'Fleet List', Colors.blue)),
+              Expanded(child: _buildActionCard(context, Icons.directions_bus, 'Fleet List', Colors.blue, () => onNavigate(1))),
               const SizedBox(width: 10),
-              Expanded(child: _buildActionCard(context, Icons.map, 'Tour Packages', Colors.orange)),
+              Expanded(child: _buildActionCard(context, Icons.map, 'Tour Packages', Colors.orange, () => onNavigate(2))),
             ],
           ),
           const SizedBox(height: 10),
           Row(
             children: [
-              Expanded(child: _buildActionCard(context, Icons.book_online, 'New Booking', Colors.green)),
+              Expanded(child: _buildActionCard(context, Icons.book_online, 'New Booking', Colors.green, onNewBooking)),
               const SizedBox(width: 10),
-              Expanded(child: _buildActionCard(context, Icons.support_agent, 'Contact Us', Colors.purple)),
+              Expanded(child: _buildActionCard(context, Icons.support_agent, 'Contact Us', Colors.purple, () => onNavigate(4))),
             ],
           ),
           const SizedBox(height: 20),
-
-          // Overview Stats
           const Text('Fleet Stats', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 10),
           Card(
@@ -140,11 +183,11 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildActionCard(BuildContext context, IconData icon, String title, Color color) {
+  Widget _buildActionCard(BuildContext context, IconData icon, String title, Color color, VoidCallback onTap) {
     return Card(
       elevation: 2,
       child: InkWell(
-        onTap: () {},
+        onTap: onTap,
         borderRadius: BorderRadius.circular(10),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -233,19 +276,38 @@ class TourCard extends StatelessWidget {
 
 // ---------------- BOOKINGS SCREEN ----------------
 class BookingsScreen extends StatelessWidget {
-  const BookingsScreen({super.key});
+  final List<Map<String, String>> bookings;
+  const BookingsScreen({super.key, required this.bookings});
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.confirmation_number_outlined, size: 60, color: Colors.grey),
-          SizedBox(height: 10),
-          Text('No Active Bookings', style: TextStyle(fontSize: 18, color: Colors.grey)),
-        ],
-      ),
+    if (bookings.isEmpty) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.confirmation_number_outlined, size: 60, color: Colors.grey),
+            SizedBox(height: 10),
+            Text('No Active Bookings Yet', style: TextStyle(fontSize: 18, color: Colors.grey)),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: bookings.length,
+      itemBuilder: (context, index) {
+        final b = bookings[index];
+        return Card(
+          child: ListTile(
+            leading: const CircleAvatar(backgroundColor: Colors.green, child: Icon(Icons.check, color: Colors.white)),
+            title: Text(b['customer'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: Text('${b['service']} - ${b['date']}'),
+            trailing: Chip(label: Text(b['status'] ?? ''), backgroundColor: Colors.green.shade100),
+          ),
+        );
+      },
     );
   }
 }
@@ -267,4 +329,3 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 }
-
