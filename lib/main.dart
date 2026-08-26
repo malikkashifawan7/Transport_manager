@@ -213,7 +213,7 @@ class HomeScreen extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.admin_panel_settings),
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminLoginScreen())),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AdminLoginScreen())),
           ),
         ],
       ),
@@ -725,12 +725,12 @@ class SettingsScreen extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.privacy_tip_outlined),
             title: const Text('Privacy Policy'),
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen())),
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PrivacyPolicyScreen())),
           ),
           ListTile(
             leading: const Icon(Icons.admin_panel_settings_outlined),
             title: const Text('Admin Dashboard Login'),
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminLoginScreen())),
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AdminLoginScreen())),
           ),
           const Divider(),
           const Padding(
@@ -769,12 +769,32 @@ class FAQScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('FAQs')),
       body: ListView(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(12), // '.al' ki jagah '.all'
         children: const [
           ExpansionTile(
             title: Text('How do I confirm my booking?'),
-            children: [Padding(padding: EdgeInsets.all(12), child: Text('Once submitted, our team reviews your request and contacts you via WhatsApp or phone call for final confirmation.'))],
+            children: [
+              Padding(
+                padding: EdgeInsets.all(12),
+                child: Text(
+                  'Once submitted, our team reviews your request and contacts you via WhatsApp or phone call for final confirmation.',
+                ),
+              ),
+            ],
           ),
           ExpansionTile(
             title: Text('Are drivers included with vehicle rentals?'),
-            children: [Padding(padding: EdgeInsets.al
+            children: [
+              Padding(
+                padding: EdgeInsets.all(12),
+                child: Text(
+                  'Yes, all our luxury coasters, vans, and SUVs come with experienced commercial drivers.',
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
