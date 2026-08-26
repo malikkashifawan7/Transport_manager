@@ -26,8 +26,8 @@ dependencies:
   provider: ^6.1.2
   shared_preferences: ^2.2.3
   cached_network_image: ^3.3.1
-  flutter_local_notifications: ^17.1.2
-  
+    # flutter_local_notifications: ^17.1.2
+    
   # UI & Utility Packages
   url_launcher: ^6.3.0
   google_fonts: ^6.2.1
