@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import 'database_helper.dart';
 
 void main() async {
@@ -114,10 +117,10 @@ class HomeScreen extends StatelessWidget {
               _buildFeatureCard(context, Icons.account_balance_wallet, 'Udhar Khata', Colors.green, () => onNavigate(3)),
               _buildFeatureCard(context, Icons.calculate, 'Auto Average', Colors.purple, () => onNavigate(4)),
               _buildFeatureCard(context, Icons.map, 'Google Map / Route', Colors.redAccent, () {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Google Maps module linked')));
+                Navigator.push(context, MaterialPageRoute(builder: (context) => const RouteMapScreen()));
               }),
               _buildFeatureCard(context, Icons.picture_as_pdf, 'Bill & Invoices', Colors.teal, () {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invoice Generator ready')));
+                Navigator.push(context, MaterialPageRoute(builder: (context) => const InvoiceScreen()));
               }),
             ],
           ),
@@ -148,7 +151,7 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-// ---------------- VEHICLES SCREEN (SQLITE INTEGRATED) ----------------
+// ---------------- VEHICLES SCREEN ----------------
 class VehiclesScreen extends StatefulWidget {
   const VehiclesScreen({super.key});
 
@@ -246,7 +249,7 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
   }
 }
 
-// ---------------- DRIVERS & SALARY SCREEN ----------------
+// ---------------- DRIVERS SCREEN ----------------
 class DriversScreen extends StatefulWidget {
   const DriversScreen({super.key});
 
@@ -362,7 +365,6 @@ class _LedgerKhataScreenState extends State<LedgerKhataScreen> {
   void _addKhataEntryDialog() {
     final titleController = TextEditingController();
     final amountController = TextEditingController();
-    String type = 'Credit';
 
     showDialog(
       context: context,
@@ -384,7 +386,7 @@ class _LedgerKhataScreenState extends State<LedgerKhataScreen> {
                 await db.insert('ledger', {
                   'title': titleController.text,
                   'amount': double.tryParse(amountController.text) ?? 0.0,
-                  'type': type,
+                  'type': 'Credit',
                   'date': DateTime.now().toString().split(' ')[0],
                 });
                 Navigator.pop(ctx);
@@ -482,4 +484,107 @@ class _AutoAverageScreenState extends State<AutoAverageScreen> {
     );
   }
 }
- 
+
+// ---------------- BILL & INVOICE GENERATOR SCREEN ----------------
+class InvoiceScreen extends StatelessWidget {
+  const InvoiceScreen({super.key});
+
+  void _generatePdf(BuildContext context) async {
+    final pdf = pw.Document();
+
+    pdf.addPage(
+      pw.Page(
+        build: (pw.Context ctx) {
+          return pw.Column(
+            cross: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text('Awan Brothers Tours & Travels', style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold)),
+              pw.SizedBox(height: 10),
+              pw.Text('Booking Receipt / Official Invoice', style: const pw.TextStyle(fontSize: 16)),
+              pw.Divider(),
+              pw.SizedBox(height: 20),
+              pw.Text('Customer Name: Valued Client'),
+              pw.Text('Route: Lahore to Islamabad'),
+              pw.Text('Total Amount: Rs. 45,000'),
+              pw.Text('Advance Paid: Rs. 15,000'),
+              pw.Text('Remaining Balance: Rs. 30,000'),
+              pw.SizedBox(height: 30),
+              pw.Text('Thank you for choosing Awan Brothers Tours!'),
+            ],
+          );
+        },
+      ),
+    );
+
+    await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Invoice & PDF Generator'),
+        backgroundColor: const Color(0xFF1A237E),
+        foregroundColor: Colors.white,
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.picture_as_pdf, size: 80, color: Colors.teal),
+              const SizedBox(height: 20),
+              const Text('Generate & Print Official Invoice', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 30),
+              ElevatedButton.icon(
+                onPressed: () => _generatePdf(context),
+                icon: const Icon(Icons.print),
+                label: const Text('Print / Share PDF Invoice'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.teal,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(200, 50),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------- ROUTE & MAP SCREEN ----------------
+class RouteMapScreen extends StatelessWidget {
+  const RouteMapScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Google Maps / Route Tracker'),
+        backgroundColor: const Color(0xFF1A237E),
+        foregroundColor: Colors.white,
+      ),
+      body: const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.map, size: 80, color: Colors.redAccent),
+            SizedBox(height: 20),
+            Text(
+              'Google Maps & Route System Linked',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 10),
+            Text(
+              'Ready for GPS & Distance tracking integration.',
+              style: TextStyle(color: Colors.grey),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
