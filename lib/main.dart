@@ -132,7 +132,7 @@ class _MainNavigationHubState extends State<MainNavigationHub> {
 }
 
 // ============================================================================
-// 5. CUSTOMER HOME SCREEN
+// 5. CUSTOMER HOME SCREEN (FIXED FOR BLANK SCREEN ISSUE)
 // ============================================================================
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -145,71 +145,144 @@ class HomeScreen extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.admin_panel_settings),
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminLoginScreen())),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AdminLoginScreen()),
+            ),
           ),
         ],
       ),
       body: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Banner Card
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [Color(0xFF1A237E), Color(0xFF3F51B5)]),
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF1A237E), Color(0xFF3F51B5)],
+                ),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Explore Pakistan With Us', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+                  const Text(
+                    'Explore Pakistan With Us',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(height: 6),
-                  const Text('Premium buses, luxury SUVs, and customized northern area packages.', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                  const Text(
+                    'Premium buses, luxury SUVs, and customized northern area packages.',
+                    style: TextStyle(color: Colors.white70, fontSize: 13),
+                  ),
                   const SizedBox(height: 16),
                   ElevatedButton.icon(
                     onPressed: () => ActionService.openWhatsApp(),
                     icon: const Icon(Icons.chat),
                     label: const Text('Quick WhatsApp Inquiry'),
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.teal, foregroundColor: Colors.white),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.teal,
+                      foregroundColor: Colors.white,
+                    ),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 24),
+
+            // Quick Buttons
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _buildQuickActionButton(context, Icons.call, 'Call Us', Colors.green, () => ActionService.makeCall()),
-                _buildQuickActionButton(context, Icons.location_on, 'Location', Colors.red, () => ActionService.openMap()),
-                _buildQuickActionButton(context, Icons.help_outline, 'FAQs', Colors.orange, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FAQScreen()))),
-                _buildQuickActionButton(context, Icons.info_outline, 'About', Colors.blue, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AboutUsScreen()))),
+                _buildQuickActionButton(
+                  context,
+                  Icons.call,
+                  'Call Us',
+                  Colors.green,
+                  () => ActionService.makeCall(),
+                ),
+                _buildQuickActionButton(
+                  context,
+                  Icons.location_on,
+                  'Location',
+                  Colors.red,
+                  () => ActionService.openMap(),
+                ),
+                _buildQuickActionButton(
+                  context,
+                  Icons.help_outline,
+                  'FAQs',
+                  Colors.orange,
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const FAQScreen()),
+                  ),
+                ),
+                _buildQuickActionButton(
+                  context,
+                  Icons.info_outline,
+                  'About',
+                  Colors.blue,
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AboutUsScreen()),
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Featured Vehicles', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                TextButton(
-                  onPressed: () {}, 
-                  child: const Text('View All'),
-                )
-              ],
+
+            // Featured Header
+            const Text(
+              'Featured Vehicles',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
+
+            // Safe StreamBuilder with Fallback UI
             StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance.collection('vehicles').limit(3).snapshots(),
               builder: (context, snapshot) {
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const Card(
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
                     child: Padding(
-                      padding: EdgeInsets.all(16),
-                      child: Text('No vehicles available right now. Please check back later.'),
+                      padding: EdgeInsets.all(20.0),
+                      child: CircularProgressIndicator(),
                     ),
                   );
                 }
+
+                if (snapshot.hasError || !snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return Card(
+                    elevation: 1,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    child: const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          Icon(Icons.directions_bus, color: Colors.grey, size: 30),
+                          SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Fleet items will appear here once added in Admin Panel.',
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+
                 return Column(
                   children: snapshot.data!.docs.map((doc) {
                     final data = doc.data() as Map<String, dynamic>;
@@ -224,13 +297,23 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildQuickActionButton(BuildContext context, IconData icon, String label, Color color, VoidCallback onTap) {
+  Widget _buildQuickActionButton(
+    BuildContext context,
+    IconData icon,
+    String label,
+    Color color,
+    VoidCallback onTap,
+  ) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Column(
         children: [
-          CircleAvatar(radius: 25, backgroundColor: color.withOpacity(0.15), child: Icon(icon, color: color)),
+          CircleAvatar(
+            radius: 25,
+            backgroundColor: color.withOpacity(0.15),
+            child: Icon(icon, color: color),
+          ),
           const SizedBox(height: 6),
           Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
         ],
@@ -238,6 +321,7 @@ class HomeScreen extends StatelessWidget {
     );
   }
 }
+
 
 // ============================================================================
 // 6. VEHICLES SCREEN & CARD
