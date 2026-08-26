@@ -198,7 +198,6 @@ class _MainNavigationHubState extends State<MainNavigationHub> {
     );
   }
 }
-
 // ============================================================================
 // 5. CUSTOMER HOME SCREEN
 // ============================================================================
@@ -213,7 +212,7 @@ class HomeScreen extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.admin_panel_settings),
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AdminLoginScreen())),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminLoginScreen())),
           ),
         ],
       ),
@@ -306,6 +305,7 @@ class HomeScreen extends StatelessWidget {
     );
   }
 }
+
 // ============================================================================
 // 6. VEHICLES SCREEN & CARD
 // ============================================================================
@@ -648,7 +648,6 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
     }
   }
 }
-
 // ============================================================================
 // 9. MY BOOKINGS SCREEN
 // ============================================================================
@@ -725,12 +724,12 @@ class SettingsScreen extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.privacy_tip_outlined),
             title: const Text('Privacy Policy'),
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PrivacyPolicyScreen())),
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen())),
           ),
           ListTile(
             leading: const Icon(Icons.admin_panel_settings_outlined),
             title: const Text('Admin Dashboard Login'),
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AdminLoginScreen())),
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminLoginScreen())),
           ),
           const Divider(),
           const Padding(
@@ -769,16 +768,14 @@ class FAQScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('FAQs')),
       body: ListView(
-        padding: const EdgeInsets.all(12), // '.al' ki jagah '.all'
+        padding: const EdgeInsets.all(12),
         children: const [
           ExpansionTile(
             title: Text('How do I confirm my booking?'),
             children: [
               Padding(
                 padding: EdgeInsets.all(12),
-                child: Text(
-                  'Once submitted, our team reviews your request and contacts you via WhatsApp or phone call for final confirmation.',
-                ),
+                child: Text('Once submitted, our team reviews your request and contacts you via WhatsApp or phone call for final confirmation.'),
               ),
             ],
           ),
@@ -787,13 +784,251 @@ class FAQScreen extends StatelessWidget {
             children: [
               Padding(
                 padding: EdgeInsets.all(12),
-                child: Text(
-                  'Yes, all our luxury coasters, vans, and SUVs come with experienced commercial drivers.',
-                ),
+                child: Text('Yes, all our luxury coasters, vans, and SUVs come with experienced commercial drivers.'),
               ),
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class PrivacyPolicyScreen extends StatelessWidget {
+  const PrivacyPolicyScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Privacy Policy')),
+      body: const SingleChildScrollView(
+        padding: EdgeInsets.all(16),
+        child: Text(
+          'Awan Brothers Tours & Travels respects your privacy. We collect customer information such as name, phone number, and location strictly for processing travel booking requests.\n\nWe do not sell or share customer data with third-party advertisers.',
+          style: TextStyle(fontSize: 14, height: 1.5),
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// 11. ADMIN DASHBOARD & MANAGEMENT
+// ============================================================================
+class AdminLoginScreen extends StatefulWidget {
+  const AdminLoginScreen({super.key});
+
+  @override
+  State<AdminLoginScreen> createState() => _AdminLoginScreenState();
+}
+
+class _AdminLoginScreenState extends State<AdminLoginScreen> {
+  final _emailCtrl = TextEditingController();
+  final _passCtrl = TextEditingController();
+  bool _isLoading = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Admin Login')),
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.admin_panel_settings, size: 80, color: Color(0xFF1A237E)),
+            const SizedBox(height: 20),
+            TextField(
+              controller: _emailCtrl,
+              decoration: const InputDecoration(labelText: 'Admin Email', border: OutlineInputBorder()),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _passCtrl,
+              obscureText: true,
+              decoration: const InputDecoration(labelText: 'Password', border: OutlineInputBorder()),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: _isLoading ? null : _login,
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1A237E), foregroundColor: Colors.white),
+                child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text('Login to Admin Panel'),
+              ),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _login() async {
+    setState(() => _isLoading = true);
+    try {
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: _emailCtrl.text.trim(),
+        password: _passCtrl.text.trim(),
+      );
+      if (mounted) {
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const AdminDashboardScreen()));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Login Failed: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+}
+
+class AdminDashboardScreen extends StatelessWidget {
+  const AdminDashboardScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Admin Control Panel'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () {
+              FirebaseAuth.instance.signOut();
+              Navigator.pop(context);
+            },
+          )
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Card(
+            color: Colors.indigo.shade50,
+            child: const ListTile(
+              leading: Icon(Icons.security, color: Color(0xFF1A237E)),
+              title: Text('Authenticated Admin Access', style: TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: Text('Manage vehicles, bookings and packages in real-time.'),
+            ),
+          ),
+          const SizedBox(height: 16),
+          ListTile(
+            tileColor: Colors.grey.shade100,
+            leading: const Icon(Icons.list_alt, color: Colors.indigo),
+            title: const Text('Manage Booking Requests'),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminManageBookingsScreen())),
+          ),
+          const SizedBox(height: 8),
+          ListTile(
+            tileColor: Colors.grey.shade100,
+            leading: const Icon(Icons.directions_bus, color: Colors.green),
+            title: const Text('Add / Manage Fleet Vehicles'),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminAddVehicleScreen())),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class AdminManageBookingsScreen extends StatelessWidget {
+  const AdminManageBookingsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Manage Bookings')),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance.collection('bookings').orderBy('createdAt', descending: true).snapshots(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+          return ListView.builder(
+            itemCount: snapshot.data!.docs.length,
+            itemBuilder: (context, index) {
+              final doc = snapshot.data!.docs[index];
+              final data = doc.data() as Map<String, dynamic>;
+              return Card(
+                margin: const EdgeInsets.all(8),
+                child: ExpansionTile(
+                  title: Text('${data['itemTitle']} - ${data['customerName']}'),
+                  subtitle: Text('Phone: ${data['phone']} | Status: ${data['status']}'),
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
+                            onPressed: () => FirebaseFirestore.instance.collection('bookings').doc(doc.id).update({'status': 'confirmed'}),
+                            child: const Text('Approve'),
+                          ),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+                            onPressed: () => FirebaseFirestore.instance.collection('bookings').doc(doc.id).update({'status': 'rejected'}),
+                            child: const Text('Reject'),
+                          ),
+                        ],
+                      ),
+                    )
+                  ],
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+class AdminAddVehicleScreen extends StatefulWidget {
+  const AdminAddVehicleScreen({super.key});
+
+  @override
+  State<AdminAddVehicleScreen> createState() => _AdminAddVehicleScreenState();
+}
+
+class _AdminAddVehicleScreenState extends State<AdminAddVehicleScreen> {
+  final _nameCtrl = TextEditingController();
+  final _capacityCtrl = TextEditingController();
+  final _priceCtrl = TextEditingController();
+  final _typeCtrl = TextEditingController();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Add Fleet Vehicle')),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            TextField(controller: _nameCtrl, decoration: const InputDecoration(labelText: 'Vehicle Name', border: OutlineInputBorder())),
+            const SizedBox(height: 10),
+            TextField(controller: _typeCtrl, decoration: const InputDecoration(labelText: 'Vehicle Type (e.g. Bus, Coaster, Sedan)', border: OutlineInputBorder())),
+            const SizedBox(height: 10),
+            TextField(controller: _capacityCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Seating Capacity', border: OutlineInputBorder())),
+            const SizedBox(height: 10),
+            TextField(controller: _priceCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Price Per Day (PKR)', border: OutlineInputBorder())),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () async {
+                await FirebaseFirestore.instance.collection('vehicles').add({
+                  'name': _nameCtrl.text,
+                  'type': _typeCtrl.text,
+                  'capacity': _capacityCtrl.text,
+                  'pricePerDay': _priceCtrl.text,
+                });
+                if (mounted) Navigator.pop(context);
+              },
+              child: const Text('Save Vehicle'),
+            )
+          ],
+        ),
       ),
     );
   }
