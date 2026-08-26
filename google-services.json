@@ -1,21 +1,20 @@
-{
-  "project_info": {
-    "project_number": "123456789012",
-    "project_id": "awan-brothers-tours",
-    "storage_bucket": "awan-brothers-tours.appspot.com"
+"project_info": {
+    "project_number": "706988395708",
+    "project_id": "awan-tours-and-tralvels",
+    "storage_bucket": "awan-tours-and-tralvels.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:123456789012:android:abc123def456ghi789",
+        "mobilesdk_app_id": "1:706988395708:android:593a64aad1ae3177a594b9",
         "android_client_info": {
-          "package_name": "com.example.transport_manager"
+          "package_name": "com.transport_manager"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyDummyApiKeyForFirebaseTesting12345"
+          "current_key": "AIzaSyBYb0sImbVLcWoR-0rHtSntZehWrjoUqxo"
         }
       ],
       "services": {
