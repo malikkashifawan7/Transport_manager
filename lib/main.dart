@@ -482,3 +482,4 @@ class _AutoAverageScreenState extends State<AutoAverageScreen> {
     );
   }
 }
+ 
