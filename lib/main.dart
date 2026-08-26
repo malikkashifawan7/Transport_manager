@@ -7,14 +7,14 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
 
 // ============================================================================
-// 1. MAIN & INITIALIZATION
+// 1. MAIN & INITIALIZATION (CRASH-PROOF)
 // ============================================================================
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
     await Firebase.initializeApp();
   } catch (e) {
-    debugPrint("Firebase Initialization Error: $e");
+    debugPrint("Firebase init failed: $e");
   }
   runApp(const AwanBrothersToursApp());
 }
@@ -130,6 +130,7 @@ class _MainNavigationHubState extends State<MainNavigationHub> {
     );
   }
 }
+
 
 // ============================================================================
 // 5. CUSTOMER HOME SCREEN (FIXED FOR BLANK SCREEN ISSUE)
