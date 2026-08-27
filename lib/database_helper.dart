@@ -58,15 +58,43 @@ class DatabaseHelper {
       )
     ''');
 
-    // Khata / Ledger Table
+    // Ledger / Khata Table
     await db.execute('''
       CREATE TABLE ledger (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT NOT NULL,
         amount REAL,
-        type TEXT, -- 'Credit' or 'Debit'
+        type TEXT,
         date TEXT
       )
     ''');
+
+    // Maintenance Table
+    await db.execute('''
+      CREATE TABLE maintenance (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        vehicleNo TEXT,
+        serviceType TEXT,
+        cost REAL,
+        date TEXT,
+        notes TEXT
+      )
+    ''');
+  }
+
+  Future<int> insertRecord(String table, Map<String, dynamic> row) async {
+    final db = await instance.database;
+    return await db.insert(table, row);
+  }
+
+  Future<List<Map<String, dynamic>>> fetchAll(String table) async {
+    final db = await instance.database;
+    return await db.query(table, orderBy: 'id DESC');
+  }
+
+  Future<int> deleteRecord(String table, int id) async {
+    final db = await instance.database;
+    return await db.delete(table, where: 'id = ?', whereArgs: [id]);
   }
 }
+
