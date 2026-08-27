@@ -1,9 +1,9 @@
-import 'auto_average_screen.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'vehicles_screen.dart';
 import 'bookings_screen.dart';
 import 'drivers_screen.dart';
+import 'auto_average_screen.dart';
 
 void main() {
   runApp(const TransportApp());
@@ -41,7 +41,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
     const HomeDashboardView(),
     const VehiclesScreen(),
     const DriversScreen(),
-    const VehiclesScreen(), // Udhar Khata is integrated inside Vehicle Detail View
+    const VehiclesScreen(),
     const BookingsScreen(),
   ];
 
@@ -103,7 +103,7 @@ class HomeDashboardView extends StatelessWidget {
               mainAxisSpacing: 16,
               childAspectRatio: 1.1,
               children: [
-                _                _buildCard(context, 'Party Bookings', Icons.bookmark_add, Colors.purple.shade50, Colors.purple, () {
+                _buildCard(context, 'Party Bookings', Icons.bookmark_add, Colors.purple.shade50, Colors.purple, () {
                   Navigator.push(context, MaterialPageRoute(builder: (_) => const BookingsScreen()));
                 }),
                 _buildCard(context, 'Vehicle Fleet', Icons.directions_bus, Colors.blue.shade50, Colors.blue, () {
@@ -122,7 +122,6 @@ class HomeDashboardView extends StatelessWidget {
                   final Uri url = Uri.parse('https://www.google.com/maps');
                   await launchUrl(url, mode: LaunchMode.externalApplication);
                 }),
-,
               ],
             ),
           ],
