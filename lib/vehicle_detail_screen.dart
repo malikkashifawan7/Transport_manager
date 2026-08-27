@@ -10,7 +10,6 @@ class VehicleDetailScreen extends StatefulWidget {
 }
 
 class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
-  // Sample data for Maintenance Invoices linked to this vehicle
   final List<Map<String, String>> _maintenanceLogs = [
     {
       'type': 'Engine Oil & Filter Change',
@@ -26,10 +25,9 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
     },
   ];
 
-  // Document Expiry Dates for this vehicle
-  DateTime taxExpiry = DateTime.now().add(const Duration(days: 10)); // Expires in 10 days
-  DateTime passingExpiry = DateTime.now().add(const Duration(days: 45)); // Valid
-  DateTime routePermitExpiry = DateTime.now().subtract(const Duration(days: 3)); // Expired
+  DateTime taxExpiry = DateTime.now().add(const Duration(days: 10));
+  DateTime passingExpiry = DateTime.now().add(const Duration(days: 45));
+  DateTime routePermitExpiry = DateTime.now().subtract(const Duration(days: 3));
 
   Color _getStatusColor(DateTime expiryDate) {
     final difference = expiryDate.difference(DateTime.now()).inDays;
@@ -107,7 +105,6 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
         ),
         body: TabBarView(
           children: [
-            // TAB 1: MAINTENANCE & BILLS
             Scaffold(
               floatingActionButton: FloatingActionButton(
                 backgroundColor: const Color(0xFF1A237E),
@@ -139,8 +136,6 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
                       },
                     ),
             ),
-
-            // TAB 2: TAX & PASSING REMINDERS
             ListView(
               padding: const EdgeInsets.all(16),
               children: [
@@ -151,31 +146,26 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
                 _buildDocCard('Route Permit Expiry', routePermitExpiry),
               ],
             ),
-
-            // TAB 3: VEHICLE OVERVIEW
             Padding(
               padding: const EdgeInsets.all(16.0),
-              children: [
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Vehicle Number: ${widget.vehicle['number'] ?? widget.vehicle['name']}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                        const Divider(),
-                        Text('Model / Type: ${widget.vehicle['type'] ?? 'AC Bus / Coaster'}', style: const TextStyle(fontSize: 16)),
-                        const SizedBox(height: 8),
-                        Text('Total Seating Capacity: ${widget.vehicle['seats'] ?? '45 Seats'}', style: const TextStyle(fontSize: 16)),
-                        const SizedBox(height: 8),
-                        Text('Assigned Driver: ${widget.vehicle['driver'] ?? 'Ustad Ali'}', style: const TextStyle(fontSize: 16)),
-                        const SizedBox(height: 8),
-                        Text('Current Status: ${widget.vehicle['status'] ?? 'Available'}', style: TextStyle(fontSize: 16, color: widget.vehicle['status'] == 'On Trip' ? Colors.orange : Colors.green, fontWeight: FontWeight.bold)),
-                      ],
-                    ),
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('Vehicle Number: ${widget.vehicle['number'] ?? widget.vehicle['name']}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      const Divider(),
+                      Text('Model / Type: ${widget.vehicle['type'] ?? 'AC Bus / Coaster'}', style: const TextStyle(fontSize: 16)),
+                      const SizedBox(height: 8),
+                      Text('Assigned Driver: ${widget.vehicle['driver'] ?? 'Ustad Ali'}', style: const TextStyle(fontSize: 16)),
+                      const SizedBox(height: 8),
+                      Text('Current Status: ${widget.vehicle['status'] ?? 'Available'}', style: TextStyle(fontSize: 16, color: widget.vehicle['status'] == 'On Trip' ? Colors.orange : Colors.green, fontWeight: FontWeight.bold)),
+                    ],
                   ),
                 ),
-              ],
+              ),
             ),
           ],
         ),
