@@ -3,6 +3,9 @@ description: "A new Flutter project."
 publish_to: 'none'
 version: 1.0.0+1
 
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
 dependencies:
   flutter:
     sdk: flutter
@@ -16,7 +19,6 @@ dependencies:
   url_launcher: ^6.2.5
   flutter_app_installer: ^1.0.0
 
-
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -24,3 +26,4 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  
