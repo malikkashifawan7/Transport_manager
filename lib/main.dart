@@ -113,35 +113,54 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(height: 20),
             const Text('Management Features', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 15),
-            GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 2,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              children: [
-                _buildDashboardCard(context, 'Vehicle Fleet', Icons.directions_bus, Colors.blue.shade100, Colors.blue, () {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const VehiclesScreen()));
-                }),
-                _buildDashboardCard(context, 'Driver & Salary', Icons.person, Colors.orange.shade100, Colors.orange, () {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const DriversScreen()));
-                }),
-                _buildDashboardCard(context, 'Udhar Khata', Icons.account_balance_wallet, Colors.green.shade100, Colors.green, () {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const KhataScreen()));
-                }),
-                _buildDashboardCard(context, 'Auto Average', Icons.calculate, Colors.purple.shade100, Colors.purple, () {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const AvgCalcScreen()));
-                }),
-                _buildDashboardCard(context, 'Google Map / Route', Icons.map, Colors.red.shade100, Colors.red, () {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const RouteMapScreen()));
-                }),
-                _buildDashboardCard(context, 'Bill & Invoices', Icons.picture_as_pdf, Colors.teal.shade100, Colors.teal, () {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const InvoiceScreen()));
-                }),
-                _buildDashboardCard(context, 'Maintenance', Icons.build, Colors.amber.shade100, Colors.amber.shade900, () {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const MaintenanceScreen()));
-                }),
-              ],
+                        GridView.count(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        crossAxisCount: 2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        children: [
+          _buildDashboardCard(
+            context,
+            'Party Bookings',
+            Icons.bookmark_add,
+            Colors.purple.shade50,
+            Colors.purple,
+            () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const BookingsScreen()),
+              );
+            },
+          ),
+          _buildDashboardCard(context, 'Vehicle Fleet', Icons.directions_bus, Colors.blue.shade50, Colors.blue, () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const VehiclesScreen()));
+          }),
+          _buildDashboardCard(context, 'Driver & Salary', Icons.person, Colors.orange.shade50, Colors.orange, () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const DriversScreen()));
+          }),
+          _buildDashboardCard(context, 'Udhar Khata', Icons.account_balance_wallet, Colors.green.shade50, Colors.green, () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const KhataScreen()));
+          }),
+          _buildDashboardCard(context, 'Auto Average', Icons.calculate, Colors.purple.shade50, Colors.purple, () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const AverageCalcScreen()));
+          }),
+          _buildDashboardCard(context, 'Google Map / Route', Icons.map, Colors.red.shade50, Colors.red, () {
+            _launchMap();
+          }),
+          _buildDashboardCard(context, 'Bill & Invoices', Icons.picture_as_pdf, Colors.teal.shade50, Colors.teal, () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const InvoiceScreen()));
+          }),
+          _buildDashboardCard(context, 'Maintenance', Icons.build, Colors.deepOrange.shade50, Colors.deepOrange, () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const MaintenanceScreen()));
+          }),
+        ],
+      ),
+er: (_) => const MaintenanceScreen()));
+          }),
+        ],
+      ),
+
             ),
           ],
         ),
