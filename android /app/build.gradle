@@ -6,12 +6,12 @@ plugins {
 
 android {
     namespace "com.awanbrothers.tours"
-    compileSdk 34
+    compileSdk = 34
 
     defaultConfig {
         applicationId "com.awanbrothers.tours"
-        minSdk 21
-        targetSdk 34
+        minSdk = 21
+        targetSdk = 34
         versionCode 1
         versionName "1.0.0"
     }
@@ -40,5 +40,5 @@ flutter {
 }
 
 dependencies {
-    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.3'
 }
