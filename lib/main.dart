@@ -1,5 +1,7 @@
-import 'vehicles_screen.dart';
 import 'package:flutter/material.dart';
+import 'vehicles_screen.dart';
+import 'bookings_screen.dart';
+import 'drivers_screen.dart';
 
 void main() {
   runApp(const TransportApp());
@@ -35,10 +37,10 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
 
   final List<Widget> _screens = [
     const HomeDashboardView(),
-    const VehiclesScreen(), // Merged Vehicle, Driver & Khata Master Screen
-    const Center(child: Text('Driver & Salary Module')),
-    const Center(child: Text('Udhar Khata Module')),
-    const Center(child: Text('Bookings Module')),
+    const VehiclesScreen(),
+    const DriversScreen(),
+    const VehiclesScreen(), // Udhar Khata is integrated inside Vehicle Detail View
+    const BookingsScreen(),
   ];
 
   @override
@@ -99,11 +101,15 @@ class HomeDashboardView extends StatelessWidget {
               mainAxisSpacing: 16,
               childAspectRatio: 1.1,
               children: [
-                _buildCard(context, 'Party Bookings', Icons.bookmark_add, Colors.purple.shade50, Colors.purple, () {}),
+                _buildCard(context, 'Party Bookings', Icons.bookmark_add, Colors.purple.shade50, Colors.purple, () {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const BookingsScreen()));
+                }),
                 _buildCard(context, 'Vehicle Fleet', Icons.directions_bus, Colors.blue.shade50, Colors.blue, () {
                   Navigator.push(context, MaterialPageRoute(builder: (_) => const VehiclesScreen()));
                 }),
-                _buildCard(context, 'Driver & Salary', Icons.person, Colors.orange.shade50, Colors.orange, () {}),
+                _buildCard(context, 'Driver & Salary', Icons.person, Colors.orange.shade50, Colors.orange, () {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const DriversScreen()));
+                }),
                 _buildCard(context, 'Udhar Khata', Icons.account_balance_wallet, Colors.green.shade50, Colors.green, () {
                   Navigator.push(context, MaterialPageRoute(builder: (_) => const VehiclesScreen()));
                 }),
