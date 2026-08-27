@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'database_helper.dart';
-import 'bookings_screen.dart';
+import 'vehicles_screen.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await DatabaseHelper.instance.database;
+void main() {
   runApp(const TransportApp());
 }
 
@@ -15,46 +11,50 @@ class TransportApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Transport Hisab ERP',
       debugShowCheckedModeBanner: false,
+      title: 'Awan Brothers Tours & Travels',
       theme: ThemeData(
+        primaryColor: const Color(0xFF1A237E),
+        scaffoldBackgroundColor: const Color(0xFFF8F9FE),
         useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF1A237E),
-          primary: const Color(0xFF1A237E),
-          secondary: Colors.orangeAccent,
-        ),
       ),
-      home: const MainNavigationHub(),
+      home: const MainHomeScreen(),
     );
   }
 }
 
-class MainNavigationHub extends StatefulWidget {
-  const MainNavigationHub({super.key});
+class MainHomeScreen extends StatefulWidget {
+  const MainHomeScreen({super.key});
 
   @override
-  State<MainNavigationHub> createState() => _MainNavigationHubState();
+  State<MainHomeScreen> createState() => _MainHomeScreenState();
 }
 
-class _MainNavigationHubState extends State<MainNavigationHub> {
-  int _currentIndex = 0;
+class _MainHomeScreenState extends State<MainHomeScreen> {
+  int _selectedIndex = 0;
 
   final List<Widget> _screens = [
-    const HomeScreen(),
-    const VehiclesScreen(),
-    const DriversScreen(),
-    const KhataScreen(),
-    const BookingsScreen(),
+    const HomeDashboardView(),
+    const VehiclesScreen(), // Merged Vehicle, Driver & Khata Master Screen
+    const Center(child: Text('Driver & Salary Module')),
+    const Center(child: Text('Udhar Khata Module')),
+    const Center(child: Text('Bookings Module')),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _screens[_currentIndex],
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: _screens,
+      ),
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) => setState(() => _currentIndex = index),
+        currentIndex: _selectedIndex,
+        onTap: (index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+        },
         type: BottomNavigationBarType.fixed,
         selectedItemColor: const Color(0xFF1A237E),
         unselectedItemColor: Colors.grey,
@@ -70,25 +70,54 @@ class _MainNavigationHubState extends State<MainNavigationHub> {
   }
 }
 
-// ---------------- HOME DASHBOARD SCREEN ----------------
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+class HomeDashboardView extends StatelessWidget {
+  const HomeDashboardView({super.key});
 
-  void _launchMap() async {
-    final Uri url = Uri.parse('https://www.google.com/maps');
-    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
-      throw Exception('Could not launch Google Maps');
-    }
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Awan Brothers Tours & Travels', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+        backgroundColor: const Color(0xFF1A237E),
+        elevation: 0,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Management Features',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
+            ),
+            const SizedBox(height: 16),
+            GridView.count(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisCount: 2,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+              childAspectRatio: 1.1,
+              children: [
+                _buildCard(context, 'Party Bookings', Icons.bookmark_add, Colors.purple.shade50, Colors.purple, () {}),
+                _buildCard(context, 'Vehicle Fleet', Icons.directions_bus, Colors.blue.shade50, Colors.blue, () {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const VehiclesScreen()));
+                }),
+                _buildCard(context, 'Driver & Salary', Icons.person, Colors.orange.shade50, Colors.orange, () {}),
+                _buildCard(context, 'Udhar Khata', Icons.account_balance_wallet, Colors.green.shade50, Colors.green, () {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const VehiclesScreen()));
+                }),
+                _buildCard(context, 'Auto Average', Icons.calculate, Colors.purple.shade50, Colors.purple.shade400, () {}),
+                _buildCard(context, 'Google Map / Route', Icons.map, Colors.red.shade50, Colors.red.shade400, () {}),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
-  Widget _buildDashboardCard(
-    BuildContext context,
-    String title,
-    IconData icon,
-    Color bg,
-    Color iconColor,
-    VoidCallback onTap,
-  ) {
+  Widget _buildCard(BuildContext context, String title, IconData icon, Color bgColor, Color iconColor, VoidCallback onTap) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
@@ -97,137 +126,22 @@ class HomeScreen extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            )
+            BoxShadow(color: Colors.black.withAlpha(10), blurRadius: 10, offset: const Offset(0, 4)),
           ],
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             CircleAvatar(
-              radius: 26,
-              backgroundColor: bg,
+              radius: 28,
+              backgroundColor: bgColor,
               child: Icon(icon, color: iconColor, size: 28),
             ),
             const SizedBox(height: 12),
             Text(
               title,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
               textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Awan Brothers Tours & Travels'),
-        backgroundColor: const Color(0xFF1A237E),
-        foregroundColor: Colors.white,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1A237E),
-                borderRadius: BorderRadius.circular(15),
-              ),
-              child: const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Transport Hisab ERP', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-                  SizedBox(height: 8),
-                  Text('Fleet, Drivers, Khata & Party Bookings Manager', style: TextStyle(color: Colors.white70)),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            const Text('Management Features', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 15),
-            GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 2,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              children: [
-                _buildDashboardCard(
-                  context,
-                  'Party Bookings',
-                  Icons.bookmark_add,
-                  Colors.purple.shade50,
-                  Colors.purple,
-                  () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BookingsScreen())),
-                ),
-                _buildDashboardCard(
-                  context,
-                  'Vehicle Fleet',
-                  Icons.directions_bus,
-                  Colors.blue.shade50,
-                  Colors.blue,
-                  () => Navigator.push(context, MaterialPageRoute(builder: (_) => const VehiclesScreen())),
-                ),
-                _buildDashboardCard(
-                  context,
-                  'Driver & Salary',
-                  Icons.person,
-                  Colors.orange.shade50,
-                  Colors.orange,
-                  () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DriversScreen())),
-                ),
-                _buildDashboardCard(
-                  context,
-                  'Udhar Khata',
-                  Icons.account_balance_wallet,
-                  Colors.green.shade50,
-                  Colors.green,
-                  () => Navigator.push(context, MaterialPageRoute(builder: (_) => const KhataScreen())),
-                ),
-                _buildDashboardCard(
-                  context,
-                  'Auto Average',
-                  Icons.calculate,
-                  Colors.purple.shade50,
-                  Colors.purple,
-                  () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AverageCalcScreen())),
-                ),
-                _buildDashboardCard(
-                  context,
-                  'Google Map / Route',
-                  Icons.map,
-                  Colors.red.shade50,
-                  Colors.red,
-                  () => _launchMap(),
-                ),
-                _buildDashboardCard(
-                  context,
-                  'Bill & Invoices',
-                  Icons.picture_as_pdf,
-                  Colors.teal.shade50,
-                  Colors.teal,
-                  () => Navigator.push(context, MaterialPageRoute(builder: (_) => const InvoiceScreen())),
-                ),
-                _buildDashboardCard(
-                  context,
-                  'Maintenance',
-                  Icons.build,
-                  Colors.deepOrange.shade50,
-                  Colors.deepOrange,
-                  () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MaintenanceScreen())),
-                ),
-              ],
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87),
             ),
           ],
         ),
@@ -235,11 +149,3 @@ class HomeScreen extends StatelessWidget {
     );
   }
 }
-
-// Dummy Screen Placeholders
-class VehiclesScreen extends StatelessWidget { const VehiclesScreen({super.key}); @override Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('Vehicles')), body: const Center(child: Text('Vehicles Screen'))); }
-class DriversScreen extends StatelessWidget { const DriversScreen({super.key}); @override Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('Drivers')), body: const Center(child: Text('Drivers Screen'))); }
-class KhataScreen extends StatelessWidget { const KhataScreen({super.key}); @override Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('Khata')), body: const Center(child: Text('Khata Screen'))); }
-class AverageCalcScreen extends StatelessWidget { const AverageCalcScreen({super.key}); @override Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('Average Calc')), body: const Center(child: Text('Average Calc Screen'))); }
-class InvoiceScreen extends StatelessWidget { const InvoiceScreen({super.key}); @override Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('Invoices')), body: const Center(child: Text('Invoice Screen'))); }
-class MaintenanceScreen extends StatelessWidget { const MaintenanceScreen({super.key}); @override Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('Maintenance')), body: const Center(child: Text('Maintenance Screen'))); }
