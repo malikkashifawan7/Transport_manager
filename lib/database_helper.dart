@@ -9,7 +9,7 @@ class DatabaseHelper {
 
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _database = await _initDB('transport_app.db');
+    _database = await _initDB('transport_erp.db');
     return _database!;
   }
 
@@ -25,43 +25,44 @@ class DatabaseHelper {
   }
 
   Future _createDB(Database db, int version) async {
+    // Vehicles Table (Linked with Driver)
     await db.execute('''
-      CREATE TABLE maintenance (
+      CREATE TABLE vehicles (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        vehicleNo TEXT,
-        serviceType TEXT,
-        cost REAL,
-        date TEXT,
-        notes TEXT
+        vehicleNumber TEXT NOT NULL UNIQUE,
+        model TEXT,
+        driverName TEXT,
+        driverPhone TEXT
       )
     ''');
 
+    // Vendors & Khata Table (Linked by Vehicle Number)
+    await db.execute('''
+      CREATE TABLE khata (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        vehicleNumber TEXT NOT NULL,
+        vendorName TEXT NOT NULL,
+        description TEXT,
+        udhar REAL DEFAULT 0.0,
+        jama REAL DEFAULT 0.0,
+        baqaya REAL DEFAULT 0.0,
+        date TEXT NOT NULL
+      )
+    ''');
+
+    // Bookings Table
     await db.execute('''
       CREATE TABLE bookings (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        customerName TEXT,
-        phone TEXT,
-        totalAmount REAL,
-        advanceAmount REAL,
-        remainingAmount REAL,
-        bookingDate TEXT,
-        vehicleNo TEXT
+        partyName TEXT NOT NULL,
+        phone TEXT NOT NULL,
+        route TEXT NOT NULL,
+        vehicleNumber TEXT NOT NULL,
+        totalAmount REAL NOT NULL,
+        advance REAL NOT NULL,
+        balance REAL NOT NULL,
+        date TEXT NOT NULL
       )
     ''');
-  }
-
-  Future<int> insertRecord(String table, Map<String, dynamic> row) async {
-    final db = await instance.database;
-    return await db.insert(table, row);
-  }
-
-  Future<List<Map<String, dynamic>>> fetchAll(String table) async {
-    final db = await instance.database;
-    return await db.query(table, orderBy: 'id DESC');
-  }
-
-  Future<int> deleteRecord(String table, int id) async {
-    final db = await instance.database;
-    return await db.delete(table, where: 'id = ?', whereArgs: [id]);
   }
 }
