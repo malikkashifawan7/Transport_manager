@@ -557,8 +557,18 @@ class InvoiceScreen extends StatelessWidget {
 }
 
 // ---------------- ROUTE & MAP SCREEN ----------------
+// ---------------- ROUTE & MAP SCREEN ----------------
 class RouteMapScreen extends StatelessWidget {
   const RouteMapScreen({super.key});
+
+  Future<void> _openGoogleMapsRoute() async {
+    final Uri googleMapsUrl = Uri.parse(
+      'https://www.google.com/maps/dir/?api=1&origin=Lahore&destination=Islamabad&travelmode=driving',
+    );
+    if (!await launchUrl(googleMapsUrl, mode: LaunchMode.externalApplication)) {
+      throw Exception('Could not launch Google Maps');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -568,22 +578,37 @@ class RouteMapScreen extends StatelessWidget {
         backgroundColor: const Color(0xFF1A237E),
         foregroundColor: Colors.white,
       ),
-      body: const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.map, size: 80, color: Colors.redAccent),
-            SizedBox(height: 20),
-            Text(
-              'Google Maps & Route System Linked',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 10),
-            Text(
-              'Ready for GPS & Distance tracking integration.',
-              style: TextStyle(color: Colors.grey),
-            ),
-          ],
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.map, size: 80, color: Colors.redAccent),
+              const SizedBox(height: 20),
+              const Text(
+                'Lahore to Islamabad Route',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Tap below to open turn-by-turn navigation in Google Maps.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey),
+              ),
+              const SizedBox(height: 30),
+              ElevatedButton.icon(
+                onPressed: _openGoogleMapsRoute,
+                icon: const Icon(Icons.navigation),
+                label: const Text('Open Route in Google Maps'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1A237E),
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(220, 50),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
