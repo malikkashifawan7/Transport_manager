@@ -9,7 +9,7 @@ class DatabaseHelper {
 
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _database = await _initDB('transport_hisab.db');
+    _database = await _initDB('transport_app.db');
     return _database!;
   }
 
@@ -25,51 +25,6 @@ class DatabaseHelper {
   }
 
   Future _createDB(Database db, int version) async {
-    // Vehicles Table
-    await db.execute('''
-      CREATE TABLE vehicles (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        reg_number TEXT NOT NULL,
-        model_name TEXT,
-        capacity INTEGER
-      )
-    ''');
-
-    // Drivers Table
-    await db.execute('''
-      CREATE TABLE drivers (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        phone TEXT,
-        salary REAL,
-        advance REAL DEFAULT 0.0
-      )
-    ''');
-
-    // Bookings Table
-    await db.execute('''
-      CREATE TABLE bookings (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        customer_name TEXT NOT NULL,
-        vehicle TEXT,
-        total_amount REAL,
-        advance_paid REAL,
-        booking_date TEXT
-      )
-    ''');
-
-    // Ledger / Khata Table
-    await db.execute('''
-      CREATE TABLE ledger (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT NOT NULL,
-        amount REAL,
-        type TEXT,
-        date TEXT
-      )
-    ''');
-
-    // Maintenance Table
     await db.execute('''
       CREATE TABLE maintenance (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -78,6 +33,19 @@ class DatabaseHelper {
         cost REAL,
         date TEXT,
         notes TEXT
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE bookings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        customerName TEXT,
+        phone TEXT,
+        totalAmount REAL,
+        advanceAmount REAL,
+        remainingAmount REAL,
+        bookingDate TEXT,
+        vehicleNo TEXT
       )
     ''');
   }
@@ -97,4 +65,3 @@ class DatabaseHelper {
     return await db.delete(table, where: 'id = ?', whereArgs: [id]);
   }
 }
-
