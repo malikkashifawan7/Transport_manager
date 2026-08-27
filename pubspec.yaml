@@ -17,6 +17,7 @@ dependencies:
   pdf: ^3.10.8
   printing: ^5.13.1
   url_launcher: ^6.2.5
+    ota_update: ^6.0.0
 
 dev_dependencies:
   flutter_test:
