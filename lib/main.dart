@@ -36,7 +36,16 @@ class MainHomeScreen extends StatefulWidget {
 }
 
 class _MainHomeScreenState extends State<MainHomeScreen> {
-  int _selectedIndex = 0;
+    @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      AutoUpdater.checkAndDownloadUpdate(context);
+    });
+  }
+  
+ 
+int _selectedIndex = 0;
 
   final List<Widget> _screens = [
     const HomeDashboardView(),
