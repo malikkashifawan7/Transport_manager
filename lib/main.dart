@@ -103,7 +103,7 @@ class HomeDashboardView extends StatelessWidget {
               mainAxisSpacing: 16,
               childAspectRatio: 1.1,
               children: [
-                _buildCard(context, 'Party Bookings', Icons.bookmark_add, Colors.purple.shade50, Colors.purple, () {
+                _                _buildCard(context, 'Party Bookings', Icons.bookmark_add, Colors.purple.shade50, Colors.purple, () {
                   Navigator.push(context, MaterialPageRoute(builder: (_) => const BookingsScreen()));
                 }),
                 _buildCard(context, 'Vehicle Fleet', Icons.directions_bus, Colors.blue.shade50, Colors.blue, () {
@@ -115,8 +115,14 @@ class HomeDashboardView extends StatelessWidget {
                 _buildCard(context, 'Udhar Khata', Icons.account_balance_wallet, Colors.green.shade50, Colors.green, () {
                   Navigator.push(context, MaterialPageRoute(builder: (_) => const VehiclesScreen()));
                 }),
-                _buildCard(context, 'Auto Average', Icons.calculate, Colors.purple.shade50, Colors.purple.shade400, () {}),
-                _buildCard(context, 'Google Map / Route', Icons.map, Colors.red.shade50, Colors.red.shade400, () {}),
+                _buildCard(context, 'Auto Average', Icons.calculate, Colors.purple.shade50, Colors.purple.shade400, () {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const AutoAverageScreen()));
+                }),
+                _buildCard(context, 'Google Map / Route', Icons.map, Colors.red.shade50, Colors.red.shade400, () async {
+                  final Uri url = Uri.parse('https://www.google.com/maps');
+                  await launchUrl(url, mode: LaunchMode.externalApplication);
+                }),
+,
               ],
             ),
           ],
