@@ -654,14 +654,6 @@ class MaintenanceScreen extends StatefulWidget {
   State<MaintenanceScreen> createState() => _MaintenanceScreenState();
 }
 
-// ---------------- MAINTENANCE & EXPENSE SCREEN ----------------
-class MaintenanceScreen extends StatefulWidget {
-  const MaintenanceScreen({super.key});
-
-  @override
-  State<MaintenanceScreen> createState() => _MaintenanceScreenState();
-}
-
 class _MaintenanceScreenState extends State<MaintenanceScreen> {
   final _vehicleController = TextEditingController();
   final _serviceController = TextEditingController();
@@ -752,48 +744,4 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
             padding: const EdgeInsets.all(20),
             margin: const EdgeInsets.all(15),
             decoration: BoxDecoration(
-              color: Colors.orange.shade50,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.orange.shade200),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Total Maintenance Cost:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                Text('Rs. ${totalExpense.toStringAsFixed(0)}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.deepOrange)),
-              ],
-            ),
-          ),
-          Expanded(
-            child: _records.isEmpty
-                ? const Center(child: Text('No maintenance records added yet.'))
-                : ListView.builder(
-                    itemCount: _records.length,
-                    itemBuilder: (context, index) {
-                      final item = _records[index];
-                      return Card(
-                        margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 6),
-                        child: ListTile(
-                          leading: const CircleAvatar(
-                            backgroundColor: Color(0xFF1A237E),
-                            child: Icon(Icons.build, color: Colors.white, size: 20),
-                          ),
-                          title: Text('${item['vehicleNo']} - ${item['serviceType']}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                          subtitle: Text('Date: ${item['date']}\nNotes: ${item['notes'] ?? 'N/A'}'),
-                          trailing: Text('Rs. ${item['cost']}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red, fontSize: 15)),
-                          isThreeLine: true,
-                        ),
-                      );
-                    },
-                  ),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddDialog,
-        backgroundColor: const Color(0xFF1A237E),
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
-    );
-  }
-}
+            
