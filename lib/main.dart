@@ -260,7 +260,6 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
     );
   }
 }
-
 // ---------------- DRIVERS SCREEN ----------------
 class DriversScreen extends StatefulWidget {
   const DriversScreen({super.key});
@@ -479,4 +478,270 @@ class AvgCalcScreen extends StatefulWidget {
 class _AvgCalcScreenState extends State<AvgCalcScreen> {
   final _kmsController = TextEditingController();
   final _fuelController = TextEditingController();
-  final _priceController = TextEditin
+  final _priceController = TextEditingController();
+  double _avgKmPerLiter = 0.0;
+  double _costPerKm = 0.0;
+
+  void _calculate() {
+    final kms = double.tryParse(_kmsController.text) ?? 0.0;
+    final fuel = double.tryParse(_fuelController.text) ?? 0.0;
+    final price = double.tryParse(_priceController.text) ?? 0.0;
+
+    if (kms > 0 && fuel > 0) {
+      setState(() {
+        _avgKmPerLiter = kms / fuel;
+        _costPerKm = price > 0 ? (fuel * price) / kms : 0.0;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Fuel Average Calculator'), backgroundColor: const Color(0xFF1A237E), foregroundColor: Colors.white),
+      body: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          children: [
+            TextField(controller: _kmsController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Total Distance Covered (KM)', border: OutlineInputBorder())),
+            const SizedBox(height: 10),
+            TextField(controller: _fuelController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Total Fuel Used (Liters)', border: OutlineInputBorder())),
+            const SizedBox(height: 10),
+            TextField(controller: _priceController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Fuel Price per Liter (Rs. Optional)', border: OutlineInputBorder())),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(onPressed: _calculate, style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1A237E), foregroundColor: Colors.white), child: const Text('Calculate Average')),
+            ),
+            const SizedBox(height: 30),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(color: Colors.purple.shade50, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.purple.shade200)),
+              child: Column(
+                children: [
+                  Text('Fuel Average: ${_avgKmPerLiter.toStringAsFixed(2)} KM / Liter', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.purple)),
+                  const SizedBox(height: 10),
+                  Text('Cost per KM: Rs. ${_costPerKm.toStringAsFixed(2)}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------- ROUTE & MAP SCREEN ----------------
+class RouteMapScreen extends StatelessWidget {
+  const RouteMapScreen({super.key});
+
+  Future<void> _openGoogleMapsRoute() async {
+    final Uri googleMapsUrl = Uri.parse(
+      'https://www.google.com/maps/dir/?api=1&origin=Lahore&destination=Islamabad&travelmode=driving',
+    );
+    if (!await launchUrl(googleMapsUrl, mode: LaunchMode.externalApplication)) {
+      throw Exception('Could not launch Google Maps');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Google Maps / Route Tracker'),
+        backgroundColor: const Color(0xFF1A237E),
+        foregroundColor: Colors.white,
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.map, size: 80, color: Colors.redAccent),
+              const SizedBox(height: 20),
+              const Text('Lahore to Islamabad Route', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 10),
+              const Text('Tap below to open turn-by-turn navigation in Google Maps.', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)),
+              const SizedBox(height: 30),
+              ElevatedButton.icon(
+                onPressed: _openGoogleMapsRoute,
+                icon: const Icon(Icons.navigation),
+                label: const Text('Open Route in Google Maps'),
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1A237E), foregroundColor: Colors.white, minimumSize: const Size(220, 50)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------- BILL & INVOICE GENERATOR SCREEN ----------------
+class InvoiceScreen extends StatelessWidget {
+  const InvoiceScreen({super.key});
+
+  void _generatePdf(BuildContext context) async {
+    final pdf = pw.Document();
+
+    pdf.addPage(
+      pw.Page(
+        build: (pw.Context ctx) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text('Awan Brothers Tours & Travels', style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold)),
+              pw.SizedBox(height: 10),
+              pw.Text('Booking Receipt / Official Invoice', style: const pw.TextStyle(fontSize: 16)),
+              pw.Divider(),
+              pw.SizedBox(height: 20),
+              pw.Text('Customer Name: Valued Client'),
+              pw.Text('Route: Lahore to Islamabad'),
+              pw.Text('Total Amount: Rs. 45,000'),
+              pw.Text('Advance Paid: Rs. 15,000'),
+              pw.Text('Remaining Balance: Rs. 30,000'),
+              pw.SizedBox(height: 30),
+              pw.Text('Thank you for choosing Awan Brothers Tours!'),
+            ],
+          );
+        },
+      ),
+    );
+
+    await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Invoice & PDF Generator'),
+        backgroundColor: const Color(0xFF1A237E),
+        foregroundColor: Colors.white,
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.picture_as_pdf, size: 80, color: Colors.teal),
+              const SizedBox(height: 20),
+              const Text('Generate & Print Official Invoice', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 30),
+              ElevatedButton.icon(
+                onPressed: () => _generatePdf(context),
+                icon: const Icon(Icons.print),
+                label: const Text('Print / Share PDF Invoice'),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.teal, foregroundColor: Colors.white, minimumSize: const Size(200, 50)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------- MAINTENANCE & EXPENSE SCREEN ----------------
+class MaintenanceScreen extends StatefulWidget {
+  const MaintenanceScreen({super.key});
+
+  @override
+  State<MaintenanceScreen> createState() => _MaintenanceScreenState();
+}
+
+class _MaintenanceScreenState extends State<MaintenanceScreen> {
+  final _vehicleController = TextEditingController();
+  final _serviceController = TextEditingController();
+  final _costController = TextEditingController();
+  final _notesController = TextEditingController();
+
+  List<Map<String, dynamic>> _records = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchRecords();
+  }
+
+  Future<void> _fetchRecords() async {
+    final list = await DatabaseHelper.instance.fetchAll('maintenance');
+    setState(() => _records = list);
+  }
+
+  Future<void> _addRecord() async {
+    if (_vehicleController.text.isEmpty || _costController.text.isEmpty) return;
+
+    await DatabaseHelper.instance.insertRecord('maintenance', {
+      'vehicleNo': _vehicleController.text,
+      'serviceType': _serviceController.text.isEmpty ? 'General Maintenance' : _serviceController.text,
+      'cost': double.tryParse(_costController.text) ?? 0.0,
+      'date': DateTime.now().toString().split(' ')[0],
+      'notes': _notesController.text,
+    });
+
+    _vehicleController.clear();
+    _serviceController.clear();
+    _costController.clear();
+    _notesController.clear();
+
+    if (mounted) Navigator.pop(context);
+    _fetchRecords();
+  }
+
+  void _showAddDialog() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom + 20, top: 20, left: 20, right: 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Add Maintenance Record', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 15),
+            TextField(controller: _vehicleController, decoration: const InputDecoration(labelText: 'Vehicle No (e.g. LES-1234)', border: OutlineInputBorder())),
+            const SizedBox(height: 10),
+            TextField(controller: _serviceController, decoration: const InputDecoration(labelText: 'Service Type (Oil Change, Tires, etc.)', border: OutlineInputBorder())),
+            const SizedBox(height: 10),
+            TextField(controller: _costController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Total Cost (Rs.)', border: OutlineInputBorder())),
+            const SizedBox(height: 10),
+            TextField(controller: _notesController, decoration: const InputDecoration(labelText: 'Notes / Remarks', border: OutlineInputBorder())),
+            const SizedBox(height: 15),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: _addRecord,
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1A237E), foregroundColor: Colors.white),
+                child: const Text('Save Record'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    double totalExpense = _records.fold(0.0, (sum, item) => sum + (item['cost'] as double? ?? 0.0));
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Vehicle Maintenance'),
+        backgroundColor: const Color(0xFF1A237E),
+        foregroundColor: Colors.white,
+      ),
+      body: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            margin: const EdgeInsets.all(15),
+            decoration: BoxDecoration(
+            
