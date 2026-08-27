@@ -614,3 +614,153 @@ class RouteMapScreen extends StatelessWidget {
     );
   }
 }
+// ---------------- MAINTENANCE & EXPENSE SCREEN ----------------
+class MaintenanceScreen extends StatefulWidget {
+  const MaintenanceScreen({super.key});
+
+  @override
+  State<MaintenanceScreen> createState() => _MaintenanceScreenState();
+}
+
+class _MaintenanceScreenState extends State<MaintenanceScreen> {
+  final _vehicleController = TextEditingController();
+  final _serviceController = TextEditingController();
+  final _costController = TextEditingController();
+  final _notesController = TextEditingController();
+
+  List<Map<String, dynamic>> _records = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchRecords();
+  }
+
+  Future<void> _fetchRecords() async {
+    final db = await DatabaseHelper.instance.database;
+    final data = await db.query('maintenance', orderBy: 'id DESC');
+    setState(() {
+      _records = data;
+    });
+  }
+
+  Future<void> _addRecord() async {
+    if (_vehicleController.text.isEmpty || _costController.text.isEmpty) return;
+
+    final db = await DatabaseHelper.instance.database;
+    await db.insert('maintenance', {
+      'vehicleNo': _vehicleController.text,
+      'serviceType': _serviceController.text.isEmpty ? 'General Maintenance' : _serviceController.text,
+      'cost': double.tryParse(_costController.text) ?? 0.0,
+      'date': DateTime.now().toString().split(' ')[0],
+      'notes': _notesController.text,
+    });
+
+    _vehicleController.clear();
+    _serviceController.clear();
+    _costController.clear();
+    _notesController.clear();
+
+    if (mounted) Navigator.pop(context);
+    _fetchRecords();
+  }
+
+  void _showAddDialog() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+          top: 20, left: 20, right: 20,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Add Maintenance Record', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 15),
+            TextField(controller: _vehicleController, decoration: const InputDecoration(labelText: 'Vehicle No (e.g. LES-1234)', border: OutlineInputBorder())),
+            const SizedBox(height: 10),
+            TextField(controller: _serviceController, decoration: const InputDecoration(labelText: 'Service Type (Oil Change, Tires, etc.)', border: OutlineInputBorder())),
+            const SizedBox(height: 10),
+            TextField(controller: _costController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Total Cost (Rs.)', border: OutlineInputBorder())),
+            const SizedBox(height: 10),
+            TextField(controller: _notesController, decoration: const InputDecoration(labelText: 'Notes / Remarks', border: OutlineInputBorder())),
+            const SizedBox(height: 15),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: _addRecord,
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1A237E), foregroundColor: Colors.white),
+                child: const Text('Save Record'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    double totalExpense = _records.fold(0.0, (sum, item) => sum + (item['cost'] as double? ?? 0.0));
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Vehicle Maintenance'),
+        backgroundColor: const Color(0xFF1A237E),
+        foregroundColor: Colors.white,
+      ),
+      body: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            margin: const EdgeInsets.all(15),
+            decoration: BoxDecoration(
+              color: Colors.orange.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.orange.shade200),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Total Maintenance Cost:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                Text('Rs. ${totalExpense.toStringAsFixed(0)}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.deepOrange)),
+              ],
+            ),
+          ),
+          Expanded(
+            child: _records.isEmpty
+                ? const Center(child: Text('No maintenance records added yet.'))
+                : ListView.builder(
+                    itemCount: _records.length,
+                    itemBuilder: (context, index) {
+                      final item = _records[index];
+                      return Card(
+                        margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 6),
+                        child: ListTile(
+                          leading: const CircleAvatar(
+                            backgroundColor: Color(0xFF1A237E),
+                            child: Icon(Icons.build, color: Colors.white, size: 20),
+                          ),
+                          title: Text('${item['vehicleNo']} - ${item['serviceType']}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: Text('Date: ${item['date']}\nNotes: ${item['notes'] ?? 'N/A'}'),
+                          trailing: Text('Rs. ${item['cost']}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red, fontSize: 15)),
+                          isThreeLine: true,
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showAddDialog,
+        backgroundColor: const Color(0xFF1A237E),
+        child: const Icon(Icons.add, color: Colors.white),
+      ),
+    );
+  }
+}
