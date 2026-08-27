@@ -25,7 +25,7 @@ class DatabaseHelper {
   }
 
   Future _createDB(Database db, int version) async {
-    // Vehicles Table (Linked with Driver)
+    // Vehicles Table
     await db.execute('''
       CREATE TABLE vehicles (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -36,7 +36,7 @@ class DatabaseHelper {
       )
     ''');
 
-    // Vendors & Khata Table (Linked by Vehicle Number)
+    // Vendors & Khata Table
     await db.execute('''
       CREATE TABLE khata (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -64,5 +64,26 @@ class DatabaseHelper {
         date TEXT NOT NULL
       )
     ''');
+  }
+
+  // Helper Methods required by screens
+  Future<List<Map<String, dynamic>>> fetchAll(String table) async {
+    final db = await instance.database;
+    return await db.query(table);
+  }
+
+  Future<int> insertRecord(String table, Map<String, dynamic> row) async {
+    final db = await instance.database;
+    return await db.insert(table, row);
+  }
+
+  Future<int> updateRecord(String table, Map<String, dynamic> row, int id) async {
+    final db = await instance.database;
+    return await db.update(table, row, where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<int> deleteRecord(String table, int id) async {
+    final db = await instance.database;
+    return await db.delete(table, where: 'id = ?', whereArgs: [id]);
   }
 }
