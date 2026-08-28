@@ -25,6 +25,39 @@ class DatabaseHelper {
   }
 
   Future _createDB(Database db, int version) async {
+    // Vehicles Table
+    await db.execute('''
+      CREATE TABLE vehicles (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT,
+        number TEXT,
+        type TEXT
+      )
+    ''');
+
+    // Drivers Table
+    await db.execute('''
+      CREATE TABLE drivers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT,
+        phone TEXT,
+        license TEXT
+      )
+    ''');
+
+    // Bookings Table
+    await db.execute('''
+      CREATE TABLE bookings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        customer TEXT,
+        phone TEXT,
+        destination TEXT,
+        date TEXT,
+        amount REAL,
+        status TEXT
+      )
+    ''');
+
     // Vendors Table
     await db.execute('''
       CREATE TABLE vendors (
@@ -48,46 +81,59 @@ class DatabaseHelper {
     ''');
   }
 
-  // --- Vendors Methods ---
-  Future<List<Map<String, dynamic>>> getVendors() async {
+  // --- Generic Helper Methods (Used by Drivers & Bookings screens) ---
+  Future<List<Map<String, dynamic>>> fetchAll(String table) async {
     final db = await instance.database;
-    return await db.query('vendors', orderBy: 'id DESC');
+    return await db.query(table, orderBy: 'id DESC');
+  }
+
+  Future<int> insertRecord(String table, Map<String, dynamic> data) async {
+    final db = await instance.database;
+    return await db.insert(table, data);
+  }
+
+  Future<int> updateRecord(String table, Map<String, dynamic> data, int id) async {
+    final db = await instance.database;
+    return await db.update(table, data, where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<int> deleteRecord(String table, int id) async {
+    final db = await instance.database;
+    return await db.delete(table, where: 'id = ?', whereArgs: [id]);
+  }
+
+  // --- Vendor Specific Methods ---
+  Future<List<Map<String, dynamic>>> getVendors() async {
+    return await fetchAll('vendors');
   }
 
   Future<int> addVendor(Map<String, dynamic> data) async {
-    final db = await instance.database;
-    return await db.insert('vendors', data);
+    return await insertRecord('vendors', data);
   }
 
   Future<int> updateVendor(int id, Map<String, dynamic> data) async {
-    final db = await instance.database;
-    return await db.update('vendors', data, where: 'id = ?', whereArgs: [id]);
+    return await updateRecord('vendors', data, id);
   }
 
   Future<int> deleteVendor(int id) async {
-    final db = await instance.database;
-    return await db.delete('vendors', where: 'id = ?', whereArgs: [id]);
+    return await deleteRecord('vendors', id);
   }
 
-  // --- Reminders Methods ---
+  // --- Reminder Specific Methods ---
   Future<List<Map<String, dynamic>>> getReminders() async {
-    final db = await instance.database;
-    return await db.query('reminders', orderBy: 'id DESC');
+    return await fetchAll('reminders');
   }
 
   Future<int> addReminder(Map<String, dynamic> data) async {
-    final db = await instance.database;
-    return await db.insert('reminders', data);
+    return await insertRecord('reminders', data);
   }
 
   Future<int> updateReminder(int id, Map<String, dynamic> data) async {
-    final db = await instance.database;
-    return await db.update('reminders', data, where: 'id = ?', whereArgs: [id]);
+    return await updateRecord('reminders', data, id);
   }
 
   Future<int> deleteReminder(int id) async {
-    final db = await instance.database;
-    return await db.delete('reminders', where: 'id = ?', whereArgs: [id]);
+    return await deleteRecord('reminders', id);
   }
 
   Future close() async {
