@@ -1,3 +1,4 @@
+import 'screens/fuel_screen.dart';
 import 'updater_service.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -47,11 +48,12 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
  
 int _selectedIndex = 0;
 
-  final List<Widget> _screens = [
+    final List<Widget> _screens = [
     const HomeDashboardView(),
     const VehiclesScreen(),
     const DriversScreen(),
-    const VehiclesScreen(),
+    const FuelScreen(), // <-- Line 55 par naya Fuel Screen add karein
+    const KhataScreen(),
     const BookingsScreen(),
   ];
 
@@ -69,6 +71,19 @@ int _selectedIndex = 0;
             _selectedIndex = index;
           });
         },
+                  BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'Drivers',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.local_gas_station), // <-- Yeh add karein
+            label: 'Fuel',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.account_balance_wallet),
+            label: 'Khata',
+          ),
+        
         type: BottomNavigationBarType.fixed,
         selectedItemColor: const Color(0xFF1A237E),
         unselectedItemColor: Colors.grey,
