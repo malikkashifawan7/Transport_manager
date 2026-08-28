@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
-import 'screens/home_dashboard_view.dart';
-import 'screens/vehicles_screen.dart';
-import 'screens/drivers_screen.dart';
-import 'screens/fuel_screen.dart';
-import 'screens/bookings_screen.dart';
+
+// Direct lib folder wale imports (screens/ mita diya hai)
+import 'home_dashboard_view.dart';
+import 'vehicles_screen.dart';
+import 'drivers_screen.dart';
+import 'fuel_screen.dart';
+import 'bookings_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -88,4 +90,3 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
     );
   }
 }
-
