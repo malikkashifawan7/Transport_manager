@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 
-import 'admin_dashboard.dart';
+// Root screens
 import 'vehicles_screen.dart';
 import 'drivers_screen.dart';
 import 'bookings_screen.dart';
+
+// Screens folder ki files
+import 'screens/admin_dashboard.dart';
 import 'screens/fuel_screen.dart';
 
 void main() {
@@ -39,7 +42,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
   int _selectedIndex = 0;
 
   final List<Widget> _screens = const [
-    AdminDashboard(), // <-- Yahan AppHomeScreen ki jagah AdminDashboard kar diya hai
+    AdminDashboard(),
     VehiclesScreen(),
     DriversScreen(),
     FuelScreen(),
