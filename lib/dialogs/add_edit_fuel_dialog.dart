@@ -3,7 +3,7 @@ import '../models/fuel_log_model.dart';
 import '../services/fuel_service.dart';
 
 class AddEditFuelDialog extends StatefulWidget {
-  final FuelLog? fuelLog; // Null for Add, Not Null for Edit
+  final FuelLog? fuelLog;
   final int? preSelectedVehicleId;
   final int? preSelectedBookingId;
 
@@ -31,11 +31,17 @@ class _AddEditFuelDialogState extends State<AddEditFuelDialog> {
   void initState() {
     super.initState();
     _fuelType = widget.fuelLog?.fuelType ?? 'Diesel';
-    _rateController = TextEditingController(text: widget.fuelLog?.ratePerUnit.toString() ?? '');
-    _unitsController = TextEditingController(text: widget.fuelLog?.totalUnits.toString() ?? '');
-    _costController = TextEditingController(text: widget.fuelLog?.totalCost.toString() ?? '');
-    _notesController = TextEditingController(text: widget.fuelLog?.notes ?? '');
-    _selectedDate = widget.fuelLog != null ? DateTime.parse(widget.fuelLog!.date) : DateTime.now();
+    _rateController = TextEditingController(
+        text: widget.fuelLog?.ratePerUnit.toString() ?? '');
+    _unitsController = TextEditingController(
+        text: widget.fuelLog?.totalUnits.toString() ?? '');
+    _costController = TextEditingController(
+        text: widget.fuelLog?.totalCost.toString() ?? '');
+    _notesController =
+        TextEditingController(text: widget.fuelLog?.notes ?? '');
+    _selectedDate = widget.fuelLog != null
+        ? DateTime.parse(widget.fuelLog!.date)
+        : DateTime.now();
 
     _rateController.addListener(_calculateTotal);
     _unitsController.addListener(_calculateTotal);
@@ -71,13 +77,15 @@ class _AddEditFuelDialogState extends State<AddEditFuelDialog> {
               ),
               TextFormField(
                 controller: _rateController,
-                decoration: const InputDecoration(labelText: 'Rate per Unit (Rs)'),
+                decoration:
+                    const InputDecoration(labelText: 'Rate Per Liter/Kg (Rs)'),
                 keyboardType: TextInputType.number,
                 validator: (v) => v!.isEmpty ? 'Enter rate' : null,
               ),
               TextFormField(
                 controller: _unitsController,
-                decoration: const InputDecoration(labelText: 'Total Units (Liters / Kg)'),
+                decoration:
+                    const InputDecoration(labelText: 'Total Units (Liters/Kg)'),
                 keyboardType: TextInputType.number,
                 validator: (v) => v!.isEmpty ? 'Enter units' : null,
               ),
@@ -89,21 +97,27 @@ class _AddEditFuelDialogState extends State<AddEditFuelDialog> {
               ),
               TextFormField(
                 controller: _notesController,
-                decoration: const InputDecoration(labelText: 'Notes / Petrol Pump Name'),
+                decoration: const InputDecoration(
+                    labelText: 'Notes / Pump Name / Driver'),
               ),
             ],
           ),
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel')),
         ElevatedButton(
           onPressed: () async {
             if (_formKey.currentState!.validate()) {
               final log = FuelLog(
                 id: widget.fuelLog?.id,
-                vehicleId: widget.preSelectedVehicleId ?? widget.fuelLog!.vehicleId,
-                bookingId: widget.preSelectedBookingId ?? widget.fuelLog?.bookingId,
+                vehicleId: widget.preSelectedVehicleId ??
+                    widget.fuelLog?.vehicleId ??
+                    1,
+                bookingId: widget.preSelectedBookingId ??
+                    widget.fuelLog?.bookingId,
                 fuelType: _fuelType,
                 ratePerUnit: double.parse(_rateController.text),
                 totalUnits: double.parse(_unitsController.text),
@@ -127,3 +141,4 @@ class _AddEditFuelDialogState extends State<AddEditFuelDialog> {
     );
   }
 }
+
