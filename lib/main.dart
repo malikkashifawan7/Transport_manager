@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
-// Sahi File Names (Aapki Repo Ki Directory List Ke Mutabiq)
-import 'app_home.dart';
+import 'admin_dashboard.dart';
 import 'vehicles_screen.dart';
 import 'drivers_screen.dart';
 import 'bookings_screen.dart';
@@ -40,7 +39,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
   int _selectedIndex = 0;
 
   final List<Widget> _screens = const [
-    AppHomeScreen(), // 'app_home.dart' ki exact widget class
+    AdminDashboard(), // <-- Yahan AppHomeScreen ki jagah AdminDashboard kar diya hai
     VehiclesScreen(),
     DriversScreen(),
     FuelScreen(),
@@ -90,4 +89,3 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
     );
   }
 }
-
