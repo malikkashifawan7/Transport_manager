@@ -8,7 +8,7 @@ class FuelScreen extends StatefulWidget {
   State<FuelScreen> createState() => _FuelScreenState();
 }
 
-class _FuelScreenState extends State<FuelScreen> with SingleTickerProviderTabController {
+class _FuelScreenState extends State<FuelScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   List<Map<String, dynamic>> _vehicles = [];
   List<Map<String, dynamic>> _fuelLogs = [];
@@ -20,6 +20,12 @@ class _FuelScreenState extends State<FuelScreen> with SingleTickerProviderTabCon
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _loadAllData();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadAllData() async {
@@ -88,7 +94,7 @@ class _FuelScreenState extends State<FuelScreen> with SingleTickerProviderTabCon
                     'odometer': double.tryParse(odometerController.text) ?? 0.0,
                   });
 
-                  Navigator.pop(context);
+                  if (context.mounted) Navigator.pop(context);
                   _loadAllData();
                 },
                 child: const Text('Save Record'),
@@ -147,7 +153,7 @@ class _FuelScreenState extends State<FuelScreen> with SingleTickerProviderTabCon
                     'mechanic_name': mechanicController.text,
                   });
 
-                  Navigator.pop(context);
+                  if (context.mounted) Navigator.pop(context);
                   _loadAllData();
                 },
                 child: const Text('Save Record'),
@@ -179,7 +185,6 @@ class _FuelScreenState extends State<FuelScreen> with SingleTickerProviderTabCon
           : TabBarView(
               controller: _tabController,
               children: [
-                // Fuel Tab
                 _fuelLogs.isEmpty
                     ? const Center(child: Text('No fuel logs saved yet.'))
                     : ListView.builder(
@@ -200,7 +205,6 @@ class _FuelScreenState extends State<FuelScreen> with SingleTickerProviderTabCon
                           );
                         },
                       ),
-                // Maintenance Tab
                 _maintenanceLogs.isEmpty
                     ? const Center(child: Text('No maintenance logs saved yet.'))
                     : ListView.builder(
@@ -237,3 +241,4 @@ class _FuelScreenState extends State<FuelScreen> with SingleTickerProviderTabCon
     );
   }
 }
+
