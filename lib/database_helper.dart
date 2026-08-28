@@ -19,23 +19,47 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _createDB,
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS fuel_logs (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              vehicle_number TEXT NOT NULL,
+              date TEXT NOT NULL,
+              rate REAL NOT NULL,
+              liters REAL NOT NULL,
+              total_cost REAL NOT NULL,
+              odometer REAL
+            )
+          ''');
+
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS maintenance_logs (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              vehicle_number TEXT NOT NULL,
+              date TEXT NOT NULL,
+              work_description TEXT NOT NULL,
+              cost REAL NOT NULL,
+              mechanic_name TEXT
+            )
+          ''');
+        }
+      },
     );
   }
 
   Future _createDB(Database db, int version) async {
-    // Vehicles Table
     await db.execute('''
       CREATE TABLE vehicles (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT,
-        number TEXT,
+        number TEXT UNIQUE NOT NULL,
         type TEXT
       )
     ''');
 
-    // Drivers Table
     await db.execute('''
       CREATE TABLE drivers (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -45,7 +69,6 @@ class DatabaseHelper {
       )
     ''');
 
-    // Bookings Table
     await db.execute('''
       CREATE TABLE bookings (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -58,7 +81,6 @@ class DatabaseHelper {
       )
     ''');
 
-    // Vendors Table
     await db.execute('''
       CREATE TABLE vendors (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -69,19 +91,31 @@ class DatabaseHelper {
       )
     ''');
 
-    // Reminders Table
     await db.execute('''
-      CREATE TABLE reminders (
+      CREATE TABLE fuel_logs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT NOT NULL,
+        vehicle_number TEXT NOT NULL,
         date TEXT NOT NULL,
-        amount REAL,
-        status TEXT DEFAULT 'Pending'
+        rate REAL NOT NULL,
+        liters REAL NOT NULL,
+        total_cost REAL NOT NULL,
+        odometer REAL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE maintenance_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        vehicle_number TEXT NOT NULL,
+        date TEXT NOT NULL,
+        work_description TEXT NOT NULL,
+        cost REAL NOT NULL,
+        mechanic_name TEXT
       )
     ''');
   }
 
-  // --- Generic Helper Methods (Used by Drivers & Bookings screens) ---
+  // --- Generic Helpers ---
   Future<List<Map<String, dynamic>>> fetchAll(String table) async {
     final db = await instance.database;
     return await db.query(table, orderBy: 'id DESC');
@@ -102,38 +136,10 @@ class DatabaseHelper {
     return await db.delete(table, where: 'id = ?', whereArgs: [id]);
   }
 
-  // --- Vendor Specific Methods ---
-  Future<List<Map<String, dynamic>>> getVendors() async {
-    return await fetchAll('vendors');
-  }
-
-  Future<int> addVendor(Map<String, dynamic> data) async {
-    return await insertRecord('vendors', data);
-  }
-
-  Future<int> updateVendor(int id, Map<String, dynamic> data) async {
-    return await updateRecord('vendors', data, id);
-  }
-
-  Future<int> deleteVendor(int id) async {
-    return await deleteRecord('vendors', id);
-  }
-
-  // --- Reminder Specific Methods ---
-  Future<List<Map<String, dynamic>>> getReminders() async {
-    return await fetchAll('reminders');
-  }
-
-  Future<int> addReminder(Map<String, dynamic> data) async {
-    return await insertRecord('reminders', data);
-  }
-
-  Future<int> updateReminder(int id, Map<String, dynamic> data) async {
-    return await updateRecord('reminders', data, id);
-  }
-
-  Future<int> deleteReminder(int id) async {
-    return await deleteRecord('reminders', id);
+  // --- Vehicle Linked Merged Query ---
+  Future<List<Map<String, dynamic>>> getLogsByVehicle(String vehicleNumber, String table) async {
+    final db = await instance.database;
+    return await db.query(table, where: 'vehicle_number = ?', whereArgs: [vehicleNumber], orderBy: 'id DESC');
   }
 
   Future close() async {
