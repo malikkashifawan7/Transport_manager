@@ -87,18 +87,28 @@ class DatabaseHelper {
     return await db.delete(table, where: 'id = ?', whereArgs: [id]);
   }
 }
-CREATE TABLE fuel_logs await db.execute('''
-  CREATE TABLE fuel_logs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    vehicle_id INTEGER NOT NULL,
-    booking_id INTEGER,
-    fuel_type TEXT NOT NULL,
-    rate_per_unit REAL NOT NULL,
-    total_units REAL NOT NULL,
-    total_cost REAL NOT NULL,
-    date TEXT NOT NULL,
-    notes TEXT,
-    FOREIGN KEY (vehicle_id) REFERENCES vehicles (id) ON DELETE CASCADE,
-    FOREIGN KEY (booking_id) REFERENCES bookings (id) ON DELETE SET NULL
-  )
-''');
+  Future _onCreate(Database db, int version) async {
+    await db.execute('''
+      CREATE TABLE vehicles (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT,
+        number TEXT
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE fuel_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        vehicle_id INTEGER NOT NULL,
+        booking_id INTEGER,
+        fuel_type TEXT NOT NULL,
+        rate_per_unit REAL NOT NULL,
+        total_units REAL NOT NULL,
+        total_cost REAL NOT NULL,
+        date TEXT NOT NULL,
+        notes TEXT,
+        FOREIGN KEY (vehicle_id) REFERENCES vehicles (id) ON DELETE CASCADE,
+        FOREIGN KEY (booking_id) REFERENCES bookings (id) ON DELETE SET NULL
+      )
+    ''');
+  }
