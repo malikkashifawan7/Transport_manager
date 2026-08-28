@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 
-// Purani screens (jo direct lib/ folder mein hain)
-import 'home_dashboard_view.dart';
+// Corrected import path for Dashboard View
+import 'screens/home_dashboard_view.dart'; 
 import 'vehicles_screen.dart';
 import 'drivers_screen.dart';
 import 'bookings_screen.dart';
-
-// Nayi screen (jo screens/ folder mein hai)
 import 'screens/fuel_screen.dart';
 
 void main() {
