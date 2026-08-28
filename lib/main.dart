@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 
-// Direct lib/ folder wali screens (Exact File Names)
-import 'dashboard_screen.dart';
+// Sahi File Names (Aapki Repo Ki Directory List Ke Mutabiq)
+import 'app_home.dart';
 import 'vehicles_screen.dart';
 import 'drivers_screen.dart';
 import 'bookings_screen.dart';
-
-// Screens folder wali screen
 import 'screens/fuel_screen.dart';
 
 void main() {
@@ -42,7 +40,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
   int _selectedIndex = 0;
 
   final List<Widget> _screens = const [
-    DashboardScreen(), // Updated to exact name: DashboardScreen
+    AppHomeScreen(), // 'app_home.dart' ki exact widget class
     VehiclesScreen(),
     DriversScreen(),
     FuelScreen(),
