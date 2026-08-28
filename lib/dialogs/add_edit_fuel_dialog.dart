@@ -141,4 +141,3 @@ class _AddEditFuelDialogState extends State<AddEditFuelDialog> {
     );
   }
 }
-
