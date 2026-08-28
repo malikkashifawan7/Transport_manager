@@ -29,32 +29,15 @@ class TransportApp extends StatelessWidget {
   }
 }
 
-class MainHomeScreen extends StatefulWidget {
-  const MainHomeScreen({super.key});
-
-  @override
-  State<MainHomeScreen> createState() => _MainHomeScreenState();
-}
-
 class _MainHomeScreenState extends State<MainHomeScreen> {
-    @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      AutoUpdater.checkAndDownloadUpdate(context);
-    });
-  }
-  
- 
-int _selectedIndex = 0;
+  int _selectedIndex = 0;
 
-    final List<Widget> _screens = [
-    const HomeDashboardView(),
-    const VehiclesScreen(),
-    const DriversScreen(),
-    const FuelScreen(), // <-- Line 55 par naya Fuel Screen add karein
-    const KhataScreen(),
-    const BookingsScreen(),
+  final List<Widget> _screens = const [
+    HomeDashboardView(),
+    VehiclesScreen(),
+    DriversScreen(),
+    FuelScreen(),
+    BookingsScreen(),
   ];
 
   @override
@@ -71,28 +54,30 @@ int _selectedIndex = 0;
             _selectedIndex = index;
           });
         },
-                  BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Drivers',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.local_gas_station), // <-- Yeh add karein
-            label: 'Fuel',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.account_balance_wallet),
-            label: 'Khata',
-          ),
-        
         type: BottomNavigationBarType.fixed,
         selectedItemColor: const Color(0xFF1A237E),
         unselectedItemColor: Colors.grey,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.directions_bus), label: 'Vehicles'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Drivers'),
-          BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: 'Khata'),
-          BottomNavigationBarItem(icon: Icon(Icons.bookmark_add), label: 'Bookings'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.directions_bus),
+            label: 'Vehicles',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'Drivers',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.local_gas_station),
+            label: 'Fuel',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.bookmark),
+            label: 'Bookings',
+          ),
         ],
       ),
     );
