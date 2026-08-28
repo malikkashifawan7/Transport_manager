@@ -87,3 +87,16 @@ class DatabaseHelper {
     return await db.delete(table, where: 'id = ?', whereArgs: [id]);
   }
 }
+CREATE TABLE fuel_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    vehicle_id INTEGER NOT NULL,
+    booking_id INTEGER, -- Optional: Agar kisi specific booking ke sath attach karna ho
+    fuel_type TEXT NOT NULL, -- 'Diesel', 'Petrol', 'LPG'
+    rate_per_unit REAL NOT NULL, -- Rate per Liter/Kg
+    total_units REAL NOT NULL, -- Kitne Liters ya Kg purchase kiye
+    total_cost REAL NOT NULL, -- Total Kharcha (Rate * Units)
+    date TEXT NOT NULL, -- Date (YYYY-MM-DD)
+    notes TEXT,
+    FOREIGN KEY (vehicle_id) REFERENCES vehicles (id) ON DELETE CASCADE,
+    FOREIGN KEY (booking_id) REFERENCES bookings (id) ON DELETE SET NULL
+);
