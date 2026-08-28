@@ -99,16 +99,21 @@ class AdminDashboardView extends StatelessWidget {
   const AdminDashboardView({Key? key, required this.onNavigate}) : super(key: key);
 
   // Function to open Google Maps for Routes & Location
-  Future<void> _openMaps(BuildContext context) async {
+    Future<void> _openMaps(BuildContext context) async {
     final Uri googleMapsUrl = Uri.parse('https://www.google.com/maps');
-    if (await canLaunchUrl(googleMapsUrl)) {
-      await launchUrl(googleMapsUrl, mode: LaunchMode.externalApplication);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not launch Google Maps')),
-      );
+    try {
+      if (!await launchUrl(googleMapsUrl, mode: LaunchMode.externalApplication)) {
+        await launchUrl(googleMapsUrl, mode: LaunchMode.platformDefault);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not launch Google Maps')),
+        );
+      }
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
