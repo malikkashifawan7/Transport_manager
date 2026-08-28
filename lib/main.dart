@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
-// Direct lib folder wale imports (screens/ mita diya hai)
-import 'home_dashboard_view.dart';
-import 'vehicles_screen.dart';
-import 'drivers_screen.dart';
-import 'fuel_screen.dart';
-import 'bookings_screen.dart';
+// Screens with correct folder paths
+import 'screens/home_dashboard_view.dart'; // Agar yeh views/ mein hai to 'views/home_dashboard_view.dart' likhein
+import 'screens/vehicles_screen.dart';
+import 'screens/drivers_screen.dart';
+import 'screens/fuel_screen.dart';
+import 'screens/bookings_screen.dart';
 
 void main() {
   runApp(const MyApp());
