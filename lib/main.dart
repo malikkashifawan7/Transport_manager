@@ -4,6 +4,7 @@ import 'vehicles_screen.dart';
 import 'drivers_screen.dart';
 import 'bookings_screen.dart';
 import 'screens/fuel_screen.dart';
+import 'screens/vendors_reminders_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -37,28 +38,30 @@ class MainHomeScreen extends StatefulWidget {
 class _MainHomeScreenState extends State<MainHomeScreen> {
   int _selectedIndex = 0;
 
-  final List<Widget> _screens = const [
-    AdminDashboardView(),
-    VehiclesScreen(),
-    DriversScreen(),
-    FuelScreen(),
-    BookingsScreen(),
-  ];
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final List<Widget> screens = [
+      AdminDashboardView(onNavigate: _onItemTapped),
+      const VehiclesScreen(),
+      const DriversScreen(),
+      const FuelScreen(),
+      const BookingsScreen(),
+    ];
+
     return Scaffold(
       body: IndexedStack(
         index: _selectedIndex,
-        children: _screens,
+        children: screens,
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
-        onTap: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
+        onTap: _onItemTapped,
         type: BottomNavigationBarType.fixed,
         selectedItemColor: const Color(0xFF1A237E),
         unselectedItemColor: Colors.grey,
@@ -89,9 +92,10 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
   }
 }
 
-// Built-in Complete Admin Dashboard View
 class AdminDashboardView extends StatelessWidget {
-  const AdminDashboardView({Key? key}) : super(key: key);
+  final Function(int) onNavigate;
+
+  const AdminDashboardView({Key? key, required this.onNavigate}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -119,12 +123,59 @@ class AdminDashboardView extends StatelessWidget {
               crossAxisSpacing: 12,
               mainAxisSpacing: 12,
               children: [
-                _buildCard(context, Icons.bookmark_add, 'Party Bookings', Colors.purple),
-                _buildCard(context, Icons.directions_bus, 'Vehicle Fleet', Colors.blue),
-                _buildCard(context, Icons.person, 'Driver Management', Colors.orange),
-                _buildCard(context, Icons.account_balance_wallet, 'Vendors / Udhar Khata', Colors.green),
-                _buildCard(context, Icons.local_gas_station, 'Fuel Logs & Average', Colors.redAccent),
-                _buildCard(context, Icons.map, 'Routes & Location', Colors.teal),
+                _buildCard(
+                  context,
+                  Icons.bookmark_add,
+                  'Party Bookings',
+                  Colors.purple,
+                  () => onNavigate(4), // Tab index for Bookings
+                ),
+                _buildCard(
+                  context,
+                  Icons.directions_bus,
+                  'Vehicle Fleet',
+                  Colors.blue,
+                  () => onNavigate(1), // Tab index for Vehicles
+                ),
+                _buildCard(
+                  context,
+                  Icons.person,
+                  'Driver Management',
+                  Colors.orange,
+                  () => onNavigate(2), // Tab index for Drivers
+                ),
+                _buildCard(
+                  context,
+                  Icons.account_balance_wallet,
+                  'Vendors / Udhar Khata',
+                  Colors.green,
+                  () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const VendorsRemindersScreen(),
+                      ),
+                    );
+                  },
+                ),
+                _buildCard(
+                  context,
+                  Icons.local_gas_station,
+                  'Fuel Logs & Average',
+                  Colors.redAccent,
+                  () => onNavigate(3), // Tab index for Fuel
+                ),
+                _buildCard(
+                  context,
+                  Icons.map,
+                  'Routes & Location',
+                  Colors.teal,
+                  () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Routes & Maps screen opening...')),
+                    );
+                  },
+                ),
               ],
             ),
           ],
@@ -133,16 +184,18 @@ class AdminDashboardView extends StatelessWidget {
     );
   }
 
-  Widget _buildCard(BuildContext context, IconData icon, String title, Color color) {
+  Widget _buildCard(
+    BuildContext context,
+    IconData icon,
+    String title,
+    Color color,
+    VoidCallback onTap,
+  ) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
-        onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('$title opening...')),
-          );
-        },
+        onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
