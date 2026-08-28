@@ -87,7 +87,7 @@ class DatabaseHelper {
     return await db.delete(table, where: 'id = ?', whereArgs: [id]);
   }
 }
-CREATE TABLE fuel_logsawait db.execute('''
+CREATE TABLE fuel_logs await db.execute('''
   CREATE TABLE fuel_logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     vehicle_id INTEGER NOT NULL,
