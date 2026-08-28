@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'vehicles_screen.dart';
 import 'drivers_screen.dart';
 import 'bookings_screen.dart';
+import 'vendors_reminders_screen.dart';
 import 'screens/fuel_screen.dart';
-import 'screens/vendors_reminders_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -128,21 +128,21 @@ class AdminDashboardView extends StatelessWidget {
                   Icons.bookmark_add,
                   'Party Bookings',
                   Colors.purple,
-                  () => onNavigate(4), // Tab index for Bookings
+                  () => onNavigate(4),
                 ),
                 _buildCard(
                   context,
                   Icons.directions_bus,
                   'Vehicle Fleet',
                   Colors.blue,
-                  () => onNavigate(1), // Tab index for Vehicles
+                  () => onNavigate(1),
                 ),
                 _buildCard(
                   context,
                   Icons.person,
                   'Driver Management',
                   Colors.orange,
-                  () => onNavigate(2), // Tab index for Drivers
+                  () => onNavigate(2),
                 ),
                 _buildCard(
                   context,
@@ -153,7 +153,7 @@ class AdminDashboardView extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const VendorsRemindersScreen(),
+                        builder: (context) => VendorsRemindersScreen(),
                       ),
                     );
                   },
@@ -163,7 +163,7 @@ class AdminDashboardView extends StatelessWidget {
                   Icons.local_gas_station,
                   'Fuel Logs & Average',
                   Colors.redAccent,
-                  () => onNavigate(3), // Tab index for Fuel
+                  () => onNavigate(3),
                 ),
                 _buildCard(
                   context,
@@ -217,3 +217,4 @@ class AdminDashboardView extends StatelessWidget {
     );
   }
 }
+
