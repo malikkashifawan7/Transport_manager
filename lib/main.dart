@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'vehicles_screen.dart';
 import 'drivers_screen.dart';
@@ -97,88 +98,101 @@ class AdminDashboardView extends StatelessWidget {
 
   const AdminDashboardView({Key? key, required this.onNavigate}) : super(key: key);
 
+  // Function to open Google Maps for Routes & Location
+  Future<void> _openMaps(BuildContext context) async {
+    final Uri googleMapsUrl = Uri.parse('https://www.google.com/maps');
+    if (await canLaunchUrl(googleMapsUrl)) {
+      await launchUrl(googleMapsUrl, mode: LaunchMode.externalApplication);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not launch Google Maps')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Awan Brothers Tours & Travels'),
+        title: const Text(
+          'Awan Brothers Tours & Travels',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
         backgroundColor: const Color(0xFF1A237E),
-        elevation: 0,
+        elevation: 2,
         centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Management Dashboard',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 2,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              children: [
-                _buildCard(
-                  context,
-                  Icons.bookmark_add,
-                  'Party Bookings',
-                  Colors.purple,
-                  () => onNavigate(4),
-                ),
-                _buildCard(
-                  context,
-                  Icons.directions_bus,
-                  'Vehicle Fleet',
-                  Colors.blue,
-                  () => onNavigate(1),
-                ),
-                _buildCard(
-                  context,
-                  Icons.person,
-                  'Driver Management',
-                  Colors.orange,
-                  () => onNavigate(2),
-                ),
-                _buildCard(
-                  context,
-                  Icons.account_balance_wallet,
-                  'Vendors / Udhar Khata',
-                  Colors.green,
-                  () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => VendorsRemindersScreen(),
-                      ),
-                    );
-                  },
-                ),
-                _buildCard(
-                  context,
-                  Icons.local_gas_station,
-                  'Fuel Logs & Average',
-                  Colors.redAccent,
-                  () => onNavigate(3),
-                ),
-                _buildCard(
-                  context,
-                  Icons.map,
-                  'Routes & Location',
-                  Colors.teal,
-                  () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Routes & Maps screen opening...')),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ],
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Management Dashboard',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              GridView.count(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisCount: 2,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                children: [
+                  _buildCard(
+                    context,
+                    Icons.bookmark_add,
+                    'Party Bookings',
+                    Colors.purple,
+                    () => onNavigate(4),
+                  ),
+                  _buildCard(
+                    context,
+                    Icons.directions_bus,
+                    'Vehicle Fleet',
+                    Colors.blue,
+                    () => onNavigate(1),
+                  ),
+                  _buildCard(
+                    context,
+                    Icons.person,
+                    'Driver Management',
+                    Colors.orange,
+                    () => onNavigate(2),
+                  ),
+                  _buildCard(
+                    context,
+                    Icons.account_balance_wallet,
+                    'Vendors / Udhar Khata',
+                    Colors.green,
+                    () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => VendorsRemindersScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildCard(
+                    context,
+                    Icons.local_gas_station,
+                    'Fuel Logs & Average',
+                    Colors.redAccent,
+                    () => onNavigate(3),
+                  ),
+                  _buildCard(
+                    context,
+                    Icons.map,
+                    'Routes & Location',
+                    Colors.teal,
+                    () => _openMaps(context),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -217,4 +231,3 @@ class AdminDashboardView extends StatelessWidget {
     );
   }
 }
-
