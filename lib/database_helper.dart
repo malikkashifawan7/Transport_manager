@@ -9,7 +9,7 @@ class DatabaseHelper {
 
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _database = await _initDB('transport_erp.db');
+    _database = await _initDB('transport_manager.db');
     return _database!;
   }
 
@@ -25,90 +25,73 @@ class DatabaseHelper {
   }
 
   Future _createDB(Database db, int version) async {
-    // Vehicles Table
+    // Vendors Table
     await db.execute('''
-      CREATE TABLE vehicles (
+      CREATE TABLE vendors (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        vehicleNumber TEXT NOT NULL UNIQUE,
-        model TEXT,
-        driverName TEXT,
-        driverPhone TEXT
+        name TEXT NOT NULL,
+        phone TEXT,
+        type TEXT,
+        balance REAL DEFAULT 0.0
       )
     ''');
 
-    // Vendors & Khata Table
+    // Reminders Table
     await db.execute('''
-      CREATE TABLE khata (
+      CREATE TABLE reminders (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        vehicleNumber TEXT NOT NULL,
-        vendorName TEXT NOT NULL,
-        description TEXT,
-        udhar REAL DEFAULT 0.0,
-        jama REAL DEFAULT 0.0,
-        baqaya REAL DEFAULT 0.0,
-        date TEXT NOT NULL
-      )
-    ''');
-
-    // Bookings Table
-    await db.execute('''
-      CREATE TABLE bookings (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        partyName TEXT NOT NULL,
-        phone TEXT NOT NULL,
-        route TEXT NOT NULL,
-        vehicleNumber TEXT NOT NULL,
-        totalAmount REAL NOT NULL,
-        advance REAL NOT NULL,
-        balance REAL NOT NULL,
-        date TEXT NOT NULL
+        title TEXT NOT NULL,
+        date TEXT NOT NULL,
+        amount REAL,
+        status TEXT DEFAULT 'Pending'
       )
     ''');
   }
 
-  // Helper Methods required by screens
-  Future<List<Map<String, dynamic>>> fetchAll(String table) async {
+  // --- Vendors Methods ---
+  Future<List<Map<String, dynamic>>> getVendors() async {
     final db = await instance.database;
-    return await db.query(table);
+    return await db.query('vendors', orderBy: 'id DESC');
   }
 
-  Future<int> insertRecord(String table, Map<String, dynamic> row) async {
+  Future<int> addVendor(Map<String, dynamic> data) async {
     final db = await instance.database;
-    return await db.insert(table, row);
+    return await db.insert('vendors', data);
   }
 
-  Future<int> updateRecord(String table, Map<String, dynamic> row, int id) async {
+  Future<int> updateVendor(int id, Map<String, dynamic> data) async {
     final db = await instance.database;
-    return await db.update(table, row, where: 'id = ?', whereArgs: [id]);
+    return await db.update('vendors', data, where: 'id = ?', whereArgs: [id]);
   }
 
-  Future<int> deleteRecord(String table, int id) async {
+  Future<int> deleteVendor(int id) async {
     final db = await instance.database;
-    return await db.delete(table, where: 'id = ?', whereArgs: [id]);
+    return await db.delete('vendors', where: 'id = ?', whereArgs: [id]);
+  }
+
+  // --- Reminders Methods ---
+  Future<List<Map<String, dynamic>>> getReminders() async {
+    final db = await instance.database;
+    return await db.query('reminders', orderBy: 'id DESC');
+  }
+
+  Future<int> addReminder(Map<String, dynamic> data) async {
+    final db = await instance.database;
+    return await db.insert('reminders', data);
+  }
+
+  Future<int> updateReminder(int id, Map<String, dynamic> data) async {
+    final db = await instance.database;
+    return await db.update('reminders', data, where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<int> deleteReminder(int id) async {
+    final db = await instance.database;
+    return await db.delete('reminders', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future close() async {
+    final db = await instance.database;
+    db.close();
   }
 }
-  Future _onCreate(Database db, int version) async {
-    await db.execute('''
-      CREATE TABLE vehicles (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT,
-        number TEXT
-      )
-    ''');
-
-    await db.execute('''
-      CREATE TABLE fuel_logs (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        vehicle_id INTEGER NOT NULL,
-        booking_id INTEGER,
-        fuel_type TEXT NOT NULL,
-        rate_per_unit REAL NOT NULL,
-        total_units REAL NOT NULL,
-        total_cost REAL NOT NULL,
-        date TEXT NOT NULL,
-        notes TEXT,
-        FOREIGN KEY (vehicle_id) REFERENCES vehicles (id) ON DELETE CASCADE,
-        FOREIGN KEY (booking_id) REFERENCES bookings (id) ON DELETE SET NULL
-      )
-    ''');
-  }
