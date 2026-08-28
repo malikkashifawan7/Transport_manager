@@ -52,3 +52,40 @@ class FuelService {
     return res.map((e) => FuelLog.fromMap(e)).toList();
   }
 }
+  // Monthly Vehicle Report/Hisab Calculation
+  Future<Map<String, double>> getMonthlyVehicleReport({
+    required int vehicleId,
+    required String monthYear, // Format: 'YYYY-MM' e.g. '2026-08'
+  }) async {
+    final db = await _dbHelper.database;
+
+    // 1. Total Earnings from Bookings
+    final earningRes = await db.rawQuery('''
+      SELECT SUM(total_amount) as total FROM bookings 
+      WHERE vehicle_id = ? AND strftime('%Y-%m', booking_date) = ?
+    ''', [vehicleId, monthYear]);
+    double earning = (earningRes.first['total'] as num?)?.toDouble() ?? 0.0;
+
+    // 2. Total Fuel Expenses (Diesel / Petrol / LPG)
+    final fuelRes = await db.rawQuery('''
+      SELECT SUM(total_cost) as total FROM fuel_logs 
+      WHERE vehicle_id = ? AND strftime('%Y-%m', date) = ?
+    ''', [vehicleId, monthYear]);
+    double fuel = (fuelRes.first['total'] as num?)?.toDouble() ?? 0.0;
+
+    // 3. Total Other Maintenance / Expenses
+    final expRes = await db.rawQuery('''
+      SELECT SUM(amount) as total FROM vehicle_expenses 
+      WHERE vehicle_id = ? AND strftime('%Y-%m', date) = ?
+    ''', [vehicleId, monthYear]);
+    double otherExp = (expRes.first['total'] as num?)?.toDouble() ?? 0.0;
+
+    double netProfit = earning - (fuel + otherExp);
+
+    return {
+      'earning': earning,
+      'fuel': fuel,
+      'otherExp': otherExp,
+      'netProfit': netProfit,
+    };
+  }
