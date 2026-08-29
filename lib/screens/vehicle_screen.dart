@@ -21,11 +21,15 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
 
   Future<void> _refreshVehicles() async {
     setState(() => _isLoading = true);
-    final data = await DatabaseHelper.instance.fetchAll('vehicles');
-    setState(() {
-      _vehicles = data;
-      _isLoading = false;
-    });
+    try {
+      final data = await DatabaseHelper.instance.fetchAll('vehicles');
+      setState(() {
+        _vehicles = data;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+    }
   }
 
   void _showAddVehicleDialog() {
@@ -42,19 +46,41 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(controller: numberController, decoration: const InputDecoration(labelText: 'Gari Number (e.g. LES-3514)')),
-              TextField(controller: modelController, decoration: const InputDecoration(labelText: 'Vehicle Model / Type')),
-              TextField(controller: driverController, decoration: const InputDecoration(labelText: 'Driver Name')),
-              TextField(controller: phoneController, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Driver Mobile Number')),
+              TextField(
+                controller: numberController, 
+                decoration: const InputDecoration(labelText: 'Gari Number (e.g. LES-3514)')
+              ),
+              TextField(
+                controller: modelController, 
+                decoration: const InputDecoration(labelText: 'Vehicle Model / Type')
+              ),
+              TextField(
+                controller: driverController, 
+                decoration: const InputDecoration(labelText: 'Driver Name')
+              ),
+              TextField(
+                controller: phoneController, 
+                keyboardType: TextInputType.phone, 
+                decoration: const InputDecoration(labelText: 'Driver Mobile Number')
+              ),
             ],
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context), 
+            child: const Text('Cancel')
+          ),
           ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1A237E)),
             onPressed: () async {
               final number = numberController.text.trim();
-              if (number.isEmpty) return;
+              if (number.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please enter Gari Number'))
+                );
+                return;
+              }
 
               await DatabaseHelper.instance.insertRecord('vehicles', {
                 'number': number,
@@ -66,7 +92,7 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
               if (mounted) Navigator.pop(context);
               _refreshVehicles();
             },
-            child: const Text('Save'),
+            child: const Text('Save', style: TextStyle(color: Colors.white)),
           )
         ],
       ),
@@ -90,6 +116,7 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
                   itemBuilder: (context, index) {
                     final item = _vehicles[index];
                     return Card(
+                      elevation: 2,
                       margin: const EdgeInsets.only(bottom: 10),
                       child: ListTile(
                         leading: const CircleAvatar(
@@ -98,7 +125,19 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
                         ),
                         title: Text('Gari No: ${item['number']}', style: const TextStyle(fontWeight: FontWeight.bold)),
                         subtitle: Text('Model: ${item['type'] ?? 'N/A'}\nDriver: ${item['driver_name'] ?? 'N/A'}'),
-                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              onPressed: () async {
+                                await DatabaseHelper.instance.deleteRecord('vehicles', item['id']);
+                                _refreshVehicles();
+                              },
+                            ),
+                            const Icon(Icons.arrow_forward_ios, size: 16),
+                          ],
+                        ),
                         onTap: () {
                           Navigator.push(
                             context,
@@ -119,4 +158,3 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
     );
   }
 }
-
