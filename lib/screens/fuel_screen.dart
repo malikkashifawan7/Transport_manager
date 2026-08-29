@@ -19,6 +19,9 @@ class _FuelScreenState extends State<FuelScreen> with SingleTickerProviderStateM
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      if (mounted) setState(() {});
+    });
     _loadAllData();
   }
 
@@ -43,7 +46,9 @@ class _FuelScreenState extends State<FuelScreen> with SingleTickerProviderStateM
   }
 
   void _showAddFuelDialog() {
-    String? selectedVehicle = _vehicles.isNotEmpty ? _vehicles.first['number']?.toString() : null;
+    final vehicleController = TextEditingController(
+      text: _vehicles.isNotEmpty ? _vehicles.first['number']?.toString() : '',
+    );
     final dateController = TextEditingController(text: DateTime.now().toString().split(' ')[0]);
     final rateController = TextEditingController();
     final litersController = TextEditingController();
@@ -51,63 +56,94 @@ class _FuelScreenState extends State<FuelScreen> with SingleTickerProviderStateM
 
     showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          return AlertDialog(
-            title: const Text('Add Fuel Record'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  DropdownButtonFormField<String>(
-                    value: selectedVehicle,
-                    decoration: const InputDecoration(labelText: 'Select Vehicle Number'),
-                    items: _vehicles.map((v) {
-                      final num = v['number']?.toString() ?? 'No Number';
-                      return DropdownMenuItem(value: num, child: Text(num));
-                    }).toList(),
-                    onChanged: (val) => setDialogState(() => selectedVehicle = val),
-                  ),
-                  TextField(controller: dateController, decoration: const InputDecoration(labelText: 'Date (YYYY-MM-DD)')),
-                  TextField(controller: rateController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Rate per Liter')),
-                  TextField(controller: litersController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Liters Filled')),
-                  TextField(controller: odometerController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Odometer (KM)')),
-                ],
+      builder: (context) => AlertDialog(
+        title: const Text('Add Fuel Record', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_vehicles.isNotEmpty)
+                DropdownButtonFormField<String>(
+                  decoration: const InputDecoration(labelText: 'Select Vehicle'),
+                  value: _vehicles.first['number']?.toString(),
+                  items: _vehicles.map((v) {
+                    final num = v['number']?.toString() ?? '';
+                    return DropdownMenuItem(value: num, child: Text(num));
+                  }).toList(),
+                  onChanged: (val) {
+                    if (val != null) vehicleController.text = val;
+                  },
+                ),
+              TextField(
+                controller: vehicleController,
+                decoration: const InputDecoration(labelText: 'Vehicle Number (Type or Select)'),
               ),
-            ),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-              ElevatedButton(
-                onPressed: () async {
-                  if (selectedVehicle == null || rateController.text.isEmpty || litersController.text.isEmpty) return;
-
-                  final rate = double.tryParse(rateController.text) ?? 0.0;
-                  final liters = double.tryParse(litersController.text) ?? 0.0;
-                  final total = rate * liters;
-
-                  await DatabaseHelper.instance.insertRecord('fuel_logs', {
-                    'vehicle_number': selectedVehicle,
-                    'date': dateController.text,
-                    'rate': rate,
-                    'liters': liters,
-                    'total_cost': total,
-                    'odometer': double.tryParse(odometerController.text) ?? 0.0,
-                  });
-
-                  if (context.mounted) Navigator.pop(context);
-                  _loadAllData();
-                },
-                child: const Text('Save Record'),
+              TextField(
+                controller: dateController,
+                decoration: const InputDecoration(labelText: 'Date (YYYY-MM-DD)'),
+              ),
+              TextField(
+                controller: rateController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Rate per Liter'),
+              ),
+              TextField(
+                controller: litersController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Liters Filled'),
+              ),
+              TextField(
+                controller: odometerController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Odometer (KM)'),
               ),
             ],
-          );
-        },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final vehNum = vehicleController.text.trim();
+              if (vehNum.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please enter or select a vehicle number')),
+                );
+                return;
+              }
+
+              final rate = double.tryParse(rateController.text.trim()) ?? 0.0;
+              final liters = double.tryParse(litersController.text.trim()) ?? 0.0;
+              final total = rate * liters;
+
+              await DatabaseHelper.instance.insertRecord('fuel_logs', {
+                'vehicle_number': vehNum,
+                'date': dateController.text.trim(),
+                'rate': rate,
+                'liters': liters,
+                'total_cost': total,
+                'odometer': double.tryParse(odometerController.text.trim()) ?? 0.0,
+              });
+
+              if (mounted) {
+                Navigator.pop(context);
+                _loadAllData();
+              }
+            },
+            child: const Text('Save Record'),
+          ),
+        ],
       ),
     );
   }
 
   void _showAddMaintenanceDialog() {
-    String? selectedVehicle = _vehicles.isNotEmpty ? _vehicles.first['number']?.toString() : null;
+    final vehicleController = TextEditingController(
+      text: _vehicles.isNotEmpty ? _vehicles.first['number']?.toString() : '',
+    );
     final dateController = TextEditingController(text: DateTime.now().toString().split(' ')[0]);
     final workController = TextEditingController();
     final costController = TextEditingController();
@@ -115,52 +151,79 @@ class _FuelScreenState extends State<FuelScreen> with SingleTickerProviderStateM
 
     showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          return AlertDialog(
-            title: const Text('Add Maintenance Record'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  DropdownButtonFormField<String>(
-                    value: selectedVehicle,
-                    decoration: const InputDecoration(labelText: 'Select Vehicle Number'),
-                    items: _vehicles.map((v) {
-                      final num = v['number']?.toString() ?? 'No Number';
-                      return DropdownMenuItem(value: num, child: Text(num));
-                    }).toList(),
-                    onChanged: (val) => setDialogState(() => selectedVehicle = val),
-                  ),
-                  TextField(controller: dateController, decoration: const InputDecoration(labelText: 'Date')),
-                  TextField(controller: workController, decoration: const InputDecoration(labelText: 'Work Description')),
-                  TextField(controller: costController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Total Cost')),
-                  TextField(controller: mechanicController, decoration: const InputDecoration(labelText: 'Mechanic/Shop Name')),
-                ],
+      builder: (context) => AlertDialog(
+        title: const Text('Add Maintenance Record', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_vehicles.isNotEmpty)
+                DropdownButtonFormField<String>(
+                  decoration: const InputDecoration(labelText: 'Select Vehicle'),
+                  value: _vehicles.first['number']?.toString(),
+                  items: _vehicles.map((v) {
+                    final num = v['number']?.toString() ?? '';
+                    return DropdownMenuItem(value: num, child: Text(num));
+                  }).toList(),
+                  onChanged: (val) {
+                    if (val != null) vehicleController.text = val;
+                  },
+                ),
+              TextField(
+                controller: vehicleController,
+                decoration: const InputDecoration(labelText: 'Vehicle Number (Type or Select)'),
               ),
-            ),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-              ElevatedButton(
-                onPressed: () async {
-                  if (selectedVehicle == null || costController.text.isEmpty) return;
-
-                  await DatabaseHelper.instance.insertRecord('maintenance_logs', {
-                    'vehicle_number': selectedVehicle,
-                    'date': dateController.text,
-                    'work_description': workController.text,
-                    'cost': double.tryParse(costController.text) ?? 0.0,
-                    'mechanic_name': mechanicController.text,
-                  });
-
-                  if (context.mounted) Navigator.pop(context);
-                  _loadAllData();
-                },
-                child: const Text('Save Record'),
+              TextField(
+                controller: dateController,
+                decoration: const InputDecoration(labelText: 'Date (YYYY-MM-DD)'),
+              ),
+              TextField(
+                controller: workController,
+                decoration: const InputDecoration(labelText: 'Work Description (e.g. Oil Change)'),
+              ),
+              TextField(
+                controller: costController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Total Cost'),
+              ),
+              TextField(
+                controller: mechanicController,
+                decoration: const InputDecoration(labelText: 'Mechanic / Shop Name'),
               ),
             ],
-          );
-        },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final vehNum = vehicleController.text.trim();
+              if (vehNum.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please enter or select a vehicle number')),
+                );
+                return;
+              }
+
+              await DatabaseHelper.instance.insertRecord('maintenance_logs', {
+                'vehicle_number': vehNum,
+                'date': dateController.text.trim(),
+                'work_description': workController.text.trim().isEmpty ? 'General Service' : workController.text.trim(),
+                'cost': double.tryParse(costController.text.trim()) ?? 0.0,
+                'mechanic_name': mechanicController.text.trim(),
+              });
+
+              if (mounted) {
+                Navigator.pop(context);
+                _loadAllData();
+              }
+            },
+            child: const Text('Save Record'),
+          ),
+        ],
       ),
     );
   }
@@ -219,7 +282,7 @@ class _FuelScreenState extends State<FuelScreen> with SingleTickerProviderStateM
                                 child: Icon(Icons.build, color: Colors.white),
                               ),
                               title: Text('Vehicle: ${item['vehicle_number']}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                              subtitle: Text('Work: ${item['work_description']}\nDate: ${item['date']} (${item['mechanic_name']})'),
+                              subtitle: Text('Work: ${item['work_description']}\nDate: ${item['date']} (${item['mechanic_name'] ?? 'N/A'})'),
                               trailing: Text('Rs. ${item['cost']}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red, fontSize: 14)),
                             ),
                           );
@@ -241,4 +304,3 @@ class _FuelScreenState extends State<FuelScreen> with SingleTickerProviderStateM
     );
   }
 }
-
