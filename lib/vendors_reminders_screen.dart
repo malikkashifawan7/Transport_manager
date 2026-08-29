@@ -227,8 +227,8 @@ class _VendorsRemindersScreenState extends State<VendorsRemindersScreen> with Si
                               title: Text(v['name'], style: const TextStyle(fontWeight: FontWeight.bold)),
                               subtitle: Text('Total Udhar: Rs. ${v['total_udhar'] ?? 0}\nTotal Jama: Rs. ${v['total_jama'] ?? 0}'),
                               trailing: Column(
-                                mainCenter: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAlignment.end,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
                                   Text(
                                     'Baqaya: Rs. $balance',
