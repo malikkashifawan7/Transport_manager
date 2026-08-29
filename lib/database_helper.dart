@@ -19,24 +19,29 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: _createDB,
       onUpgrade: (db, oldVersion, newVersion) async {
-        if (oldVersion < 3) {
-          try {
-            await db.execute('ALTER TABLE vehicles ADD COLUMN driver_name TEXT');
-            await db.execute('ALTER TABLE vehicles ADD COLUMN driver_phone TEXT');
-          } catch (_) {}
+        if (oldVersion < 4) {
+          // Automatic DB Reset/Upgrade to prevent schema mismatch crashes
+          await db.execute('DROP TABLE IF EXISTS vehicles');
+          await db.execute('DROP TABLE IF EXISTS drivers');
+          await db.execute('DROP TABLE IF EXISTS bookings');
+          await db.execute('DROP TABLE IF EXISTS vendors');
+          await db.execute('DROP TABLE IF EXISTS vendor_transactions');
+          await db.execute('DROP TABLE IF EXISTS fuel_logs');
+          await db.execute('DROP TABLE IF EXISTS maintenance_logs');
+          await _createDB(db, 4);
         }
       },
     );
   }
 
   Future _createDB(Database db, int version) async {
+    // Vehicles Table
     await db.execute('''
       CREATE TABLE vehicles (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT,
         number TEXT UNIQUE NOT NULL,
         type TEXT,
         driver_name TEXT,
@@ -44,47 +49,58 @@ class DatabaseHelper {
       )
     ''');
 
+    // Drivers Table
     await db.execute('''
       CREATE TABLE drivers (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT,
+        name TEXT NOT NULL,
         phone TEXT,
         license TEXT
       )
     ''');
 
+    // Party Bookings Table (With Advance, Total, Baqaya)
     await db.execute('''
       CREATE TABLE bookings (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        customer TEXT,
+        customer TEXT NOT NULL,
         phone TEXT,
         destination TEXT,
         date TEXT,
-        amount REAL,
-        status TEXT
+        total_amount REAL DEFAULT 0.0,
+        advance_amount REAL DEFAULT 0.0,
+        baqaya_amount REAL DEFAULT 0.0,
+        status TEXT DEFAULT 'Pending'
       )
     ''');
 
+    // Vendors / Shops Table (Udhar Khata)
     await db.execute('''
       CREATE TABLE vendors (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
         phone TEXT,
-        type TEXT,
-        balance REAL DEFAULT 0.0
+        type TEXT, -- e.g., Spare Parts, Workshop, Fuel Pump
+        total_jama REAL DEFAULT 0.0,   -- Total Paid
+        total_udhar REAL DEFAULT 0.0,  -- Total Bill
+        balance REAL DEFAULT 0.0       -- Net Remaining Balance
       )
     ''');
 
+    // Vendor Khata Transactions (Jama / Udhar History)
     await db.execute('''
-      CREATE TABLE reminders (
+      CREATE TABLE vendor_transactions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT NOT NULL,
+        vendor_id INTEGER NOT NULL,
         date TEXT NOT NULL,
-        amount REAL,
-        status TEXT DEFAULT 'Pending'
+        type TEXT NOT NULL, -- 'UDHAR' (Bill) or 'JAMA' (Payment)
+        amount REAL NOT NULL,
+        description TEXT,
+        FOREIGN KEY (vendor_id) REFERENCES vendors (id) ON DELETE CASCADE
       )
     ''');
 
+    // Fuel Logs Table
     await db.execute('''
       CREATE TABLE fuel_logs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -97,6 +113,7 @@ class DatabaseHelper {
       )
     ''');
 
+    // Maintenance Logs Table
     await db.execute('''
       CREATE TABLE maintenance_logs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -109,7 +126,7 @@ class DatabaseHelper {
     ''');
   }
 
-  // --- Generic Helpers ---
+  // --- CRUD Generic Functions ---
   Future<List<Map<String, dynamic>>> fetchAll(String table) async {
     final db = await instance.database;
     return await db.query(table, orderBy: 'id DESC');
@@ -135,20 +152,14 @@ class DatabaseHelper {
     return await db.query(table, where: 'vehicle_number = ?', whereArgs: [vehicleNumber], orderBy: 'id DESC');
   }
 
-  // --- Specific Helpers required by Vendors / Reminders screens ---
+  // Legacy Methods for Backward Compatibility
   Future<List<Map<String, dynamic>>> getVendors() async => fetchAll('vendors');
   Future<int> addVendor(Map<String, dynamic> data) async => insertRecord('vendors', data);
   Future<int> updateVendor(int id, Map<String, dynamic> data) async => updateRecord('vendors', data, id);
   Future<int> deleteVendor(int id) async => deleteRecord('vendors', id);
-
-  Future<List<Map<String, dynamic>>> getReminders() async => fetchAll('reminders');
-  Future<int> addReminder(Map<String, dynamic> data) async => insertRecord('reminders', data);
-  Future<int> updateReminder(int id, Map<String, dynamic> data) async => updateRecord('reminders', data, id);
-  Future<int> deleteReminder(int id) async => deleteRecord('reminders', id);
 
   Future close() async {
     final db = await instance.database;
     db.close();
   }
 }
-
