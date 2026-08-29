@@ -23,8 +23,10 @@ class DatabaseHelper {
       onCreate: _createDB,
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 3) {
-          await db.execute('ALTER TABLE vehicles ADD COLUMN driver_name TEXT');
-          await db.execute('ALTER TABLE vehicles ADD COLUMN driver_phone TEXT');
+          try {
+            await db.execute('ALTER TABLE vehicles ADD COLUMN driver_name TEXT');
+            await db.execute('ALTER TABLE vehicles ADD COLUMN driver_phone TEXT');
+          } catch (_) {}
         }
       },
     );
@@ -107,7 +109,7 @@ class DatabaseHelper {
     ''');
   }
 
-  // --- Helper Methods ---
+  // --- Generic Helpers ---
   Future<List<Map<String, dynamic>>> fetchAll(String table) async {
     final db = await instance.database;
     return await db.query(table, orderBy: 'id DESC');
@@ -133,8 +135,20 @@ class DatabaseHelper {
     return await db.query(table, where: 'vehicle_number = ?', whereArgs: [vehicleNumber], orderBy: 'id DESC');
   }
 
+  // --- Specific Helpers required by Vendors / Reminders screens ---
+  Future<List<Map<String, dynamic>>> getVendors() async => fetchAll('vendors');
+  Future<int> addVendor(Map<String, dynamic> data) async => insertRecord('vendors', data);
+  Future<int> updateVendor(int id, Map<String, dynamic> data) async => updateRecord('vendors', data, id);
+  Future<int> deleteVendor(int id) async => deleteRecord('vendors', id);
+
+  Future<List<Map<String, dynamic>>> getReminders() async => fetchAll('reminders');
+  Future<int> addReminder(Map<String, dynamic> data) async => insertRecord('reminders', data);
+  Future<int> updateReminder(int id, Map<String, dynamic> data) async => updateRecord('reminders', data, id);
+  Future<int> deleteReminder(int id) async => deleteRecord('reminders', id);
+
   Future close() async {
     final db = await instance.database;
     db.close();
   }
 }
+
